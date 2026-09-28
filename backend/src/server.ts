@@ -269,7 +269,42 @@ async function ensureTables() {
     )`,
     `CREATE INDEX IF NOT EXISTS "invoice_items_invoice_id_idx" ON "invoice_items"("invoice_id")`,
     `CREATE INDEX IF NOT EXISTS "invoice_items_item_id_idx" ON "invoice_items"("item_id")`,
-    `CREATE INDEX IF NOT EXISTS "invoice_items_batch_id_idx" ON "invoice_items"("batch_id")`
+    `CREATE INDEX IF NOT EXISTS "invoice_items_batch_id_idx" ON "invoice_items"("batch_id")`,
+
+    // Party Ledger Master columns
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "station" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "account_group" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "balancing_method" TEXT DEFAULT 'BILL_BY_BILL'`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "opening_balance" DECIMAL(12,2) DEFAULT 0.0`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "opening_balance_type" TEXT DEFAULT 'CR'`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "mail_to" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "pincode" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "state" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "state_code" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "country" TEXT DEFAULT 'INDIA'`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "mobile" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "fax_no" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "website" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "contact_person" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "designation" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "fssai_no" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "fssai_expiry_date" TIMESTAMP(3)`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "pan_no" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "schedule_h_notice" TEXT DEFAULT 'ALLOW_ALL'`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "hold_payment" BOOLEAN DEFAULT false`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "ledger_category" TEXT DEFAULT 'REGISTERED'`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "default_doctor_name" TEXT`,
+    `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "default_doctor_reg_no" TEXT`,
+
+    // Purchase items columns
+    `ALTER TABLE "purchase_items" ADD COLUMN IF NOT EXISTS "pack" TEXT DEFAULT '10 TAB'`,
+
+    // Invoice & Invoice items columns
+    `ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "doctor_reg_no" TEXT`,
+    `ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "patient_address" TEXT`,
+    `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "pack" TEXT DEFAULT '10 TAB'`,
+    `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "strips" INTEGER DEFAULT 0`,
+    `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "loose_qty" INTEGER DEFAULT 0`
   ];
 
   for (const sql of statements) {

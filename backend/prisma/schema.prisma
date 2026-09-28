@@ -167,18 +167,41 @@ model Batch {
   @@map("batches")
 }
 
-// 10. Parties Master (Suppliers & Customers)
+// 10. Parties Master (Suppliers & Customers / Ledger Master)
 model Party {
   id                 String    @id @default(uuid())
   companyId          String    @map("company_id")
   name               String
   type               String    // "supplier" | "customer" | "both"
-  phone              String?
-  email              String?
+  station            String?
+  accountGroup       String?   @map("account_group") // "SUNDRY_CREDITORS", "SUNDRY_DEBTORS", "BANK", "CASH"
+  balancingMethod    String    @default("BILL_BY_BILL") @map("balancing_method") // "BILL_BY_BILL", "ON_ACCOUNT"
+  openingBalance     Decimal   @default(0.0) @map("opening_balance") @db.Decimal(12, 2)
+  openingBalanceType String    @default("CR") @map("opening_balance_type") // "DR" | "CR"
+  mailTo             String?   @map("mail_to")
   address            String?
+  pincode            String?
+  state              String?
+  stateCode          String?   @map("state_code")
+  country            String    @default("INDIA")
+  phone              String?
+  mobile             String?
+  faxNo              String?   @map("fax_no")
+  email              String?
+  website            String?
+  contactPerson      String?   @map("contact_person")
+  designation        String?
   gstin              String?
   drugLicenseNo      String?   @map("drug_license_no")
   dlExpiryDate       DateTime? @map("dl_expiry_date")
+  fssaiNo            String?   @map("fssai_no")
+  fssaiExpiryDate    DateTime? @map("fssai_expiry_date")
+  panNo              String?   @map("pan_no")
+  scheduleHNotice    String    @default("ALLOW_ALL") @map("schedule_h_notice") // "ALLOW_ALL", "WARNING", "BLOCK"
+  holdPayment        Boolean   @default(false) @map("hold_payment")
+  ledgerCategory     String    @default("REGISTERED") @map("ledger_category") // "REGISTERED", "UNREGISTERED", "COMPOSITE", "CONSUMER"
+  defaultDoctorName  String?   @map("default_doctor_name")
+  defaultDoctorRegNo String?   @map("default_doctor_reg_no")
   isCash             Boolean   @default(false) @map("is_cash")
   creditLimit        Decimal   @default(0.0) @map("credit_limit") @db.Decimal(12, 2)
   outstandingBalance Decimal   @default(0.0) @map("outstanding_balance") @db.Decimal(12, 2)
@@ -263,6 +286,7 @@ model PurchaseItem {
   purchaseId      String   @map("purchase_id")
   itemId          String   @map("item_id")
   batchId         String   @map("batch_id")
+  pack            String?  @default("10 TAB")
   batchNumber     String   @map("batch_number")
   expiryDate      DateTime @map("expiry_date")
   quantity        Int
@@ -302,7 +326,9 @@ model Invoice {
   customerAddress String?   @map("customer_address")
   customerGstin   String?   @map("customer_gstin")
   doctorName      String?   @map("doctor_name")
+  doctorRegNo     String?   @map("doctor_reg_no")
   patientName     String?   @map("patient_name")
+  patientAddress  String?   @map("patient_address")
   paymentMode     String    @default("CASH") @map("payment_mode") // CASH, UPI, CARD, CREDIT, SPLIT
   subtotal        Decimal   @default(0.0) @map("subtotal") @db.Decimal(12, 2)
   itemDiscount    Decimal   @default(0.0) @map("item_discount") @db.Decimal(12, 2)
@@ -340,9 +366,12 @@ model InvoiceItem {
   invoiceId       String   @map("invoice_id")
   itemId          String   @map("item_id")
   batchId         String   @map("batch_id")
+  pack            String?  @default("10 TAB")
   batchNumber     String   @map("batch_number")
   expiryDate      DateTime @map("expiry_date")
-  quantity        Int
+  strips          Int      @default(0)
+  looseQty        Int      @default(0) @map("loose_qty")
+  quantity        Int      // Total base units (strips * conversionFactor + looseQty)
   freeQuantity    Int      @default(0) @map("free_quantity")
   unitPrice       Decimal  @map("unit_price") @db.Decimal(10, 2) // MRP or Rate charged
   mrp             Decimal  @map("mrp") @db.Decimal(10, 2)
