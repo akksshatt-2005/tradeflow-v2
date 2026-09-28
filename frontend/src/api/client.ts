@@ -78,21 +78,46 @@ export function generateIdempotencyKey(): string {
   return 'idem-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now();
 }
 
+let prewarmPolling = false;
+
 /**
- * Rule F1: Pre-warm server on load
+ * Rule F1: Pre-warm server on load with active auto-retry polling
  */
 export async function prewarmServer(): Promise<boolean> {
+  if (prewarmPolling) return false;
+  prewarmPolling = true;
+
+  const startTime = Date.now();
+  const maxWait = 90 * 1000;
+
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    if (res.ok) {
-      updateServerState({ isOnline: true, isWakingUp: false, error: null });
-      return true;
+    while (Date.now() - startTime < maxWait) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/health`, {
+          method: 'GET',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        if (res.ok) {
+          updateServerState({ isOnline: true, isWakingUp: false, error: null, elapsedSeconds: 0 });
+          prewarmPolling = false;
+          return true;
+        }
+      } catch (_) {
+        // Continue to retry
+      }
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      updateServerState({ isOnline: false, isWakingUp: true, elapsedSeconds: elapsed, error: null });
+      await new Promise(r => setTimeout(r, 2500));
     }
-  } catch (_) {
-    updateServerState({ isOnline: false, isWakingUp: true });
+
+    updateServerState({
+      isOnline: false,
+      isWakingUp: false,
+      error: 'The server is taking longer than expected to wake up. Please click Retry.'
+    });
+  } finally {
+    prewarmPolling = false;
   }
   return false;
 }
