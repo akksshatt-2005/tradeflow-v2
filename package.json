@@ -1,0 +1,32 @@
+{
+  "name": "trade-flow-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Trade Flow v2 - High-Performance Multi-Company Pharmacy Billing & Trade Management System",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan.bold,magenta.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "prisma:migrate": "npm run prisma:migrate --prefix backend",
+    "prisma:generate": "npm run prisma:generate --prefix backend",
+    "user:reset-password": "npm run user:reset-password --prefix backend --",
+    "user:revoke-sessions": "npm run user:revoke-sessions --prefix backend --",
+    "db:backup": "npm run db:backup --prefix backend",
+    "db:restore": "npm run db:restore --prefix backend",
+    "test:phase0": "npm run test:phase0 --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

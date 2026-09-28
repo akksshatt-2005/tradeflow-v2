@@ -1,0 +1,1 @@
+# Keeps backups directory tracked in Git while ignoring *.sql / *.json dump files
