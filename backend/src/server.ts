@@ -18,7 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Rule B7: Exact origins from ALLOWED_ORIGINS env var. No wildcards.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,https://tradeflow-v2-frontend.vercel.app')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
