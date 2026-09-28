@@ -41,6 +41,18 @@
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+
+  /* ── Pharma ERP Component Variables ──
+     Mapped to base theme for consistent rendering */
+  --card-bg: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-hover: #e2e8f0;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --brand-teal: #0f766e;
+  --accent-red: #dc2626;
+  --accent-green: #16a34a;
 }
 
 * {

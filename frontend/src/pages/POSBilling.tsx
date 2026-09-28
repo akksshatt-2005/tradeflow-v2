@@ -439,6 +439,28 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
               style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '700', outline: 'none', fontSize: '0.85rem' }}
             />
           </div>
+          <button
+            onClick={handleSaveInvoice}
+            disabled={submitting || invoiceItems.length === 0}
+            style={{
+              padding: '0.65rem 1.4rem',
+              background: invoiceItems.length === 0 ? '#94a3b8' : '#0f766e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '0.95rem',
+              cursor: (submitting || invoiceItems.length === 0) ? 'not-allowed' : 'pointer',
+              opacity: (submitting || invoiceItems.length === 0) ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: invoiceItems.length > 0 ? '0 4px 12px rgba(15, 118, 110, 0.35)' : 'none'
+            }}
+          >
+            <Receipt size={16} />
+            {submitting ? 'Generating Invoice...' : `Complete Sale (₹${grandTotal.toFixed(0)})`}
+          </button>
         </div>
       </div>
 
@@ -530,27 +552,31 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
         
         {/* Medicine Search Bar */}
         <div style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)', position: 'relative', background: 'var(--bg-secondary)' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--brand-teal)' }} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#0f766e', display: 'flex', alignItems: 'center', pointerEvents: 'none', zIndex: 2 }}>
+              <Search size={16} />
+            </span>
             <input
               ref={medicineInputRef}
               type="text"
-              placeholder="PRODUCT SEARCH [F3] : Type brand name, generic name, or scan barcode..."
+              placeholder="Search by brand name, generic name, or scan barcode... [F3]"
               value={medicineSearch}
               onChange={e => {
                 setMedicineSearch(e.target.value);
                 setShowMedicineDropdown(true);
               }}
               onFocus={() => setShowMedicineDropdown(true)}
+              onBlur={() => setTimeout(() => setShowMedicineDropdown(false), 200)}
               style={{
                 width: '100%',
                 padding: '0.65rem 1rem 0.65rem 2.4rem',
-                background: 'var(--card-bg)',
-                border: '1px solid var(--border-color)',
+                background: '#ffffff',
+                border: '2px solid #e2e8f0',
                 borderRadius: '8px',
-                color: 'var(--text-primary)',
+                color: '#0f172a',
                 fontWeight: '600',
-                fontSize: '0.9rem'
+                fontSize: '0.9rem',
+                outline: 'none'
               }}
             />
 
@@ -881,36 +907,60 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
               borderTop: '2px solid var(--border-color)',
               fontSize: '1.2rem',
               fontWeight: '800',
-              color: 'var(--brand-teal)'
+              color: '#0f766e'
             }}>
-              <span>BILL TOTAL / NET :</span>
+              <span>BILL TOTAL :</span>
               <span>₹{grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '0.8rem' }}>
+          {/* Paid Amount & Balance */}
+          <div style={{ marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '1px dashed var(--border-color)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>PAID (₹)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={paidAmount === '' ? (paymentMode === 'CREDIT' ? '0' : String(grandTotal)) : paidAmount}
+                onChange={e => setPaidAmount(e.target.value)}
+                style={{ width: '100%', padding: '0.45rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem', textAlign: 'right' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>BALANCE DUE (₹)</label>
+              <div style={{ padding: '0.45rem', background: balanceDue > 0 ? '#fee2e2' : '#dcfce7', border: '1px solid ' + (balanceDue > 0 ? '#fca5a5' : '#86efac'), borderRadius: '6px', fontWeight: '800', fontSize: '0.9rem', textAlign: 'right', color: balanceDue > 0 ? '#dc2626' : '#16a34a' }}>
+                ₹{balanceDue.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* Complete Sale Button */}
+          <div style={{ marginTop: '1rem' }}>
             <button
               onClick={handleSaveInvoice}
               disabled={submitting || invoiceItems.length === 0}
               style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: 'var(--brand-teal)',
+                width: '100%',
+                padding: '0.85rem',
+                background: invoiceItems.length === 0 ? '#94a3b8' : '#0f766e',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
-                fontWeight: '700',
-                fontSize: '0.95rem',
+                fontWeight: '800',
+                fontSize: '1rem',
                 cursor: (submitting || invoiceItems.length === 0) ? 'not-allowed' : 'pointer',
                 opacity: (submitting || invoiceItems.length === 0) ? 0.6 : 1,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '0.4rem',
-                boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
+                gap: '0.5rem',
+                boxShadow: invoiceItems.length > 0 ? '0 4px 16px rgba(15, 118, 110, 0.4)' : 'none',
+                letterSpacing: '0.02em'
               }}
             >
-              {submitting ? 'Generating...' : '⚡ Complete Sale & Print (F2)'}
+              <Receipt size={18} />
+              {submitting ? 'Generating Invoice...' : '⚡ COMPLETE SALE & PRINT (F2)'}
             </button>
           </div>
         </div>
