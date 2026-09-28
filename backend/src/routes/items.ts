@@ -185,7 +185,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     });
   } catch (error: any) {
     console.error('Error creating item:', error);
-    res.status(500).json({ error: 'Failed to create item' });
+    res.status(500).json({ error: error.message || 'Failed to create item' });
   }
 });
 
