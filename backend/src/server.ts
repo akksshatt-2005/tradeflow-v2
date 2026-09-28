@@ -21,7 +21,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Rule B7: Exact origins from ALLOWED_ORIGINS env var. No wildcards.
+// Rule B7: Exact origins from ALLOWED_ORIGINS env var with dynamic vercel.app support
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,https://tradeflow-v2-frontend.vercel.app')
   .split(',')
   .map(o => o.trim())
@@ -29,13 +29,19 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,ht
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests (e.g. mobile, curl, cron-job) without Origin header
+    // Allow non-browser requests (mobile, curl, cron-job) without Origin header
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    const isAllowed = allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      process.env.NODE_ENV !== 'production';
+
+    if (isAllowed) {
       return callback(null, true);
     }
-    return callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

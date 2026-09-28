@@ -83,9 +83,15 @@ let prewarmPolling = false;
 /**
  * Rule F1: Pre-warm server on load with active auto-retry polling
  */
-export async function prewarmServer(): Promise<boolean> {
-  if (prewarmPolling) return false;
+export async function prewarmServer(force: boolean = false): Promise<boolean> {
+  if (force) {
+    prewarmPolling = false;
+  } else if (prewarmPolling) {
+    return false;
+  }
   prewarmPolling = true;
+
+  updateServerState({ error: null, isWakingUp: true, elapsedSeconds: 0 });
 
   const startTime = Date.now();
   const maxWait = 90 * 1000;

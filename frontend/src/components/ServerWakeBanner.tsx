@@ -28,7 +28,7 @@ export default function ServerWakeBanner() {
 
   const handleManualRetry = () => {
     setDismissed(false);
-    prewarmServer();
+    prewarmServer(true);
   };
 
   return (
