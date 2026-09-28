@@ -162,6 +162,7 @@ async function refreshAccessToken(): Promise<string | null> {
 export interface RequestOptions extends RequestInit {
   companyId?: string;
   isRetry?: boolean;
+  idempotencyKey?: string;
 }
 
 /**
@@ -187,9 +188,12 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
     headers.set('x-company-id', options.companyId);
   }
 
-  // Inject Idempotency-Key for mutations (Rule F3)
-  if (isMutation && !headers.has('Idempotency-Key') && !headers.has('x-idempotency-key')) {
-    headers.set('Idempotency-Key', generateIdempotencyKey());
+  // Inject ONE stable Idempotency-Key per action and reuse across all retries (Rule F3)
+  if (isMutation) {
+    if (!options.idempotencyKey) {
+      options.idempotencyKey = (headers.get('Idempotency-Key') || headers.get('x-idempotency-key')) || generateIdempotencyKey();
+    }
+    headers.set('Idempotency-Key', options.idempotencyKey);
   }
 
   const startTime = Date.now();
