@@ -51,10 +51,14 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Mount Phase 0 Routes
+// Mount Phase 0 Routes (supporting both /api/xxx and /xxx)
 app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);
 app.use('/companies', companyRoutes);
+
+app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/companies', companyRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
