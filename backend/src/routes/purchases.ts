@@ -355,11 +355,16 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       return purchase;
     });
 
+    const resPaid = Number(savedPurchase.paidAmount);
+    const resTotal = Number(savedPurchase.totalAmount);
+
     res.status(201).json({
       purchase: {
         id: savedPurchase.id,
         invoiceNumber: savedPurchase.invoiceNumber,
-        totalAmount: Number(savedPurchase.totalAmount),
+        totalAmount: resTotal,
+        paidAmount: resPaid,
+        balanceAmount: Math.max(0, resTotal - resPaid),
         status: savedPurchase.status,
         purchaseDate: savedPurchase.purchaseDate.toISOString()
       },
@@ -456,9 +461,9 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
 router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const { id } = req.params;
-  const { paymentAmount } = req.body;
+  const { paymentAmount, amount } = req.body;
 
-  const numPayment = parseFloat(paymentAmount) || 0;
+  const numPayment = parseFloat(paymentAmount !== undefined ? paymentAmount : amount) || 0;
   if (numPayment <= 0) {
     res.status(400).json({ error: 'Payment amount must be greater than 0' });
     return;
@@ -506,6 +511,13 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
     });
 
     res.status(200).json({
+      purchase: {
+        id: purchase.id,
+        paidAmount: newPaid,
+        totalAmount: total,
+        balanceAmount: Math.max(0, total - newPaid),
+        status: newStatus
+      },
       paidAmount: newPaid,
       status: newStatus,
       message: `Payment of ₹${actualPayment.toFixed(2)} recorded successfully`
