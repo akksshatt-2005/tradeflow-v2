@@ -81,7 +81,7 @@ export function generateIdempotencyKey(): string {
 let prewarmPolling = false;
 
 /**
- * Rule F1: Pre-warm server on load with active auto-retry polling
+ * Rule F1: Pre-warm server on load with silent check first
  */
 export async function prewarmServer(force: boolean = false): Promise<boolean> {
   if (force) {
@@ -91,13 +91,29 @@ export async function prewarmServer(force: boolean = false): Promise<boolean> {
   }
   prewarmPolling = true;
 
-  updateServerState({ error: null, isWakingUp: true, elapsedSeconds: 0 });
-
   const startTime = Date.now();
   const maxWait = 90 * 1000;
 
   try {
+    // 1. Silent check first - if server is already online, do NOT show waking banner!
+    try {
+      const res = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (res.ok) {
+        updateServerState({ isOnline: true, isWakingUp: false, error: null, elapsedSeconds: 0 });
+        prewarmPolling = false;
+        return true;
+      }
+    } catch (_) {
+      // Failed -> Server is cold-starting
+      updateServerState({ isOnline: false, isWakingUp: true, elapsedSeconds: 0, error: null });
+    }
+
+    // 2. Active polling loop until awake
     while (Date.now() - startTime < maxWait) {
+      await new Promise(r => setTimeout(r, 2000));
       try {
         const res = await fetch(`${API_BASE_URL}/health`, {
           method: 'GET',
@@ -114,7 +130,6 @@ export async function prewarmServer(force: boolean = false): Promise<boolean> {
 
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       updateServerState({ isOnline: false, isWakingUp: true, elapsedSeconds: elapsed, error: null });
-      await new Promise(r => setTimeout(r, 2500));
     }
 
     updateServerState({
@@ -255,7 +270,7 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
 
       // If successful or client error (4xx)
       if (res.status < 500) {
-        if (serverState.isWakingUp) {
+        if (serverState.isWakingUp || !serverState.isOnline) {
           updateServerState({ isWakingUp: false, isOnline: true, elapsedSeconds: 0, error: null });
         }
 
@@ -264,7 +279,9 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
 
         if (!res.ok) {
           const errorMsg = extractErrorMessage(data, `HTTP Error ${res.status}`);
-          throw new Error(errorMsg);
+          const err: any = new Error(errorMsg);
+          err.isAppError = true;
+          throw err;
         }
 
         return data as T;
@@ -273,16 +290,12 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
       // If 502/503/504 Render gateway booting
       console.warn(`[API Client] Server returned HTTP ${res.status}. Waiting for boot...`);
     } catch (err: any) {
-      // Rule C2: Ignore AbortError from cancelled requests
-      if (err.name === 'AbortError') {
+      // If application error (e.g. 400 validation error, bad credentials, duplicate SKU): Immediately throw!
+      if (err.isAppError || err.message?.includes('Session expired') || err.name === 'AbortError') {
         throw err;
       }
 
-      if (err.message && (err.message.includes('Session expired') || !err.message.includes('fetch'))) {
-        throw err;
-      }
-
-      // Network / Cold start error
+      // Real network cold start / disconnected error
       const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
       if (!serverState.isWakingUp) {
         updateServerState({
