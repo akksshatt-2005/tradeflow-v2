@@ -15,7 +15,8 @@ import {
   Eye,
   X,
   CreditCard,
-  Building2
+  Building2,
+  Trash2
 } from 'lucide-react';
 
 interface PurchaseItemDetail {
@@ -145,6 +146,31 @@ export default function Purchases() {
       setError(err.message || 'Failed to record payment');
     } finally {
       setRecordingPayment(false);
+    }
+  };
+
+  const handleDeletePurchase = async (id: string, invoiceNumber: string) => {
+    if (!activeCompany) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete purchase bill #${invoiceNumber}?\n\nThis will atomically:\n- Reverse added inventory stock\n- Remove created batch lot numbers\n- Revert supplier outstanding balance`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.delete(`/api/purchases/${id}`, {
+        companyId: activeCompany.id
+      });
+      if (viewingPurchase?.id === id) {
+        setViewingPurchase(null);
+      }
+      await fetchPurchases();
+    } catch (err: any) {
+      console.error('Failed to delete purchase:', err);
+      setError(err.message || 'Failed to delete purchase bill');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -370,13 +396,32 @@ export default function Purchases() {
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <button
-                        onClick={() => handleOpenDetails(p.id)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
-                      >
-                        <Eye size={13} /> View
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => handleOpenDetails(p.id)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                        >
+                          <Eye size={13} /> View
+                        </button>
+                        <button
+                          onClick={() => handleDeletePurchase(p.id, p.invoiceNumber)}
+                          className="btn btn-sm"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete purchase bill and reverse stock"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -545,12 +590,28 @@ export default function Purchases() {
                 </div>
               )}
 
-              <button
-                onClick={() => setViewingPurchase(null)}
-                className="btn btn-secondary btn-sm"
-              >
-                Close
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => handleDeletePurchase(viewingPurchase.id, viewingPurchase.invoiceNumber)}
+                  className="btn btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: '#fef2f2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecaca'
+                  }}
+                >
+                  <Trash2 size={14} /> Delete Bill
+                </button>
+                <button
+                  onClick={() => setViewingPurchase(null)}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -417,4 +417,52 @@ router.post('/:itemId/batches', idempotencyMiddleware, async (req: CompanyScoped
   }
 });
 
+/**
+ * DELETE /items/:id
+ * Delete a medicine item (only if no purchases or invoices reference it)
+ */
+router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { id } = req.params;
+
+  try {
+    const item = await prisma.item.findFirst({
+      where: { id, companyId },
+      include: {
+        purchaseItems: { take: 1 },
+        invoiceItems: { take: 1 }
+      }
+    });
+
+    if (!item) {
+      res.status(404).json({ error: 'Medicine item not found' });
+      return;
+    }
+
+    if (item.purchaseItems.length > 0) {
+      res.status(409).json({ error: 'Cannot delete this medicine — it has purchase bill entries. Delete the purchase bills first.' });
+      return;
+    }
+
+    if (item.invoiceItems.length > 0) {
+      res.status(409).json({ error: 'Cannot delete this medicine — it has sale invoice entries. Delete the invoices first.' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Remove stock ledger entries for this item
+      await tx.stockLedger.deleteMany({ where: { itemId: id, companyId } });
+      // Remove batches
+      await tx.batch.deleteMany({ where: { itemId: id, companyId } });
+      // Remove item
+      await tx.item.delete({ where: { id } });
+    });
+
+    res.status(200).json({ message: `Medicine "${item.name}" deleted successfully` });
+  } catch (error: any) {
+    console.error('Error deleting item:', error);
+    res.status(500).json({ error: 'Failed to delete medicine' });
+  }
+});
+
 export default router;

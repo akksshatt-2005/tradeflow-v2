@@ -12,7 +12,9 @@ import {
   Package,
   Calendar,
   Building2,
-  FileText
+  FileText,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 interface BatchInfo {
@@ -76,6 +78,19 @@ export default function Medicines() {
   const [batchPts, setBatchPts] = useState('');
   const [batchOpeningStock, setBatchOpeningStock] = useState('');
   const [submittingBatch, setSubmittingBatch] = useState(false);
+
+  // Edit Medicine State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<MedicineItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editGeneric, setEditGeneric] = useState('');
+  const [editManufacturer, setEditManufacturer] = useState('');
+  const [editHsn, setEditHsn] = useState('3004');
+  const [editGst, setEditGst] = useState('12');
+  const [editUnit, setEditUnit] = useState('STRIP');
+  const [editConversion, setEditConversion] = useState('10');
+  const [editMinStock, setEditMinStock] = useState('10');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -177,6 +192,71 @@ export default function Medicines() {
       setError(err.message || 'Failed to add batch');
     } finally {
       setSubmittingBatch(false);
+    }
+  };
+
+  const handleOpenEditModal = (item: MedicineItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditGeneric(item.genericName || '');
+    setEditManufacturer(item.manufacturer || '');
+    setEditHsn(item.hsnCode || '3004');
+    setEditGst(String(item.gstRate ?? 12));
+    setEditUnit(item.unit || 'STRIP');
+    setEditConversion(String(item.conversionFactor || 10));
+    setEditMinStock(String(item.minStockLevel || 10));
+    setShowEditModal(true);
+  };
+
+  const handleUpdateMedicine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCompany || !editingItem) return;
+
+    try {
+      setSubmittingEdit(true);
+      setError(null);
+      await api.put(`/api/items/${editingItem.id}`, {
+        name: editName.trim(),
+        genericName: editGeneric.trim() || null,
+        manufacturer: editManufacturer.trim() || null,
+        hsnCode: editHsn.trim(),
+        gstRate: parseFloat(editGst),
+        unit: editUnit.trim().toUpperCase(),
+        conversionFactor: parseInt(editConversion) || 1,
+        minStockLevel: parseInt(editMinStock) || 0
+      }, {
+        companyId: activeCompany.id
+      });
+      setShowEditModal(false);
+      setEditingItem(null);
+      await fetchItems();
+    } catch (err: any) {
+      console.error('Failed to update medicine:', err);
+      setError(err.message || 'Failed to update medicine');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  const handleDeleteMedicine = async (item: MedicineItem) => {
+    if (!activeCompany) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${item.name}" (SKU: ${item.sku})?\n\nNote: You can only delete medicines that do not have existing purchase bills or sale invoices linked to them.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.delete(`/api/items/${item.id}`, {
+        companyId: activeCompany.id
+      });
+      await fetchItems();
+    } catch (err: any) {
+      console.error('Failed to delete medicine:', err);
+      setError(err.message || 'Failed to delete medicine. Please check if invoices or purchase bills use this medicine.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -336,29 +416,52 @@ export default function Medicines() {
                       {item.activeBatchesCount} active batch{item.activeBatchesCount !== 1 ? 'es' : ''}
                     </div>
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', gap: '6px' }}>
-                      <button
-                        onClick={() => {
-                          setSelectedItemForBatch(item);
-                          setShowBatchModal(true);
-                        }}
-                        className="btn btn-secondary"
-                        style={{ padding: '5px 8px', fontSize: '11px' }}
-                        title="Add Batch / Opening Stock"
-                      >
-                        + Batch
-                      </button>
-                      <button
-                        onClick={() => setViewingItemBatches(item)}
-                        className="btn btn-secondary"
-                        style={{ padding: '5px 8px', fontSize: '11px' }}
-                        title="View Batches"
-                      >
-                        <Layers size={13} />
-                      </button>
-                    </div>
-                  </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedItemForBatch(item);
+                            setShowBatchModal(true);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 7px', fontSize: '11px' }}
+                          title="Add Batch / Opening Stock"
+                        >
+                          + Batch
+                        </button>
+                        <button
+                          onClick={() => setViewingItemBatches(item)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 7px', fontSize: '11px' }}
+                          title="View Batches"
+                        >
+                          <Layers size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 7px', fontSize: '11px', color: '#0284c7' }}
+                          title="Edit Medicine Details"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMedicine(item)}
+                          className="btn"
+                          style={{
+                            padding: '4px 7px',
+                            fontSize: '11px',
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete Medicine"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
                 </tr>
               ))
             )}
@@ -796,6 +899,175 @@ export default function Medicines() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Medicine */}
+      {showEditModal && editingItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '540px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Edit Medicine Details</h3>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>SKU: {editingItem.sku}</span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingItem(null);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateMedicine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group">
+                <label className="label">Brand / Commercial Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="input"
+                  placeholder="e.g. Paracetamol 650mg Tablet"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="label">Generic / Salt Composition</label>
+                  <input
+                    type="text"
+                    value={editGeneric}
+                    onChange={(e) => setEditGeneric(e.target.value)}
+                    className="input"
+                    placeholder="e.g. Paracetamol IP"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Manufacturer / Marketer</label>
+                  <input
+                    type="text"
+                    value={editManufacturer}
+                    onChange={(e) => setEditManufacturer(e.target.value)}
+                    className="input"
+                    placeholder="e.g. Cipla Ltd."
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="label">HSN Code</label>
+                  <input
+                    type="text"
+                    value={editHsn}
+                    onChange={(e) => setEditHsn(e.target.value)}
+                    className="input"
+                    placeholder="3004"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">GST Rate (%)</label>
+                  <select
+                    value={editGst}
+                    onChange={(e) => setEditGst(e.target.value)}
+                    className="input"
+                  >
+                    <option value="0">0% (Exempted)</option>
+                    <option value="5">5% (Life saving/vaccines)</option>
+                    <option value="12">12% (Standard medicines)</option>
+                    <option value="18">18% (Cosmetics/supplements)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="label">Packing Unit</label>
+                  <select
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="input"
+                  >
+                    <option value="STRIP">STRIP</option>
+                    <option value="BOX">BOX</option>
+                    <option value="BOTTLE">BOTTLE</option>
+                    <option value="VIAL">VIAL</option>
+                    <option value="TUBE">TUBE</option>
+                    <option value="PIECE">PIECE</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="label">Units / Pack</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editConversion}
+                    onChange={(e) => setEditConversion(e.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Min Stock Level</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editMinStock}
+                    onChange={(e) => setEditMinStock(e.target.value)}
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingItem(null);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit}
+                  className="btn btn-primary"
+                >
+                  {submittingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

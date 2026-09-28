@@ -20,9 +20,9 @@ import {
   Eye,
   Edit2,
   FileText,
-  BadgePercent,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 interface PartyLedger {
@@ -305,6 +305,37 @@ export default function Parties() {
     }
   };
 
+  const handleDeleteParty = async (p: PartyLedger) => {
+    if (!activeCompany) return;
+    if (p.isCash) {
+      alert('The default Cash party cannot be deleted.');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ledger "${p.name}"?\n\nNote: Ledgers with linked purchase bills or sales invoices cannot be deleted until those bills are deleted.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.delete(`/api/parties/${p.id}`, {
+        companyId: activeCompany.id
+      });
+      if (editingPartyId === p.id) {
+        setShowModal(false);
+        setEditingPartyId(null);
+      }
+      await fetchParties();
+    } catch (err: any) {
+      console.error('Failed to delete party:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to delete party ledger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredParties = parties.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.station && p.station.toLowerCase().includes(search.toLowerCase())) ||
@@ -572,23 +603,45 @@ export default function Parties() {
                       ₹{p.outstandingBalance.toFixed(2)}
                     </td>
                     <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                      <button
-                        onClick={() => handleOpenEditModal(p)}
-                        style={{
-                          padding: '0.4rem 0.7rem',
-                          background: 'var(--bg-secondary)',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '6px',
-                          color: 'var(--text-primary)',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        <Edit2 size={13} /> Modify
-                      </button>
+                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => handleOpenEditModal(p)}
+                          style={{
+                            padding: '0.4rem 0.7rem',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          <Edit2 size={13} /> Modify
+                        </button>
+                        {!p.isCash && (
+                          <button
+                            onClick={() => handleDeleteParty(p)}
+                            style={{
+                              padding: '0.4rem 0.6rem',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              borderRadius: '6px',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              fontSize: '0.8rem'
+                            }}
+                            title="Delete Party Ledger"
+                          >
+                            <Trash2 size={13} /> Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1079,29 +1132,58 @@ export default function Parties() {
               )}
 
               {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.8rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{ padding: '0.65rem 1.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{
-                    padding: '0.65rem 1.5rem',
-                    background: 'var(--brand-teal)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontWeight: '700',
-                    cursor: submitting ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {submitting ? 'Saving Ledger...' : editingPartyId ? 'Update Ledger' : 'Save Ledger Entry'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <div>
+                  {editingPartyId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetParty = parties.find(p => p.id === editingPartyId);
+                        if (targetParty) handleDeleteParty(targetParty);
+                      }}
+                      style={{
+                        padding: '0.65rem 1rem',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '6px',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontSize: '0.85rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <Trash2 size={15} /> Delete Ledger
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.8rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    style={{ padding: '0.65rem 1.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      padding: '0.65rem 1.5rem',
+                      background: 'var(--brand-teal)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontWeight: '700',
+                      cursor: submitting ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {submitting ? 'Saving Ledger...' : editingPartyId ? 'Update Ledger' : 'Save Ledger Entry'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

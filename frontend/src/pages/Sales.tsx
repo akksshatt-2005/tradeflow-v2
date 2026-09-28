@@ -17,7 +17,8 @@ import {
   CreditCard,
   Printer,
   User,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -144,6 +145,31 @@ export default function Sales() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string) => {
+    if (!activeCompany) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Return items and quantity back to batch stock\n- Reverse stock ledger deduction entries\n- Adjust customer outstanding balance if unpaid`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.delete(`/api/invoices/${invoiceId}`, {
+        companyId: activeCompany.id
+      });
+      if (viewingInvoice?.id === invoiceId) {
+        setViewingInvoice(null);
+      }
+      await fetchInvoices();
+    } catch (err: any) {
+      console.error('Failed to delete invoice:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to delete invoice');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (showPOS) {
@@ -418,6 +444,25 @@ export default function Sales() {
                             <CreditCard size={14} /> Settle
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                          style={{
+                            padding: '0.4rem 0.6rem',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}
+                          title="Delete invoice and restore stock"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -464,6 +509,25 @@ export default function Sales() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => handleDeleteInvoice(viewingInvoice.id, viewingInvoice.invoiceNumber)}
+                  style={{
+                    padding: '0.5rem 0.9rem',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontSize: '0.85rem',
+                    fontWeight: '600'
+                  }}
+                  title="Delete invoice"
+                >
+                  <Trash2 size={15} /> Delete
+                </button>
                 <button
                   onClick={handlePrint}
                   style={{

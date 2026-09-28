@@ -711,4 +711,75 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
   }
 });
 
+/**
+ * DELETE /invoices/:id
+ * Delete a sale invoice — reverses stock deductions, removes stock-ledger entries, and adjusts customer balance
+ */
+router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { id } = req.params;
+
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id, companyId },
+      include: {
+        items: true
+      }
+    });
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Reverse stock deductions for each item
+      for (const invItem of invoice.items) {
+        // Add stock back to batch
+        await tx.batch.update({
+          where: { id: invItem.batchId },
+          data: {
+            currentStock: { increment: invItem.quantity }
+          }
+        });
+
+        // Remove stock ledger entries for this sale
+        await tx.stockLedger.deleteMany({
+          where: {
+            companyId,
+            referenceId: invoice.id,
+            itemId: invItem.itemId
+          }
+        });
+      }
+
+      // 2. Remove invoice items
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+
+      // 3. Adjust customer outstanding balance (if there was unpaid amount)
+      if (invoice.partyId) {
+        const totalAmount = Number(invoice.grandTotal);
+        const paidAmount = Number(invoice.paidAmount);
+        const unpaidAmount = totalAmount - paidAmount;
+        if (unpaidAmount > 0) {
+          await tx.party.update({
+            where: { id: invoice.partyId },
+            data: {
+              outstandingBalance: { decrement: unpaidAmount }
+            }
+          });
+        }
+      }
+
+      // 4. Delete the invoice
+      await tx.invoice.delete({ where: { id } });
+    });
+
+    res.status(200).json({ message: `Invoice "${invoice.invoiceNumber}" deleted and stock restored successfully` });
+  } catch (error: any) {
+    console.error('Error deleting invoice:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete invoice' });
+  }
+});
+
 export default router;

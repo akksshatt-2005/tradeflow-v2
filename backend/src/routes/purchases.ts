@@ -595,4 +595,86 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
   }
 });
 
+/**
+ * DELETE /purchases/:id
+ * Delete a purchase bill — reverses stock, removes batches/stock-ledger entries, and adjusts supplier balance
+ */
+router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { id } = req.params;
+
+  try {
+    const purchase = await prisma.purchase.findFirst({
+      where: { id, companyId },
+      include: {
+        items: {
+          include: {
+            batch: true
+          }
+        }
+      }
+    });
+
+    if (!purchase) {
+      res.status(404).json({ error: 'Purchase bill not found' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Reverse stock for each item in the purchase
+      for (const pItem of purchase.items) {
+        const totalInwardUnits = pItem.quantity + (pItem.freeQuantity || 0);
+
+        // Check if the batch has enough stock to reverse
+        const batch = await tx.batch.findUnique({ where: { id: pItem.batchId } });
+        if (batch) {
+          const newStock = batch.currentStock - totalInwardUnits;
+          if (newStock <= 0) {
+            // Delete the batch entirely if stock goes to zero or negative
+            await tx.batch.delete({ where: { id: pItem.batchId } });
+          } else {
+            await tx.batch.update({
+              where: { id: pItem.batchId },
+              data: { currentStock: newStock }
+            });
+          }
+        }
+
+        // Remove stock ledger entries for this purchase
+        await tx.stockLedger.deleteMany({
+          where: {
+            companyId,
+            referenceId: purchase.id,
+            itemId: pItem.itemId
+          }
+        });
+      }
+
+      // 2. Remove purchase items
+      await tx.purchaseItem.deleteMany({ where: { purchaseId: id } });
+
+      // 3. Adjust supplier outstanding balance (if there was unpaid amount)
+      const totalAmount = Number(purchase.totalAmount);
+      const paidAmount = Number(purchase.paidAmount);
+      const unpaidAmount = totalAmount - paidAmount;
+      if (unpaidAmount > 0) {
+        await tx.party.update({
+          where: { id: purchase.supplierId },
+          data: {
+            outstandingBalance: { decrement: unpaidAmount }
+          }
+        });
+      }
+
+      // 4. Delete the purchase record
+      await tx.purchase.delete({ where: { id } });
+    });
+
+    res.status(200).json({ message: `Purchase bill "${purchase.invoiceNumber}" deleted and stock reversed successfully` });
+  } catch (error: any) {
+    console.error('Error deleting purchase:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete purchase' });
+  }
+});
+
 export default router;
