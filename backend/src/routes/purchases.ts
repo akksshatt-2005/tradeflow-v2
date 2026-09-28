@@ -176,8 +176,14 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const validatedItems: any[] = [];
 
     for (const rawItem of items) {
-      if (!rawItem.itemId || !rawItem.batchNumber || !rawItem.expiryDate) {
-        res.status(400).json({ error: 'Each item requires medicine ID, batch number, and expiry date' });
+      const medName = (rawItem.medicineName || rawItem.itemName || rawItem.name || '').trim();
+      if (!rawItem.itemId && !medName) {
+        res.status(400).json({ error: 'Each item requires either a medicine ID or medicine name' });
+        return;
+      }
+
+      if (!rawItem.batchNumber || !rawItem.expiryDate) {
+        res.status(400).json({ error: `Batch number and expiry date are required for ${medName || 'each medicine'}` });
         return;
       }
 
@@ -206,7 +212,15 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       totalGstAmount += lineGst;
 
       validatedItems.push({
-        itemId: rawItem.itemId,
+        itemId: rawItem.itemId || null,
+        medicineName: medName,
+        genericName: rawItem.genericName || rawItem.composition || null,
+        manufacturer: rawItem.manufacturer || null,
+        hsnCode: rawItem.hsnCode || '3004',
+        pack: rawItem.pack || null,
+        unit: rawItem.unit || null,
+        conversionFactor: rawItem.conversionFactor || null,
+        sku: rawItem.sku || null,
         batchNumber: rawItem.batchNumber.trim().toUpperCase(),
         expiryDate: new Date(rawItem.expiryDate),
         quantity: qty,
@@ -262,8 +276,60 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         }
       });
 
-      // 2. Process each item: Batch upsert & Stock Ledger entry
+      // 2. Process each item: Auto-catalog if needed, Batch upsert & Stock Ledger entry
       for (const item of validatedItems) {
+        let targetItemId = item.itemId;
+
+        // Auto-catalog medicine if itemId was not provided
+        if (!targetItemId) {
+          // Check if medicine already exists with same name (case-insensitive) in this company
+          let existingItem = await tx.item.findFirst({
+            where: {
+              companyId,
+              name: { equals: item.medicineName, mode: 'insensitive' }
+            }
+          });
+
+          if (!existingItem) {
+            // Auto-detect unit and conversion factor from pack (e.g., "10 TAB" -> 10 TAB)
+            const packStr = (item.pack || '').trim().toUpperCase();
+            let unit = (item.unit || 'STRIP').trim().toUpperCase();
+            let conversionFactor = parseInt(item.conversionFactor) || 1;
+
+            if (packStr) {
+              const match = packStr.match(/^(\d+)\s*([A-Z]*)/i);
+              if (match) {
+                if (!item.conversionFactor && match[1]) {
+                  conversionFactor = parseInt(match[1]) || 1;
+                }
+                if (!item.unit && match[2] && match[2].length > 1) {
+                  unit = match[2].toUpperCase();
+                }
+              }
+            }
+
+            const itemCount = await tx.item.count({ where: { companyId } });
+            const autoSku = item.sku?.trim() || `MED-${String(itemCount + 1).padStart(4, '0')}`;
+
+            existingItem = await tx.item.create({
+              data: {
+                companyId,
+                sku: autoSku,
+                name: item.medicineName,
+                genericName: item.genericName?.trim() || null,
+                manufacturer: item.manufacturer?.trim() || null,
+                hsnCode: item.hsnCode?.trim() || '3004',
+                gstRate: item.gstRate,
+                unit: unit || 'STRIP',
+                conversionFactor: conversionFactor > 0 ? conversionFactor : 1,
+                minStockLevel: 0
+              }
+            });
+          }
+
+          targetItemId = existingItem.id;
+        }
+
         const totalUnitsInward = item.quantity + item.freeQuantity;
 
         // Check if batch exists
@@ -271,7 +337,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           where: {
             companyId_itemId_batchNumber: {
               companyId,
-              itemId: item.itemId,
+              itemId: targetItemId,
               batchNumber: item.batchNumber
             }
           }
@@ -294,7 +360,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           batch = await tx.batch.create({
             data: {
               companyId,
-              itemId: item.itemId,
+              itemId: targetItemId,
               batchNumber: item.batchNumber,
               expiryDate: item.expiryDate,
               mrp: item.mrp,
@@ -309,10 +375,11 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         await tx.purchaseItem.create({
           data: {
             purchaseId: purchase.id,
-            itemId: item.itemId,
+            itemId: targetItemId,
             batchId: batch.id,
             batchNumber: item.batchNumber,
             expiryDate: item.expiryDate,
+            pack: item.pack || null,
             quantity: item.quantity,
             freeQuantity: item.freeQuantity,
             purchaseRate: item.purchaseRate,
@@ -329,7 +396,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         await tx.stockLedger.create({
           data: {
             companyId,
-            itemId: item.itemId,
+            itemId: targetItemId,
             batchId: batch.id,
             entryType: 'PURCHASE',
             quantity: totalUnitsInward,
