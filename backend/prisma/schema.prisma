@@ -18,8 +18,9 @@ model User {
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
-  userCompanies UserCompany[]
-  refreshTokens RefreshToken[]
+  userCompanies      UserCompany[]
+  refreshTokens      RefreshToken[]
+  stockLedgerEntries StockLedger[]
 
   @@map("users")
 }
@@ -32,6 +33,10 @@ model Company {
   updatedAt DateTime       @updatedAt @map("updated_at")
 
   userCompanies UserCompany[]
+  items         Item[]
+  batches       Batch[]
+  parties       Party[]
+  stockLedger   StockLedger[]
 
   @@map("companies")
 }
@@ -100,4 +105,105 @@ model IdempotencyKey {
   expiresAt    DateTime @map("expires_at")
 
   @@map("idempotency_keys")
+}
+
+// ==========================================
+// PHASE 1: MASTER DATA & INVENTORY SCHEMA
+// ==========================================
+
+// 8. Medicine / Item Catalog
+model Item {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  sku              String
+  name             String
+  genericName      String?  @map("generic_name")
+  manufacturer     String?
+  hsnCode          String   @default("3004") @map("hsn_code")
+  gstRate          Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  unit             String   @default("STRIP") // STRIP, TAB, BOTTLE, VIAL, BOX
+  conversionFactor Int      @default(1) @map("conversion_factor")
+  minStockLevel    Int      @default(0) @map("min_stock_level")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batches     Batch[]
+  stockLedger StockLedger[]
+
+  @@unique([companyId, sku])
+  @@index([companyId, name])
+  @@map("items")
+}
+
+// 9. Batch & Expiry Master
+model Batch {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  itemId       String   @map("item_id")
+  batchNumber  String   @map("batch_number")
+  expiryDate   DateTime @map("expiry_date")
+  mrp          Decimal  @map("mrp") @db.Decimal(10, 2)
+  ptr          Decimal  @map("ptr") @db.Decimal(10, 2) // Price To Retailer (Cost Price)
+  pts          Decimal  @map("pts") @db.Decimal(10, 2) // Price To Stockist (Selling Price)
+  currentStock Int      @default(0) @map("current_stock") // in base units
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item        Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  stockLedger StockLedger[]
+
+  @@unique([companyId, itemId, batchNumber])
+  @@index([companyId, expiryDate])
+  @@map("batches")
+}
+
+// 10. Parties Master (Suppliers & Customers)
+model Party {
+  id                 String    @id @default(uuid())
+  companyId          String    @map("company_id")
+  name               String
+  type               String    // "supplier" | "customer" | "both"
+  phone              String?
+  email              String?
+  address            String?
+  gstin              String?
+  drugLicenseNo      String?   @map("drug_license_no")
+  dlExpiryDate       DateTime? @map("dl_expiry_date")
+  isCash             Boolean   @default(false) @map("is_cash")
+  creditLimit        Decimal   @default(0.0) @map("credit_limit") @db.Decimal(12, 2)
+  outstandingBalance Decimal   @default(0.0) @map("outstanding_balance") @db.Decimal(12, 2)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name, type])
+  @@index([companyId, type])
+  @@map("parties")
+}
+
+// 11. Append-Only Stock Audit Ledger (Rule E)
+model StockLedger {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  itemId      String   @map("item_id")
+  batchId     String   @map("batch_id")
+  entryType   String   @map("entry_type") // OPENING_BALANCE, PURCHASE, SALE, PURCHASE_RETURN, SALE_RETURN, ADJUSTMENT
+  quantity    Int      // Positive for inward, Negative for outward
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  referenceId String?  @map("reference_id")
+  notes       String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([companyId, itemId])
+  @@index([companyId, batchId])
+  @@map("stock_ledger")
 }

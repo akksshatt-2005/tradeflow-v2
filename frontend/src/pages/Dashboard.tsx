@@ -1,37 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth, Company } from '../context/AuthContext';
-import { 
-  Building2, 
-  LayoutDashboard, 
-  Receipt, 
-  Package, 
-  Boxes, 
-  BarChart3, 
-  Users, 
-  ChevronDown, 
-  LogOut, 
-  Plus, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Clock 
+import { api } from '../api/client';
+import Medicines from './Medicines';
+import Batches from './Batches';
+import Parties from './Parties';
+import {
+  Building2,
+  LayoutDashboard,
+  Pill,
+  Layers,
+  Users,
+  AlertTriangle,
+  Package,
+  TrendingUp,
+  Boxes,
+  ChevronDown,
+  LogOut,
+  Plus,
+  ShieldCheck,
+  CheckCircle2,
+  Calendar,
+  ArrowRight
 } from 'lucide-react';
+
+interface InventorySummary {
+  totalMedicines: number;
+  activeBatches: number;
+  totalUnitsInStock: number;
+  stockValueAtCost: number;
+  stockValueAtRetail: number;
+  nearExpiryCount: number;
+  expiredCount: number;
+}
 
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'medicines' | 'batches' | 'parties'>('dashboard');
+  const [summary, setSummary] = useState<InventorySummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'invoices', label: 'Invoices & Sales', icon: Receipt },
-    { id: 'items', label: 'Items & Products', icon: Package },
-    { id: 'stock', label: 'Stock & Batches', icon: Boxes },
-    { id: 'reports', label: 'Trade Reports', icon: BarChart3 },
+    { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+    { id: 'medicines', label: 'Medicine Catalog', icon: Pill },
+    { id: 'batches', label: 'Batches & Expiry', icon: Layers },
+    { id: 'parties', label: 'Suppliers & Clients', icon: Users },
   ];
+
+  useEffect(() => {
+    if (activeCompany) {
+      fetchSummary();
+    }
+  }, [activeCompany?.id]);
+
+  const fetchSummary = async () => {
+    if (!activeCompany) return;
+    try {
+      setLoadingSummary(true);
+      const res = await api.get<InventorySummary>('/api/inventory/summary', {
+        companyId: activeCompany.id
+      });
+      setSummary(res);
+    } catch (err) {
+      console.error('Failed to load inventory summary:', err);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
 
   return (
     <div className="app-layout">
-      
       {/* Left Sidebar (Rule C5) */}
       <aside className="sidebar">
         {/* Brand Header */}
@@ -45,25 +83,25 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Building2 size={18} color="#ffffff" />
+            <Pill size={18} color="#ffffff" />
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', letterSpacing: '-0.01em' }}>
               Trade Flow v2
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-              Multi-Company Billing
+              Pharma B2B & Retail ERP
             </div>
           </div>
         </div>
 
         {/* Current Active Company Indicator */}
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b', backgroundColor: '#090d16' }}>
-          <div style={{ fontSize: '10.5px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em' }}>
             Active Company
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-            <span style={{ fontWeight: 600, fontSize: '13px', color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: 600, fontSize: '13px', color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
               {activeCompany?.name}
             </span>
             <span className={`badge badge-${activeCompany?.role}`} style={{ fontSize: '10px' }}>
@@ -80,7 +118,10 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id as any);
+                  if (item.id === 'dashboard') fetchSummary();
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -133,12 +174,10 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
 
       {/* Main Content Layout */}
       <div className="main-wrapper">
-        
         {/* Top Navbar */}
         <header className="top-navbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            
-            {/* Company Switcher Dropdown (Phase 0 Task 5) */}
+            {/* Company Switcher Dropdown */}
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setSwitcherOpen(!switcherOpen)}
@@ -224,92 +263,169 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Body */}
         <main className="page-content">
-          
-          {/* Phase 0 Foundation Overview Banner */}
-          <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header">
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle2 size={18} color="#16a34a" />
-                <span>Phase 0: Multi-Company Foundation Active</span>
+          {activeTab === 'dashboard' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Top Row Metric Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '16px'
+              }}>
+                <div className="card" style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Total Medicines
+                      </div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                        {loadingSummary ? '...' : summary?.totalMedicines || 0}
+                      </div>
+                    </div>
+                    <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '6px', color: '#0284c7' }}>
+                      <Pill size={20} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('medicines')}
+                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11.5px', fontWeight: 600, padding: 0, marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    View Catalog <ArrowRight size={12} />
+                  </button>
+                </div>
+
+                <div className="card" style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Stock Value (at Cost)
+                      </div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                        ₹{loadingSummary ? '...' : (summary?.stockValueAtCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div style={{ background: '#ecfdf5', padding: '8px', borderRadius: '6px', color: '#10b981' }}>
+                      <Boxes size={20} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '12px' }}>
+                    {summary?.activeBatches || 0} active batches in stock
+                  </div>
+                </div>
+
+                <div className="card" style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Stock Value (at MRP)
+                      </div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                        ₹{loadingSummary ? '...' : (summary?.stockValueAtRetail || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '6px', color: '#d97706' }}>
+                      <TrendingUp size={20} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '12px' }}>
+                    Retail gross valuation
+                  </div>
+                </div>
+
+                <div className="card" style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Near-Expiry Alerts
+                      </div>
+                      <div style={{
+                        fontSize: '24px',
+                        fontWeight: 700,
+                        color: (summary?.nearExpiryCount || 0) > 0 ? 'var(--status-danger)' : 'var(--status-success)',
+                        marginTop: '4px'
+                      }}>
+                        {loadingSummary ? '...' : summary?.nearExpiryCount || 0}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: (summary?.nearExpiryCount || 0) > 0 ? '#fef2f2' : '#f0fdf4',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      color: (summary?.nearExpiryCount || 0) > 0 ? '#ef4444' : '#16a34a'
+                    }}>
+                      <Calendar size={20} />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('batches')}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11.5px', fontWeight: 600, padding: 0, marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    Check Expiry Alerts <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Actions & Navigation */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '16px'
+              }}>
+                <div
+                  onClick={() => setActiveTab('medicines')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#e0f2fe', padding: '10px', borderRadius: '8px', color: '#0284c7' }}>
+                      <Pill size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Medicine Catalog</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Add medicine SKUs, GST & conversion units</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('batches')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', color: '#d97706' }}>
+                      <Layers size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Batches & Expiry Tracker</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Track batch numbers, MRP/PTR & 90-day expiries</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('parties')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#f0fdf4', padding: '10px', borderRadius: '8px', color: '#16a34a' }}>
+                      <Users size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Suppliers & Customers</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage GSTIN, Drug License 20B/21B & contacts</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <p style={{ color: '#475569', fontSize: '13px', lineHeight: 1.5, marginBottom: '16px' }}>
-              Trade Flow v2 has been initialized with database-backed authentication, strict rate limiting, 15-minute access JWTs, and complete company scoping. All incoming operations are isolated to <strong>{activeCompany?.name}</strong>.
-            </p>
+          )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-              <div style={{ padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Active Scope</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{activeCompany?.name}</div>
-              </div>
-
-              <div style={{ padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Your Role</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0284c7', marginTop: '2px' }}>{activeCompany?.role.toUpperCase()}</div>
-              </div>
-
-              <div style={{ padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Token Lifetime</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>15 Min (Auto-Refresh)</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Company Members & Access Table */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title">Authorized Companies ({companies.length})</div>
-              <button onClick={onSwitchCompany} className="btn btn-secondary btn-sm">
-                <Plus size={13} /> Add Company
-              </button>
-            </div>
-
-            <div className="table-responsive">
-              <table className="dense-table">
-                <thead>
-                  <tr>
-                    <th>Company Name</th>
-                    <th>Your Assigned Role</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companies.map((comp) => (
-                    <tr key={comp.id}>
-                      <td style={{ fontWeight: comp.id === activeCompany?.id ? 700 : 500 }}>
-                        {comp.name} {comp.id === activeCompany?.id && '(Current)'}
-                      </td>
-                      <td>
-                        <span className={`badge badge-${comp.role}`}>
-                          {comp.role.toUpperCase()}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge badge-accountant">ACTIVE</span>
-                      </td>
-                      <td>
-                        {comp.id !== activeCompany?.id ? (
-                          <button
-                            onClick={() => selectCompany(comp)}
-                            className="btn btn-secondary btn-sm"
-                          >
-                            Switch to this
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>Active</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
+          {activeTab === 'medicines' && <Medicines />}
+          {activeTab === 'batches' && <Batches />}
+          {activeTab === 'parties' && <Parties />}
         </main>
       </div>
     </div>

@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url';
 import healthRoutes from './routes/health.js';
 import authRoutes from './routes/auth.js';
 import companyRoutes from './routes/companies.js';
+import itemRoutes from './routes/items.js';
+import partyRoutes from './routes/parties.js';
+import inventoryRoutes from './routes/inventory.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,14 +54,20 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Mount Phase 0 Routes (supporting both /api/xxx and /xxx)
+// Mount Routes (supporting both root and /api prefixes)
 app.use('/health', healthRoutes);
 app.use('/auth', authRoutes);
 app.use('/companies', companyRoutes);
+app.use('/items', itemRoutes);
+app.use('/parties', partyRoutes);
+app.use('/inventory', inventoryRoutes);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/parties', partyRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
