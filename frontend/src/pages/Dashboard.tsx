@@ -5,6 +5,7 @@ import Medicines from './Medicines';
 import Batches from './Batches';
 import Parties from './Parties';
 import Purchases from './Purchases';
+import Sales from './Sales';
 import {
   Building2,
   LayoutDashboard,
@@ -22,7 +23,8 @@ import {
   CheckCircle2,
   Calendar,
   ArrowRight,
-  Truck
+  Truck,
+  ShoppingCart
 } from 'lucide-react';
 
 interface InventorySummary {
@@ -38,15 +40,16 @@ interface InventorySummary {
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'medicines' | 'batches' | 'parties' | 'purchases'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+    { id: 'sales', label: 'Sales & POS Terminal', icon: ShoppingCart },
+    { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
     { id: 'medicines', label: 'Medicine Catalog', icon: Pill },
     { id: 'batches', label: 'Batches & Expiry', icon: Layers },
-    { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
     { id: 'parties', label: 'Suppliers & Clients', icon: Users },
   ];
 
@@ -372,9 +375,41 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               {/* Quick Actions & Navigation */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                 gap: '16px'
               }}>
+                <div
+                  onClick={() => setActiveTab('sales')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0', background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.05) 0%, rgba(20, 184, 166, 0.15) 100%)' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#ccfbf1', padding: '10px', borderRadius: '8px', color: '#0f766e' }}>
+                      <ShoppingCart size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f766e' }}>Sales & POS Terminal</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fast GST billing & FEFO batch allocation</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('purchases')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '8px', color: '#1d4ed8' }}>
+                      <Truck size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Purchases & Inward</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter distributor bills & inward batch lots</div>
+                    </div>
+                  </div>
+                </div>
+
                 <div
                   onClick={() => setActiveTab('medicines')}
                   className="card"
@@ -401,24 +436,8 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                       <Layers size={22} />
                     </div>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Batches & Expiry Tracker</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Track batch numbers, MRP/PTR & 90-day expiries</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('purchases')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '8px', color: '#1d4ed8' }}>
-                      <Truck size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Purchases & Inward</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter distributor bills & inward batch lots</div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Batches & Expiry</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Track batch numbers, MRP/PTR & expiries</div>
                     </div>
                   </div>
                 </div>
@@ -442,9 +461,10 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             </div>
           )}
 
+          {activeTab === 'sales' && <Sales />}
+          {activeTab === 'purchases' && <Purchases />}
           {activeTab === 'medicines' && <Medicines />}
           {activeTab === 'batches' && <Batches />}
-          {activeTab === 'purchases' && <Purchases />}
           {activeTab === 'parties' && <Parties />}
         </main>
       </div>

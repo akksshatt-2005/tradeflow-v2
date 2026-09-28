@@ -22,6 +22,7 @@ model User {
   refreshTokens      RefreshToken[]
   stockLedgerEntries StockLedger[]
   createdPurchases   Purchase[]
+  createdInvoices    Invoice[]
 
   @@map("users")
 }
@@ -39,6 +40,7 @@ model Company {
   parties       Party[]
   stockLedger   StockLedger[]
   purchases     Purchase[]
+  invoices      Invoice[]
 
   @@map("companies")
 }
@@ -133,6 +135,7 @@ model Item {
   batches       Batch[]
   stockLedger   StockLedger[]
   purchaseItems PurchaseItem[]
+  invoiceItems  InvoiceItem[]
 
   @@unique([companyId, sku])
   @@index([companyId, name])
@@ -157,6 +160,7 @@ model Batch {
   item          Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
   stockLedger   StockLedger[]
   purchaseItems PurchaseItem[]
+  invoiceItems  InvoiceItem[]
 
   @@unique([companyId, itemId, batchNumber])
   @@index([companyId, expiryDate])
@@ -183,6 +187,7 @@ model Party {
 
   company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   purchases Purchase[]
+  invoices  Invoice[]
 
   @@unique([companyId, name, type])
   @@index([companyId, type])
@@ -278,4 +283,83 @@ model PurchaseItem {
   @@index([itemId])
   @@index([batchId])
   @@map("purchase_items")
+}
+
+// ==========================================
+// PHASE 3: SALES BILLING, POS & GST INVOICING
+// ==========================================
+
+// 14. Sales Invoices
+model Invoice {
+  id              String    @id @default(uuid())
+  companyId       String    @map("company_id")
+  partyId         String?   @map("party_id")
+  invoiceNumber   String    @map("invoice_number")
+  invoiceDate     DateTime  @map("invoice_date")
+  dueDate         DateTime? @map("due_date")
+  customerName    String    @map("customer_name")
+  customerPhone   String?   @map("customer_phone")
+  customerAddress String?   @map("customer_address")
+  customerGstin   String?   @map("customer_gstin")
+  doctorName      String?   @map("doctor_name")
+  patientName     String?   @map("patient_name")
+  paymentMode     String    @default("CASH") @map("payment_mode") // CASH, UPI, CARD, CREDIT, SPLIT
+  subtotal        Decimal   @default(0.0) @map("subtotal") @db.Decimal(12, 2)
+  itemDiscount    Decimal   @default(0.0) @map("item_discount") @db.Decimal(12, 2)
+  billDiscountPct Decimal   @default(0.0) @map("bill_discount_pct") @db.Decimal(5, 2)
+  billDiscountAmt Decimal   @default(0.0) @map("bill_discount_amt") @db.Decimal(12, 2)
+  taxableAmount   Decimal   @default(0.0) @map("taxable_amount") @db.Decimal(12, 2)
+  cgstAmount      Decimal   @default(0.0) @map("cgst_amount") @db.Decimal(12, 2)
+  sgstAmount      Decimal   @default(0.0) @map("sgst_amount") @db.Decimal(12, 2)
+  igstAmount      Decimal   @default(0.0) @map("igst_amount") @db.Decimal(12, 2)
+  totalTax        Decimal   @default(0.0) @map("total_tax") @db.Decimal(12, 2)
+  roundOff        Decimal   @default(0.0) @map("round_off") @db.Decimal(5, 2)
+  grandTotal      Decimal   @default(0.0) @map("grand_total") @db.Decimal(12, 2)
+  paidAmount      Decimal   @default(0.0) @map("paid_amount") @db.Decimal(12, 2)
+  status          String    @default("PAID") // PAID, PARTIAL, UNPAID
+  notes           String?
+  createdBy       String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  company  Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  party    Party?        @relation(fields: [partyId], references: [id], onDelete: SetNull)
+  creator  User          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  items    InvoiceItem[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, invoiceDate])
+  @@index([companyId, status])
+  @@index([companyId, partyId])
+  @@map("invoices")
+}
+
+// 15. Invoice Itemized Rows
+model InvoiceItem {
+  id              String   @id @default(uuid())
+  invoiceId       String   @map("invoice_id")
+  itemId          String   @map("item_id")
+  batchId         String   @map("batch_id")
+  batchNumber     String   @map("batch_number")
+  expiryDate      DateTime @map("expiry_date")
+  quantity        Int
+  freeQuantity    Int      @default(0) @map("free_quantity")
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(10, 2) // MRP or Rate charged
+  mrp             Decimal  @map("mrp") @db.Decimal(10, 2)
+  discountPercent Decimal  @default(0.0) @map("discount_percent") @db.Decimal(5, 2)
+  taxableAmount   Decimal  @map("taxable_amount") @db.Decimal(10, 2)
+  gstRate         Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  cgstAmount      Decimal  @map("cgst_amount") @db.Decimal(10, 2)
+  sgstAmount      Decimal  @map("sgst_amount") @db.Decimal(10, 2)
+  igstAmount      Decimal  @map("igst_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([itemId])
+  @@index([batchId])
+  @@map("invoice_items")
 }

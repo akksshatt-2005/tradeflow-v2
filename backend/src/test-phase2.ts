@@ -159,6 +159,7 @@ async function runTest() {
         'Idempotency-Key': 'test-payment-' + Date.now()
       },
       body: JSON.stringify({
+        paymentAmount: 1000,
         amount: 1000,
         paymentMode: 'UPI',
         referenceNumber: 'UPI-REF-9921',
