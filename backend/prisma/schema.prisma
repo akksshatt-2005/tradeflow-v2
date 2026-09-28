@@ -21,6 +21,7 @@ model User {
   userCompanies      UserCompany[]
   refreshTokens      RefreshToken[]
   stockLedgerEntries StockLedger[]
+  createdPurchases   Purchase[]
 
   @@map("users")
 }
@@ -37,6 +38,7 @@ model Company {
   batches       Batch[]
   parties       Party[]
   stockLedger   StockLedger[]
+  purchases     Purchase[]
 
   @@map("companies")
 }
@@ -127,9 +129,10 @@ model Item {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  batches     Batch[]
-  stockLedger StockLedger[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batches       Batch[]
+  stockLedger   StockLedger[]
+  purchaseItems PurchaseItem[]
 
   @@unique([companyId, sku])
   @@index([companyId, name])
@@ -150,9 +153,10 @@ model Batch {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  item        Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  stockLedger StockLedger[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item          Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  stockLedger   StockLedger[]
+  purchaseItems PurchaseItem[]
 
   @@unique([companyId, itemId, batchNumber])
   @@index([companyId, expiryDate])
@@ -177,7 +181,8 @@ model Party {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
 
   @@unique([companyId, name, type])
   @@index([companyId, type])
@@ -206,4 +211,71 @@ model StockLedger {
   @@index([companyId, itemId])
   @@index([companyId, batchId])
   @@map("stock_ledger")
+}
+
+// ==========================================
+// PHASE 2: PURCHASES & INWARD STOCK SCHEMA
+// ==========================================
+
+// 12. Purchase Inward Bills
+model Purchase {
+  id            String    @id @default(uuid())
+  companyId     String    @map("company_id")
+  supplierId    String    @map("supplier_id")
+  invoiceNumber String    @map("invoice_number")
+  purchaseDate  DateTime  @map("purchase_date")
+  dueDate       DateTime? @map("due_date")
+  paymentMode   String    @default("CREDIT") @map("payment_mode") // CASH, CREDIT, BANK_TRANSFER, CHEQUE, UPI
+  subtotal      Decimal   @default(0.0) @map("subtotal") @db.Decimal(12, 2)
+  totalDiscount Decimal   @default(0.0) @map("total_discount") @db.Decimal(12, 2)
+  taxableAmount Decimal   @default(0.0) @map("taxable_amount") @db.Decimal(12, 2)
+  cgstAmount    Decimal   @default(0.0) @map("cgst_amount") @db.Decimal(12, 2)
+  sgstAmount    Decimal   @default(0.0) @map("sgst_amount") @db.Decimal(12, 2)
+  igstAmount    Decimal   @default(0.0) @map("igst_amount") @db.Decimal(12, 2)
+  roundOff      Decimal   @default(0.0) @map("round_off") @db.Decimal(5, 2)
+  totalAmount   Decimal   @default(0.0) @map("total_amount") @db.Decimal(12, 2)
+  paidAmount    Decimal   @default(0.0) @map("paid_amount") @db.Decimal(12, 2)
+  status        String    @default("UNPAID") // PAID, PARTIAL, UNPAID
+  notes         String?
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Party          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  creator  User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  items    PurchaseItem[]
+
+  @@unique([companyId, supplierId, invoiceNumber])
+  @@index([companyId, purchaseDate])
+  @@index([companyId, status])
+  @@map("purchases")
+}
+
+// 13. Purchase Itemized Rows
+model PurchaseItem {
+  id              String   @id @default(uuid())
+  purchaseId      String   @map("purchase_id")
+  itemId          String   @map("item_id")
+  batchId         String   @map("batch_id")
+  batchNumber     String   @map("batch_number")
+  expiryDate      DateTime @map("expiry_date")
+  quantity        Int
+  freeQuantity    Int      @default(0) @map("free_quantity")
+  purchaseRate    Decimal  @map("purchase_rate") @db.Decimal(10, 2) // PTR
+  mrp             Decimal  @map("mrp") @db.Decimal(10, 2)
+  discountPercent Decimal  @default(0.0) @map("discount_percent") @db.Decimal(5, 2)
+  taxableValue    Decimal  @map("taxable_value") @db.Decimal(10, 2)
+  gstRate         Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  gstAmount       Decimal  @map("gst_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch    Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseId])
+  @@index([itemId])
+  @@index([batchId])
+  @@map("purchase_items")
 }

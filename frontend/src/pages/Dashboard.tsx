@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import Medicines from './Medicines';
 import Batches from './Batches';
 import Parties from './Parties';
+import Purchases from './Purchases';
 import {
   Building2,
   LayoutDashboard,
@@ -20,7 +21,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  Truck
 } from 'lucide-react';
 
 interface InventorySummary {
@@ -36,7 +38,7 @@ interface InventorySummary {
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'medicines' | 'batches' | 'parties'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'medicines' | 'batches' | 'parties' | 'purchases'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
@@ -44,6 +46,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'medicines', label: 'Medicine Catalog', icon: Pill },
     { id: 'batches', label: 'Batches & Expiry', icon: Layers },
+    { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
     { id: 'parties', label: 'Suppliers & Clients', icon: Users },
   ];
 
@@ -405,6 +408,22 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                 </div>
 
                 <div
+                  onClick={() => setActiveTab('purchases')}
+                  className="card"
+                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '8px', color: '#1d4ed8' }}>
+                      <Truck size={22} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Purchases & Inward</h3>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter distributor bills & inward batch lots</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
                   onClick={() => setActiveTab('parties')}
                   className="card"
                   style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
@@ -425,6 +444,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
 
           {activeTab === 'medicines' && <Medicines />}
           {activeTab === 'batches' && <Batches />}
+          {activeTab === 'purchases' && <Purchases />}
           {activeTab === 'parties' && <Parties />}
         </main>
       </div>

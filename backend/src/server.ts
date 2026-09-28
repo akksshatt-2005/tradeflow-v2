@@ -10,6 +10,7 @@ import companyRoutes from './routes/companies.js';
 import itemRoutes from './routes/items.js';
 import partyRoutes from './routes/parties.js';
 import inventoryRoutes from './routes/inventory.js';
+import purchaseRoutes from './routes/purchases.js';
 import prisma from './prisma.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +69,7 @@ app.use('/companies', companyRoutes);
 app.use('/items', itemRoutes);
 app.use('/parties', partyRoutes);
 app.use('/inventory', inventoryRoutes);
+app.use('/purchases', purchaseRoutes);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
@@ -75,6 +77,7 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/parties', partyRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/purchases', purchaseRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
@@ -91,7 +94,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// Phase 1 Database Tables Self-Healing Bootstrap
+// Phase 1 & 2 Database Tables Self-Healing Bootstrap
 async function ensureTables() {
   const statements = [
     `CREATE TABLE IF NOT EXISTS "items" (
@@ -159,7 +162,53 @@ async function ensureTables() {
       "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE INDEX IF NOT EXISTS "stock_ledger_company_id_item_id_idx" ON "stock_ledger"("company_id", "item_id")`,
-    `CREATE INDEX IF NOT EXISTS "stock_ledger_company_id_batch_id_idx" ON "stock_ledger"("company_id", "batch_id")`
+    `CREATE INDEX IF NOT EXISTS "stock_ledger_company_id_batch_id_idx" ON "stock_ledger"("company_id", "batch_id")`,
+    `CREATE TABLE IF NOT EXISTS "purchases" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "company_id" TEXT NOT NULL REFERENCES "companies"("id") ON DELETE CASCADE,
+      "supplier_id" TEXT NOT NULL REFERENCES "parties"("id") ON DELETE CASCADE,
+      "invoice_number" TEXT NOT NULL,
+      "purchase_date" TIMESTAMP(3) NOT NULL,
+      "due_date" TIMESTAMP(3),
+      "payment_mode" TEXT NOT NULL DEFAULT 'CREDIT',
+      "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "total_discount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "taxable_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "cgst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "sgst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "igst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "round_off" DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+      "total_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "paid_amount" DECIMAL(12,2) NOT NULL DEFAULT 0.0,
+      "status" TEXT NOT NULL DEFAULT 'UNPAID',
+      "notes" TEXT,
+      "created_by" TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "purchases_company_id_supplier_id_invoice_number_key" UNIQUE ("company_id", "supplier_id", "invoice_number")
+    )`,
+    `CREATE INDEX IF NOT EXISTS "purchases_company_id_purchase_date_idx" ON "purchases"("company_id", "purchase_date")`,
+    `CREATE INDEX IF NOT EXISTS "purchases_company_id_status_idx" ON "purchases"("company_id", "status")`,
+    `CREATE TABLE IF NOT EXISTS "purchase_items" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "purchase_id" TEXT NOT NULL REFERENCES "purchases"("id") ON DELETE CASCADE,
+      "item_id" TEXT NOT NULL REFERENCES "items"("id") ON DELETE CASCADE,
+      "batch_id" TEXT NOT NULL REFERENCES "batches"("id") ON DELETE CASCADE,
+      "batch_number" TEXT NOT NULL,
+      "expiry_date" TIMESTAMP(3) NOT NULL,
+      "quantity" INTEGER NOT NULL,
+      "free_quantity" INTEGER NOT NULL DEFAULT 0,
+      "purchase_rate" DECIMAL(10,2) NOT NULL,
+      "mrp" DECIMAL(10,2) NOT NULL,
+      "discount_percent" DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+      "taxable_value" DECIMAL(10,2) NOT NULL,
+      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+      "gst_amount" DECIMAL(10,2) NOT NULL,
+      "total_amount" DECIMAL(10,2) NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS "purchase_items_purchase_id_idx" ON "purchase_items"("purchase_id")`,
+    `CREATE INDEX IF NOT EXISTS "purchase_items_item_id_idx" ON "purchase_items"("item_id")`,
+    `CREATE INDEX IF NOT EXISTS "purchase_items_batch_id_idx" ON "purchase_items"("batch_id")`
   ];
 
   for (const sql of statements) {
@@ -169,7 +218,7 @@ async function ensureTables() {
       console.error('SQL statement notice:', err.message);
     }
   }
-  console.log('✅ Phase 1 database tables verified & ready.');
+  console.log('✅ Phase 1 & 2 database tables verified & ready.');
 }
 
 if (process.env.NODE_ENV !== 'test_runner') {
