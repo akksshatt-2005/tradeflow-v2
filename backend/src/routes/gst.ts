@@ -1,11 +1,9 @@
 import { Router, Response } from 'express';
-import { requireAuth } from '../middleware/auth.js';
-import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
+import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import prisma from '../prisma.js';
 
 const router = Router();
 router.use(requireAuth);
-router.use(requireCompany);
 
 // Standard Indian GSTIN Regex
 export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -53,10 +51,10 @@ export const GST_STATE_CODES: Record<string, string> = {
 
 /**
  * POST /api/gst/lookup
- * Intelligent GSTIN verification and autofill proxy
+ * Intelligent GSTIN verification and autofill proxy (Auth required, Company context optional)
  */
-router.post('/lookup', async (req: CompanyScopedRequest, res: Response) => {
-  const companyId = req.company!.id;
+router.post('/lookup', async (req: AuthenticatedRequest, res: Response) => {
+  const companyId = (req.headers['x-company-id'] as string) || (req.headers['company-id'] as string) || undefined;
   const { gstin } = req.body;
 
   if (!gstin || typeof gstin !== 'string') {
@@ -81,7 +79,7 @@ router.post('/lookup', async (req: CompanyScopedRequest, res: Response) => {
     // 1. Check local database cache first (0ms latency, ₹0 cost)
     const existingParty = await prisma.party.findFirst({
       where: {
-        companyId,
+        ...(companyId ? { companyId } : {}),
         gstin: cleanGstin
       }
     });
