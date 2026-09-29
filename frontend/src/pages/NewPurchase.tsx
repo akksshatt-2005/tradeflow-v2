@@ -186,7 +186,7 @@ export default function NewPurchase({
       const res = await api.post('/api/gst/lookup', { gstin: clean }, {
         companyId: activeCompany?.id
       });
-      const d = res.data?.data;
+      const d = (res as any)?.data || res;
       if (d) {
         if (d.legalName || d.tradeName) setNewSupName(d.legalName || d.tradeName);
         if (d.address) setNewSupAddress(d.address);
@@ -198,8 +198,8 @@ export default function NewPurchase({
         if (d.phone) setNewSupMobile(d.phone);
         if (d.dlNumber) setNewSupDrugLicense(d.dlNumber);
 
-        const isLive = res.data?.source === 'GOVERNMENT_GSP_LIVE';
-        const isCache = res.data?.source === 'DATABASE_CACHE';
+        const isLive = (res as any)?.source === 'GOVERNMENT_GSP_LIVE';
+        const isCache = (res as any)?.source === 'DATABASE_CACHE';
         const srcLabel = isLive ? 'Govt GST Portal' : (isCache ? 'Database Records' : 'Smart Decoder');
 
         if (d.status?.toLowerCase() === 'active') {

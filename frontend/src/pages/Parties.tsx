@@ -252,7 +252,7 @@ export default function Parties() {
         companyId: activeCompany?.id
       });
 
-      const d = res.data?.data;
+      const d = (res as any)?.data || res;
       if (d) {
         if (d.legalName) setName(d.legalName);
         if (d.tradeName) setMailTo(d.tradeName);
@@ -268,8 +268,8 @@ export default function Parties() {
         if (d.taxpayerType === 'Composition') setLedgerCategory('COMPOSITE');
         else if (d.taxpayerType === 'Regular') setLedgerCategory('REGISTERED');
 
-        const isLive = res.data?.source === 'GOVERNMENT_GSP_LIVE';
-        const isCache = res.data?.source === 'DATABASE_CACHE';
+        const isLive = (res as any)?.source === 'GOVERNMENT_GSP_LIVE';
+        const isCache = (res as any)?.source === 'DATABASE_CACHE';
         const srcLabel = isLive ? 'Govt GST Portal' : (isCache ? 'Database Records' : 'Smart Decoder');
 
         if (d.status?.toLowerCase() === 'active') {
