@@ -46,7 +46,7 @@ function MainApp() {
     return (
       <div>
         <ServerWakeBanner />
-        <SelectCompany />
+        <SelectCompany onCompanySelected={() => setForceCompanySelection(false)} />
       </div>
     );
   }

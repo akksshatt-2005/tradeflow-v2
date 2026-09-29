@@ -193,4 +193,61 @@ router.put('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
   }
 });
 
+/**
+ * DELETE /companies/:id
+ * Deletes a company and all associated records (Owner only)
+ */
+router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const companyId = req.params.id;
+
+  try {
+    // Check permission - Owner only
+    const userComp = await prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId,
+          companyId
+        }
+      }
+    });
+
+    if (!userComp || userComp.role !== 'owner') {
+      res.status(403).json({ error: 'Only the company owner can delete this company' });
+      return;
+    }
+
+    // Cascade delete in transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Invoices
+      await tx.invoiceItem.deleteMany({ where: { invoice: { companyId } } });
+      await tx.invoice.deleteMany({ where: { companyId } });
+
+      // 2. Purchases
+      await tx.purchaseItem.deleteMany({ where: { purchase: { companyId } } });
+      await tx.purchase.deleteMany({ where: { companyId } });
+
+      // 3. Stock Ledger & Batches
+      await tx.stockLedger.deleteMany({ where: { companyId } });
+      await tx.batch.deleteMany({ where: { companyId } });
+
+      // 4. Items & Parties
+      await tx.item.deleteMany({ where: { companyId } });
+      await tx.party.deleteMany({ where: { companyId } });
+
+      // 5. User Companies & Company
+      await tx.userCompany.deleteMany({ where: { companyId } });
+      await tx.company.delete({ where: { id: companyId } });
+    }, { maxWait: 15000, timeout: 30000 });
+
+    res.json({
+      message: 'Company and all associated records deleted successfully',
+      deletedCompanyId: companyId
+    });
+  } catch (error: any) {
+    console.error('Error deleting company:', error);
+    res.status(500).json({ error: 'Failed to delete company: ' + (error.message || 'Server error') });
+  }
+});
+
 export default router;

@@ -42,6 +42,8 @@ interface AuthContextType {
   signup: (username: string, password: string) => Promise<void>;
   selectCompany: (company: Company) => void;
   createCompany: (payload: string | CreateCompanyPayload) => Promise<Company>;
+  updateCompany: (companyId: string, payload: Partial<CreateCompanyPayload>) => Promise<Company>;
+  deleteCompany: (companyId: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshCompanies: () => Promise<void>;
 }
@@ -191,6 +193,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return newComp;
   };
 
+  const updateCompany = async (companyId: string, payload: Partial<CreateCompanyPayload>): Promise<Company> => {
+    const data = await api.put(`/companies/${companyId}`, payload);
+    const updatedComp: Company = data.company;
+    const updatedList = companies.map(c => c.id === companyId ? { ...c, ...updatedComp } : c);
+    setCompanies(updatedList);
+    if (activeCompany?.id === companyId) {
+      selectCompany(updatedComp);
+    }
+    return updatedComp;
+  };
+
+  const deleteCompany = async (companyId: string): Promise<void> => {
+    await api.delete(`/companies/${companyId}`);
+    const updatedList = companies.filter(c => c.id !== companyId);
+    setCompanies(updatedList);
+    if (activeCompany?.id === companyId) {
+      if (updatedList.length > 0) {
+        selectCompany(updatedList[0]);
+      } else {
+        setActiveCompany(null);
+        if (user) {
+          localStorage.removeItem(getCompanyStorageKey(user.id));
+        }
+      }
+    }
+  };
+
   const refreshCompanies = async () => {
     if (!user) return;
     const data = await api.get('/companies/mine');
@@ -227,6 +256,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         selectCompany,
         createCompany,
+        updateCompany,
+        deleteCompany,
         logout,
         refreshCompanies
       }}
