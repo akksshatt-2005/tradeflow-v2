@@ -84,7 +84,8 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
       const d = (res as any)?.data || res;
 
       if (d) {
-        if (d.legalName || d.tradeName) setName(d.legalName || d.tradeName);
+        const storeDisplayName = (d.tradeName || d.mailTo || d.legalName || '').trim();
+        if (storeDisplayName) setName(storeDisplayName);
         if (d.address) setAddress(d.address);
         if (d.city) setCity(d.city);
         if (d.state) setState(d.state);
@@ -99,7 +100,7 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
         if (d.status?.toLowerCase() === 'active') {
           setGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state}`
+            text: `✅ Verified (${srcLabel}): ${storeDisplayName || 'Active Taxpayer'}${d.legalName && d.legalName !== storeDisplayName ? ` (Legal: ${d.legalName})` : ''} — ${d.state}`
           });
         } else {
           setGstLookupMsg({
@@ -135,7 +136,8 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
       const d = (res as any)?.data || res;
 
       if (d) {
-        if (d.legalName || d.tradeName) setEditName(d.legalName || d.tradeName);
+        const storeDisplayName = (d.tradeName || d.mailTo || d.legalName || '').trim();
+        if (storeDisplayName) setEditName(storeDisplayName);
         if (d.address) setEditAddress(d.address);
         if (d.city) setEditCity(d.city);
         if (d.state) setEditState(d.state);
@@ -150,7 +152,7 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
         if (d.status?.toLowerCase() === 'active') {
           setGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state}`
+            text: `✅ Verified (${srcLabel}): ${storeDisplayName || 'Active Taxpayer'}${d.legalName && d.legalName !== storeDisplayName ? ` (Legal: ${d.legalName})` : ''} — ${d.state}`
           });
         } else {
           setGstLookupMsg({
