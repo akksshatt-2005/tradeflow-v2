@@ -107,30 +107,33 @@ export default function NewPurchase({
   // Active Row Focus for Footer Inspection HUD
   const [activeRowIndex, setActiveRowIndex] = useState<number>(0);
 
-  // Rows State - Initialized with sample pharma format
+  // Helper to create a blank purchase row with no dummy pre-filled values
+  const createEmptyRow = (id: string): PurchaseRow => ({
+    id,
+    itemId: '',
+    medicineName: '',
+    genericName: '',
+    manufacturer: '',
+    oldMrp: '',
+    hsnCode: '',
+    sku: '',
+    pack: '',
+    batchNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    quantity: '',
+    freeQuantity: '',
+    purchaseRate: '',
+    discountPercent: '',
+    gstRate: '',
+    mrp: '',
+    pts: '',
+    isNewCatalog: false
+  });
+
+  // Rows State - Initialized empty without dummy values
   const [rows, setRows] = useState<PurchaseRow[]>([
-    {
-      id: 'row-1',
-      itemId: '',
-      medicineName: '',
-      genericName: '',
-      manufacturer: '',
-      oldMrp: '39.80',
-      hsnCode: '3004',
-      sku: '',
-      pack: '10 TAB',
-      batchNumber: '',
-      expiryMonth: '10',
-      expiryYear: '28',
-      quantity: '20',
-      freeQuantity: '0',
-      purchaseRate: '18.14',
-      discountPercent: '0',
-      gstRate: '5',
-      mrp: '38.10',
-      pts: '35',
-      isNewCatalog: false
-    }
+    createEmptyRow('row-1')
   ]);
 
   // Autocomplete search states
@@ -240,29 +243,7 @@ export default function NewPurchase({
   };
 
   const handleAddRow = () => {
-    const newRow: PurchaseRow = {
-      id: `row-${Date.now()}`,
-      itemId: '',
-      medicineName: '',
-      genericName: '',
-      manufacturer: '',
-      oldMrp: '',
-      hsnCode: '3004',
-      sku: '',
-      pack: '10 TAB',
-      batchNumber: '',
-      expiryMonth: '12',
-      expiryYear: String(new Date().getFullYear() + 2).slice(-2),
-      quantity: '1',
-      freeQuantity: '0',
-      purchaseRate: '0',
-      discountPercent: '0',
-      gstRate: '5',
-      mrp: '',
-      pts: '',
-      isNewCatalog: false
-    };
-    setRows(prev => [...prev, newRow]);
+    setRows(prev => [...prev, createEmptyRow(`row-${Date.now()}`)]);
     setActiveRowIndex(rows.length);
   };
 
@@ -286,6 +267,7 @@ export default function NewPurchase({
     const latestBatch = med.batches && med.batches.length > 0 ? med.batches[0] : null;
     const existingMrp = latestBatch?.mrp ? String(latestBatch.mrp) : '';
     const existingPtr = latestBatch?.ptr ? String(latestBatch.ptr) : '';
+    const existingPts = latestBatch?.pts ? String(latestBatch.pts) : '';
 
     setRows(prev => {
       const updated = [...prev];
@@ -295,13 +277,14 @@ export default function NewPurchase({
         medicineName: med.name,
         genericName: med.genericName || '',
         manufacturer: med.manufacturer || '',
-        oldMrp: existingMrp || updated[index].oldMrp || '',
-        mrp: existingMrp || updated[index].mrp || '',
+        oldMrp: existingMrp, // Auto-suggest previous purchase MRP e.g. 20
+        mrp: existingMrp,    // Pre-populate N/MRP with previous MRP (user can change if revised)
+        purchaseRate: existingPtr, // Auto-suggest previous purchase rate (PTR)
+        pts: existingPts,
         hsnCode: med.hsnCode || '3004',
         sku: med.sku,
         pack: med.conversionFactor > 1 ? `${med.conversionFactor} ${med.unit}` : med.unit,
-        purchaseRate: existingPtr || updated[index].purchaseRate || '',
-        gstRate: String(med.gstRate || 5),
+        gstRate: String(med.gstRate ?? 5),
         isNewCatalog: false
       };
       return updated;
@@ -322,7 +305,10 @@ export default function NewPurchase({
         medicineName: cleanName,
         genericName: '',
         manufacturer: '',
-        oldMrp: updated[index].oldMrp || '',
+        oldMrp: '',
+        mrp: '',
+        purchaseRate: '',
+        pts: '',
         hsnCode: '3004',
         sku: '',
         pack: updated[index].pack || '10 TAB',
@@ -773,8 +759,34 @@ export default function NewPurchase({
                           onChange={e => {
                             const val = e.target.value;
                             setSearchQuery(val);
-                            handleRowChange(idx, 'medicineName', val);
-                            if (!medicines.some(m => m.name.toLowerCase() === val.toLowerCase())) {
+                            const exactMatch = medicines.find(m => m.name.toLowerCase() === val.trim().toLowerCase());
+                            if (exactMatch) {
+                              const latestBatch = exactMatch.batches && exactMatch.batches.length > 0 ? exactMatch.batches[0] : null;
+                              const existingMrp = latestBatch?.mrp ? String(latestBatch.mrp) : '';
+                              const existingPtr = latestBatch?.ptr ? String(latestBatch.ptr) : '';
+                              const existingPts = latestBatch?.pts ? String(latestBatch.pts) : '';
+                              setRows(prev => {
+                                const updated = [...prev];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  itemId: exactMatch.id,
+                                  medicineName: exactMatch.name,
+                                  genericName: exactMatch.genericName || '',
+                                  manufacturer: exactMatch.manufacturer || '',
+                                  oldMrp: existingMrp,
+                                  mrp: existingMrp,
+                                  purchaseRate: existingPtr,
+                                  pts: existingPts,
+                                  hsnCode: exactMatch.hsnCode || '3004',
+                                  sku: exactMatch.sku,
+                                  pack: exactMatch.conversionFactor > 1 ? `${exactMatch.conversionFactor} ${exactMatch.unit}` : exactMatch.unit,
+                                  gstRate: String(exactMatch.gstRate ?? 5),
+                                  isNewCatalog: false
+                                };
+                                return updated;
+                              });
+                            } else {
+                              handleRowChange(idx, 'medicineName', val);
                               handleRowChange(idx, 'isNewCatalog', true);
                               handleRowChange(idx, 'itemId', '');
                             }
@@ -851,23 +863,33 @@ export default function NewPurchase({
                             </div>
                           )}
 
-                          {filteredMedicines.map(med => (
-                            <div
-                              key={med.id}
-                              onClick={() => handleSelectExistingMedicine(idx, med)}
-                              style={{ padding: '0.55rem 0.8rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.8rem' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{med.name}</span>
-                                <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Stock: {med.totalStock ?? 0}</span>
+                          {filteredMedicines.map(med => {
+                            const latestB = med.batches && med.batches.length > 0 ? med.batches[0] : null;
+                            return (
+                              <div
+                                key={med.id}
+                                onClick={() => handleSelectExistingMedicine(idx, med)}
+                                style={{ padding: '0.55rem 0.8rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{med.name}</span>
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    {latestB && latestB.mrp > 0 && (
+                                      <span style={{ fontSize: '0.7rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                        MRP: ₹{latestB.mrp.toFixed(2)} {latestB.ptr ? `• Rate: ₹${latestB.ptr.toFixed(2)}` : ''}
+                                      </span>
+                                    )}
+                                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Stock: {med.totalStock ?? 0}</span>
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                  {med.genericName ? `${med.genericName} • ` : ''}SKU: {med.sku} • GST: {med.gstRate}%
+                                </div>
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                                {med.genericName ? `${med.genericName} • ` : ''}SKU: {med.sku} • GST: {med.gstRate}%
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {filteredMedicines.length === 0 && searchQuery.trim().length === 0 && (
                             <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
