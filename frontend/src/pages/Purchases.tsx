@@ -318,18 +318,18 @@ export default function Purchases() {
         background: 'var(--surface)',
         borderRadius: '8px',
         border: '1px solid var(--border)',
-        overflow: 'hidden'
+        overflowX: 'auto'
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+        <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-              <th style={{ padding: '10px 16px', fontWeight: 600 }}>BILL / INVOICE NO</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600 }}>WHOLESALER / SUPPLIER</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600 }}>PURCHASE DATE</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600 }}>PAYMENT MODE</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600 }}>STATUS</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600, textAlign: 'right' }}>BILL AMOUNT</th>
-              <th style={{ padding: '10px 16px', fontWeight: 600, textAlign: 'center' }}>ACTION</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>BILL / INVOICE NO</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>WHOLESALER / SUPPLIER</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>PURCHASE DATE</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>PAYMENT MODE</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>STATUS</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>BILL AMOUNT</th>
+              <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'center', minWidth: '210px' }}>ACTIONS</th>
             </tr>
           </thead>
           <tbody>
@@ -404,11 +404,12 @@ export default function Purchases() {
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
                         <button
                           onClick={() => handleOpenDetails(p.id)}
                           className="btn btn-secondary btn-sm"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', padding: '4px 8px' }}
+                          title="View Bill details"
                         >
                           <Eye size={13} /> View
                         </button>
@@ -423,11 +424,14 @@ export default function Purchases() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
-                              fontSize: '11px',
+                              fontSize: '11.5px',
+                              fontWeight: '600',
                               background: '#eff6ff',
-                              color: '#2563eb',
-                              border: '1px solid #bfdbfe',
-                              cursor: 'pointer'
+                              color: '#1d4ed8',
+                              border: '1px solid #93c5fd',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              borderRadius: '4px'
                             }}
                             title="Edit purchase bill"
                           >
@@ -442,15 +446,18 @@ export default function Purchases() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
-                              fontSize: '11px',
+                              fontSize: '11.5px',
+                              fontWeight: '600',
                               background: '#fef2f2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca',
-                              cursor: 'pointer'
+                              color: '#dc2626',
+                              border: '1px solid #fca5a5',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              borderRadius: '4px'
                             }}
-                            title="Cancel purchase bill and reverse stock"
+                            title="Delete / Cancel purchase bill"
                           >
-                            <Trash2 size={13} /> Cancel
+                            <Trash2 size={13} /> Delete
                           </button>
                         )}
                       </div>
@@ -653,11 +660,13 @@ export default function Purchases() {
                       alignItems: 'center',
                       gap: '4px',
                       background: '#fef2f2',
-                      color: '#b91c1c',
-                      border: '1px solid #fecaca'
+                      color: '#dc2626',
+                      border: '1px solid #fca5a5',
+                      fontWeight: 600,
+                      cursor: 'pointer'
                     }}
                   >
-                    <Trash2 size={14} /> Cancel Bill
+                    <Trash2 size={14} /> Delete Bill
                   </button>
                 )}
                 <button

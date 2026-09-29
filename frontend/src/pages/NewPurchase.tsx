@@ -557,6 +557,27 @@ export default function NewPurchase({
     }
   };
 
+  const handleDeleteThisBill = async () => {
+    if (!activeCompany || !editingPurchaseId) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete / cancel Purchase Bill #${partyBillNo}?\n\nThis will:\n- Mark the purchase bill as CANCELLED\n- Deduct inward stock from batch inventory\n- Write append-only reversing ledger entries (PURCHASE_RETURN)\n- Revert supplier outstanding balance`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      await api.delete(`/api/purchases/${editingPurchaseId}`, {
+        companyId: activeCompany.id
+      });
+      onCreated();
+    } catch (err: any) {
+      console.error('Failed to cancel purchase:', err);
+      setError(err.message || 'Failed to cancel purchase bill');
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
       {/* Top Header */}
@@ -579,6 +600,30 @@ export default function NewPurchase({
         </div>
 
         <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+          {editingPurchaseId && (
+            <button
+              type="button"
+              onClick={handleDeleteThisBill}
+              disabled={submitting}
+              style={{
+                padding: '0.6rem 1rem',
+                background: '#fef2f2',
+                color: '#dc2626',
+                border: '1px solid #fca5a5',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.85rem'
+              }}
+              title="Cancel / Delete this purchase bill"
+            >
+              <Trash2 size={15} /> Delete Bill
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowAddMedicineModal(true)}
@@ -616,7 +661,7 @@ export default function NewPurchase({
               boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
             }}
           >
-            <Save size={16} /> {submitting ? 'Posting Bill & Cataloging...' : 'Save Inward Bill (F2)'}
+            <Save size={16} /> {submitting ? 'Saving...' : (editingPurchaseId ? 'Update Purchase Bill (F2)' : 'Save Inward Bill (F2)')}
           </button>
         </div>
       </div>
