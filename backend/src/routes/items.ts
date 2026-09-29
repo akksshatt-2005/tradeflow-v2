@@ -449,19 +449,29 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
+    // Check if any audit stock ledger entries exist for this item
+    const ledgerCount = await prisma.stockLedger.count({
+      where: { itemId: id, companyId }
+    });
+
+    if (ledgerCount > 0) {
+      res.status(409).json({
+        error: `Cannot delete "${item.name}" because ${ledgerCount} audit stock ledger records exist for it. Medicine records with transaction history cannot be deleted to preserve audit trails.`
+      });
+      return;
+    }
+
     await prisma.$transaction(async (tx) => {
-      // Remove stock ledger entries for this item
-      await tx.stockLedger.deleteMany({ where: { itemId: id, companyId } });
-      // Remove batches
+      // Remove unused zero-stock batches if any
       await tx.batch.deleteMany({ where: { itemId: id, companyId } });
-      // Remove item
+      // Remove unused item
       await tx.item.delete({ where: { id } });
     });
 
     res.status(200).json({ message: `Medicine "${item.name}" deleted successfully` });
   } catch (error: any) {
     console.error('Error deleting item:', error);
-    res.status(500).json({ error: 'Failed to delete medicine' });
+    res.status(500).json({ error: error.message || 'Failed to delete medicine' });
   }
 });
 

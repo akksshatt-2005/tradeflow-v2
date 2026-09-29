@@ -16,7 +16,8 @@ import {
   X,
   CreditCard,
   Building2,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
 
 interface PurchaseItemDetail {
@@ -53,7 +54,7 @@ interface PurchaseBill {
   roundOff: number;
   totalAmount: number;
   paidAmount: number;
-  status: 'PAID' | 'PARTIAL' | 'UNPAID';
+  status: 'PAID' | 'PARTIAL' | 'UNPAID' | 'CANCELLED';
   notes?: string | null;
   supplier: {
     id: string;
@@ -78,6 +79,7 @@ export default function Purchases() {
 
   // View / Creation State
   const [showNewPurchase, setShowNewPurchase] = useState(false);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -152,7 +154,7 @@ export default function Purchases() {
   const handleDeletePurchase = async (id: string, invoiceNumber: string) => {
     if (!activeCompany) return;
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete purchase bill #${invoiceNumber}?\n\nThis will atomically:\n- Reverse added inventory stock\n- Remove created batch lot numbers\n- Revert supplier outstanding balance`
+      `Are you sure you want to cancel purchase bill #${invoiceNumber}?\n\nThis will atomically:\n- Mark the purchase bill as CANCELLED (preserving the audit trail)\n- Deduct inward stock from batch inventory\n- Write append-only reversing ledger entries (PURCHASE_RETURN)\n- Revert supplier outstanding balance if unpaid`
     );
     if (!confirmDelete) return;
 
@@ -167,8 +169,8 @@ export default function Purchases() {
       }
       await fetchPurchases();
     } catch (err: any) {
-      console.error('Failed to delete purchase:', err);
-      setError(err.message || 'Failed to delete purchase bill');
+      console.error('Failed to cancel purchase:', err);
+      setError(err.message || 'Failed to cancel purchase bill');
     } finally {
       setLoading(false);
     }
@@ -177,9 +179,14 @@ export default function Purchases() {
   if (showNewPurchase) {
     return (
       <NewPurchase
-        onBack={() => setShowNewPurchase(false)}
+        editingPurchaseId={editingPurchaseId}
+        onBack={() => {
+          setShowNewPurchase(false);
+          setEditingPurchaseId(null);
+        }}
         onCreated={() => {
           setShowNewPurchase(false);
+          setEditingPurchaseId(null);
           fetchPurchases();
         }}
       />
@@ -192,8 +199,9 @@ export default function Purchases() {
       p.supplier.name.toLowerCase().includes(s);
   });
 
-  const totalInwardValue = purchases.reduce((sum, p) => sum + p.totalAmount, 0);
-  const totalUnpaidValue = purchases.reduce((sum, p) => sum + (p.totalAmount - p.paidAmount), 0);
+  const activePurchases = purchases.filter(p => p.status !== 'CANCELLED');
+  const totalInwardValue = activePurchases.reduce((sum, p) => sum + p.totalAmount, 0);
+  const totalUnpaidValue = activePurchases.reduce((sum, p) => sum + (p.totalAmount - p.paidAmount), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -381,15 +389,15 @@ export default function Purchases() {
                         borderRadius: '4px',
                         fontSize: '11px',
                         fontWeight: 700,
-                        background: isPaid ? '#f0fdf4' : (isPartial ? '#fef3c7' : '#fef2f2'),
-                        color: isPaid ? '#15803d' : (isPartial ? '#d97706' : '#b91c1c')
+                        background: isPaid ? '#f0fdf4' : (isPartial ? '#fef3c7' : (p.status === 'CANCELLED' ? '#f1f5f9' : '#fef2f2')),
+                        color: isPaid ? '#15803d' : (isPartial ? '#d97706' : (p.status === 'CANCELLED' ? '#64748b' : '#b91c1c'))
                       }}>
                         {p.status}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>
                       ₹{p.totalAmount.toFixed(2)}
-                      {p.status !== 'PAID' && (
+                      {p.status !== 'PAID' && p.status !== 'CANCELLED' && (
                         <div style={{ fontSize: '11px', color: '#b91c1c', fontWeight: 500 }}>
                           Due: ₹{(p.totalAmount - p.paidAmount).toFixed(2)}
                         </div>
@@ -404,23 +412,47 @@ export default function Purchases() {
                         >
                           <Eye size={13} /> View
                         </button>
-                        <button
-                          onClick={() => handleDeletePurchase(p.id, p.invoiceNumber)}
-                          className="btn btn-sm"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '11px',
-                            background: '#fef2f2',
-                            color: '#b91c1c',
-                            border: '1px solid #fecaca',
-                            cursor: 'pointer'
-                          }}
-                          title="Delete purchase bill and reverse stock"
-                        >
-                          <Trash2 size={13} /> Delete
-                        </button>
+                        {p.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => {
+                              setEditingPurchaseId(p.id);
+                              setShowNewPurchase(true);
+                            }}
+                            className="btn btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              cursor: 'pointer'
+                            }}
+                            title="Edit purchase bill"
+                          >
+                            <Edit2 size={13} /> Edit
+                          </button>
+                        )}
+                        {p.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleDeletePurchase(p.id, p.invoiceNumber)}
+                            className="btn btn-sm"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
+                              cursor: 'pointer'
+                            }}
+                            title="Cancel purchase bill and reverse stock"
+                          >
+                            <Trash2 size={13} /> Cancel
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -591,20 +623,43 @@ export default function Purchases() {
               )}
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => handleDeletePurchase(viewingPurchase.id, viewingPurchase.invoiceNumber)}
-                  className="btn btn-sm"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    background: '#fef2f2',
-                    color: '#b91c1c',
-                    border: '1px solid #fecaca'
-                  }}
-                >
-                  <Trash2 size={14} /> Delete Bill
-                </button>
+                {viewingPurchase.status !== 'CANCELLED' && (
+                  <button
+                    onClick={() => {
+                      const id = viewingPurchase.id;
+                      setViewingPurchase(null);
+                      setEditingPurchaseId(id);
+                      setShowNewPurchase(true);
+                    }}
+                    className="btn btn-sm"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe'
+                    }}
+                  >
+                    <Edit2 size={14} /> Edit Bill
+                  </button>
+                )}
+                {viewingPurchase.status !== 'CANCELLED' && (
+                  <button
+                    onClick={() => handleDeletePurchase(viewingPurchase.id, viewingPurchase.invoiceNumber)}
+                    className="btn btn-sm"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#fef2f2',
+                      color: '#b91c1c',
+                      border: '1px solid #fecaca'
+                    }}
+                  >
+                    <Trash2 size={14} /> Cancel Bill
+                  </button>
+                )}
                 <button
                   onClick={() => setViewingPurchase(null)}
                   className="btn btn-secondary btn-sm"

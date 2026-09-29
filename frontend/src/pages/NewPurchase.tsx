@@ -74,7 +74,15 @@ interface PurchaseRow {
   isNewCatalog?: boolean;
 }
 
-export default function NewPurchase({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
+export default function NewPurchase({
+  onBack,
+  onCreated,
+  editingPurchaseId
+}: {
+  onBack: () => void;
+  onCreated: () => void;
+  editingPurchaseId?: string | null;
+}) {
   const { activeCompany } = useAuth();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [medicines, setMedicines] = useState<MedicineItem[]>([]);
@@ -146,7 +154,7 @@ export default function NewPurchase({ onBack, onCreated }: { onBack: () => void;
 
   useEffect(() => {
     fetchInitialData();
-  }, [activeCompany?.id]);
+  }, [activeCompany?.id, editingPurchaseId]);
 
   // Keyboard shortcut listener (F2: Save, F4: Quick Add Med)
   useEffect(() => {
@@ -173,7 +181,51 @@ export default function NewPurchase({ onBack, onCreated }: { onBack: () => void;
       ]);
       setSuppliers(supRes.parties || []);
       setMedicines(medRes.items || []);
-      if (supRes.parties && supRes.parties.length > 0) {
+
+      if (editingPurchaseId) {
+        const pRes = await api.get<{ purchase: any }>(`/api/purchases/${editingPurchaseId}`, {
+          companyId: activeCompany.id
+        });
+        const pur = pRes.purchase;
+        if (pur) {
+          setSelectedSupplierId(pur.supplier?.id || '');
+          setPartyBillNo(pur.invoiceNumber || '');
+          setBillDate(pur.purchaseDate ? pur.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+          setDueDate(pur.dueDate ? pur.dueDate.split('T')[0] : '');
+          setPaymentMode(pur.paymentMode || 'CREDIT');
+          setPaidAmount(String(pur.paidAmount ?? 0));
+          setNotes(pur.notes || '');
+
+          if (pur.items && Array.isArray(pur.items) && pur.items.length > 0) {
+            const mappedRows: PurchaseRow[] = pur.items.map((pi: any, idx: number) => {
+              const expDate = new Date(pi.expiryDate);
+              const mm = isNaN(expDate.getTime()) ? '12' : String(expDate.getMonth() + 1).padStart(2, '0');
+              const yyyy = isNaN(expDate.getTime()) ? String(new Date().getFullYear() + 2) : String(expDate.getFullYear());
+
+              return {
+                id: `row-${idx + 1}`,
+                itemId: pi.item?.id || pi.itemId || '',
+                medicineName: pi.medicineName || pi.item?.name || '',
+                genericName: pi.genericName || pi.item?.genericName || '',
+                sku: pi.sku || pi.item?.sku || '',
+                pack: pi.pack || '10 TAB',
+                batchNumber: pi.batchNumber || '',
+                expiryMonth: mm,
+                expiryYear: yyyy,
+                quantity: String(pi.quantity || 1),
+                freeQuantity: String(pi.freeQuantity || 0),
+                purchaseRate: String(pi.purchaseRate || 0),
+                mrp: String(pi.mrp || 0),
+                pts: String(pi.mrp || 0),
+                discountPercent: String(pi.discountPercent || 0),
+                gstRate: String(pi.gstRate || 12),
+                isNewCatalog: false
+              };
+            });
+            setRows(mappedRows);
+          }
+        }
+      } else if (supRes.parties && supRes.parties.length > 0) {
         setSelectedSupplierId(supRes.parties[0].id);
       }
     } catch (err: any) {
@@ -446,10 +498,17 @@ export default function NewPurchase({ onBack, onCreated }: { onBack: () => void;
         items
       };
 
-      await api.post('/api/purchases', payload, {
-        companyId: activeCompany.id,
-        idempotencyKey: `pur-${Date.now()}`
-      });
+      if (editingPurchaseId) {
+        await api.put(`/api/purchases/${editingPurchaseId}`, payload, {
+          companyId: activeCompany.id,
+          idempotencyKey: `pur-edit-${Date.now()}`
+        });
+      } else {
+        await api.post('/api/purchases', payload, {
+          companyId: activeCompany.id,
+          idempotencyKey: `pur-${Date.now()}`
+        });
+      }
 
       onCreated();
     } catch (err: any) {
@@ -473,7 +532,8 @@ export default function NewPurchase({ onBack, onCreated }: { onBack: () => void;
             ← Back to Purchases List
           </button>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <Truck style={{ color: '#0284c7' }} /> PURCHASE CHALLAN / INWARD BILL ENTRY
+            <Truck style={{ color: '#0284c7' }} />
+            {editingPurchaseId ? `EDIT PURCHASE BILL #${partyBillNo}` : 'PURCHASE CHALLAN / INWARD BILL ENTRY'}
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>
             High-speed distributor bill entry with <strong style={{ color: '#0284c7' }}>Auto-Medicine Cataloging</strong> & automated stock ledger posting

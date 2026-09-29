@@ -84,9 +84,10 @@ interface SaleLineItem {
 interface POSBillingProps {
   onBack: () => void;
   onInvoiceCreated?: () => void;
+  editingInvoiceId?: string | null;
 }
 
-export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps) {
+export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId }: POSBillingProps) {
   const { activeCompany } = useAuth();
 
   // Search & Master Data
@@ -132,7 +133,7 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
 
   useEffect(() => {
     loadMasterData();
-  }, [activeCompany?.id]);
+  }, [activeCompany?.id, editingInvoiceId]);
 
   const loadMasterData = async () => {
     if (!activeCompany) return;
@@ -156,11 +157,66 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
       setCustomers(partiesRes.parties || []);
       setNextInvoiceNo(nextNumRes.invoiceNumber || 'INV-0001');
 
-      // Default to cash customer if available
-      const cashParty = partiesRes.parties?.find((p: CustomerParty) => p.isCash);
-      if (cashParty) {
-        setSelectedCustomer(cashParty);
-        setCustomerName(cashParty.name);
+      if (editingInvoiceId) {
+        const editRes = await api.get<{ invoice: any }>(`/api/invoices/${editingInvoiceId}`, {
+          companyId: activeCompany.id
+        });
+
+        const inv = editRes.invoice;
+        if (inv) {
+          setNextInvoiceNo(inv.invoiceNumber);
+          setInvoiceDate(inv.invoiceDate ? inv.invoiceDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+          setCustomerName(inv.customerName || 'Cash Customer');
+          setCustomerPhone(inv.customerPhone || '');
+          setPatientAddress(inv.patientAddress || inv.customerAddress || '');
+          setCustomerGstin(inv.customerGstin || '');
+          setDoctorName(inv.doctorName || '');
+          setDoctorRegNo(inv.doctorRegNo || '');
+          setPatientName(inv.patientName || '');
+          setPaymentMode((inv.paymentMode as any) || 'CASH');
+          setBillDiscountPct(Number(inv.billDiscountPct) || 0);
+          setPaidAmount(String(inv.paidAmount ?? ''));
+          setNotes(inv.notes || '');
+
+          if (inv.partyId && partiesRes.parties) {
+            const found = partiesRes.parties.find((p: CustomerParty) => p.id === inv.partyId);
+            if (found) setSelectedCustomer(found);
+          }
+
+          if (inv.items && Array.isArray(inv.items)) {
+            const mappedItems: SaleLineItem[] = inv.items.map((i: any) => ({
+              itemId: i.item.id,
+              medicineName: i.item.name,
+              genericName: i.item.genericName,
+              sku: i.item.sku,
+              pack: i.pack || '10 TAB',
+              conversionFactor: 1,
+              batchId: i.batch.id,
+              batchNumber: i.batch.batchNumber,
+              expiryDate: i.batch.expiryDate,
+              currentStock: 999,
+              strips: i.strips || 0,
+              looseQty: i.looseQty || 0,
+              quantity: i.quantity,
+              freeQuantity: i.freeQuantity || 0,
+              unitPrice: Number(i.unitPrice),
+              mrp: Number(i.mrp),
+              discountPercent: Number(i.discountPercent),
+              gstRate: Number(i.gstRate),
+              taxableAmount: Number(i.taxableAmount),
+              gstAmount: Number(i.cgstAmount || 0) + Number(i.sgstAmount || 0) + Number(i.igstAmount || 0),
+              totalAmount: Number(i.totalAmount)
+            }));
+            setInvoiceItems(mappedItems);
+          }
+        }
+      } else {
+        // Default to cash customer if available
+        const cashParty = partiesRes.parties?.find((p: CustomerParty) => p.isCash);
+        if (cashParty) {
+          setSelectedCustomer(cashParty);
+          setCustomerName(cashParty.name);
+        }
       }
     } catch (err: any) {
       console.error('Failed to load POS master data:', err);
@@ -375,12 +431,22 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
         }))
       };
 
-      const res = await api.post<{ invoice: any }>('/api/invoices', payload, {
-        companyId: activeCompany.id,
-        idempotencyKey: `pos-${Date.now()}`
-      });
+      let invoiceId = editingInvoiceId;
 
-      const detailsRes = await api.get<{ invoice: any }>(`/api/invoices/${res.invoice.id}`, {
+      if (editingInvoiceId) {
+        await api.put<{ invoice: any }>(`/api/invoices/${editingInvoiceId}`, payload, {
+          companyId: activeCompany.id,
+          idempotencyKey: `pos-edit-${Date.now()}`
+        });
+      } else {
+        const res = await api.post<{ invoice: any }>('/api/invoices', payload, {
+          companyId: activeCompany.id,
+          idempotencyKey: `pos-${Date.now()}`
+        });
+        invoiceId = res.invoice.id;
+      }
+
+      const detailsRes = await api.get<{ invoice: any }>(`/api/invoices/${invoiceId}`, {
         companyId: activeCompany.id
       });
 
@@ -391,7 +457,7 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
         onInvoiceCreated();
       }
     } catch (err: any) {
-      console.error('Invoice creation error:', err);
+      console.error('Invoice creation/update error:', err);
       setError(err.response?.data?.error || err.message || 'Failed to complete sale transaction');
     } finally {
       setSubmitting(false);
@@ -418,7 +484,8 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
             ← Back to Sales List
           </button>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <ShoppingCart style={{ color: 'var(--brand-teal)' }} /> SALE ENTRY / POS BILLING TERMINAL
+            <ShoppingCart style={{ color: 'var(--brand-teal)' }} />
+            {editingInvoiceId ? `EDIT SALE INVOICE #${nextInvoiceNo}` : 'SALE ENTRY / POS BILLING TERMINAL'}
           </h1>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             Keyboard Shortcuts: <strong>[F1]</strong> Doctor • <strong>[F2]</strong> Patient/Save • <strong>[F3]</strong> Product Search • <strong>[Ctrl+Enter]</strong> Complete & Print
@@ -459,7 +526,7 @@ export default function POSBilling({ onBack, onInvoiceCreated }: POSBillingProps
             }}
           >
             <Receipt size={16} />
-            {submitting ? 'Generating Invoice...' : `Complete Sale (₹${grandTotal.toFixed(0)})`}
+            {submitting ? 'Saving...' : editingInvoiceId ? `Update Invoice (₹${grandTotal.toFixed(0)})` : `Complete Sale (₹${grandTotal.toFixed(0)})`}
           </button>
         </div>
       </div>

@@ -304,7 +304,24 @@ async function ensureTables() {
     `ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "patient_address" TEXT`,
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "pack" TEXT DEFAULT '10 TAB'`,
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "strips" INTEGER DEFAULT 0`,
-    `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "loose_qty" INTEGER DEFAULT 0`
+    `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "loose_qty" INTEGER DEFAULT 0`,
+
+    // Append-Only Immutability Trigger for stock_ledger
+    `CREATE OR REPLACE FUNCTION prevent_stock_ledger_mutation()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        RAISE EXCEPTION 'stock_ledger is an append-only audit ledger: UPDATE and DELETE operations are strictly prohibited.';
+    END;
+    $$ LANGUAGE plpgsql;`,
+
+    `DO $$ BEGIN
+      DROP TRIGGER IF EXISTS trg_stock_ledger_immutable ON "stock_ledger";
+      CREATE TRIGGER trg_stock_ledger_immutable
+      BEFORE UPDATE OR DELETE ON "stock_ledger"
+      FOR EACH ROW EXECUTE FUNCTION prevent_stock_ledger_mutation();
+    EXCEPTION
+      WHEN others THEN null;
+    END $$;`
   ];
 
   for (const sql of statements) {
@@ -314,7 +331,7 @@ async function ensureTables() {
       console.error('SQL statement notice:', err.message);
     }
   }
-  console.log('✅ Phase 1, 2 & 3 database tables verified & ready.');
+  console.log('✅ Phase 1, 2 & 3 database tables and stock_ledger immutability verified & ready.');
 }
 
 if (process.env.NODE_ENV !== 'test_runner') {

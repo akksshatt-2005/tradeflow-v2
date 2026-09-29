@@ -636,6 +636,361 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
 });
 
 /**
+ * PUT /invoices/:id
+ * Edit an existing sales invoice — atomically reverses old stock and ledger effects,
+ * validates and applies new line items and stock deductions, and updates the invoice.
+ */
+router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  const {
+    partyId,
+    customerName,
+    customerPhone,
+    customerAddress,
+    customerGstin,
+    doctorName,
+    doctorRegNo,
+    patientName,
+    patientAddress,
+    invoiceDate,
+    dueDate,
+    paymentMode = 'CASH',
+    paidAmount = 0,
+    billDiscountPct = 0,
+    isInterState = false,
+    roundOff = 0,
+    notes,
+    items
+  } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: 'Invoice must contain at least one line item' });
+    return;
+  }
+
+  try {
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { id, companyId },
+      include: { items: true }
+    });
+
+    if (!existingInvoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    if (existingInvoice.status === 'CANCELLED') {
+      res.status(400).json({ error: 'Cannot edit an invoice that has been cancelled' });
+      return;
+    }
+
+    // Verify Party if supplied
+    let customerParty: any = null;
+    if (partyId) {
+      customerParty = await prisma.party.findFirst({
+        where: { id: partyId, companyId }
+      });
+      if (!customerParty) {
+        res.status(404).json({ error: 'Selected customer party not found' });
+        return;
+      }
+    }
+
+    const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
+      ? customerName.trim()
+      : 'Cash Customer';
+
+    // Calculate totals for new items
+    let subtotal = 0;
+    let totalItemDiscount = 0;
+    let taxableAmount = 0;
+    let totalCgst = 0;
+    let totalSgst = 0;
+    let totalIgst = 0;
+
+    const validatedItems: any[] = [];
+
+    for (const rawItem of items) {
+      if (!rawItem.itemId || !rawItem.batchId) {
+        res.status(400).json({ error: 'Each line item requires medicine item ID and batch ID' });
+        return;
+      }
+
+      const qty = parseInt(rawItem.quantity) || 0;
+      if (qty <= 0) {
+        res.status(400).json({ error: 'Quantity must be greater than 0' });
+        return;
+      }
+
+      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
+      const totalUnitsNeeded = qty + freeQty;
+
+      const batch = await prisma.batch.findFirst({
+        where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
+        include: { item: { select: { name: true } } }
+      });
+
+      if (!batch) {
+        res.status(404).json({ error: 'Batch not found for selected medicine' });
+        return;
+      }
+
+      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
+      const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
+      const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
+      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+
+      const lineGross = qty * unitPrice;
+      const lineDiscount = (lineGross * discountPct) / 100;
+      const lineTaxable = lineGross - lineDiscount;
+
+      let lineCgst = 0;
+      let lineSgst = 0;
+      let lineIgst = 0;
+
+      if (isInterState) {
+        lineIgst = (lineTaxable * gstRate) / 100;
+      } else {
+        lineCgst = (lineTaxable * (gstRate / 2)) / 100;
+        lineSgst = (lineTaxable * (gstRate / 2)) / 100;
+      }
+
+      const lineTotal = lineTaxable + lineCgst + lineSgst + lineIgst;
+
+      subtotal += lineGross;
+      totalItemDiscount += lineDiscount;
+      taxableAmount += lineTaxable;
+      totalCgst += lineCgst;
+      totalSgst += lineSgst;
+      totalIgst += lineIgst;
+
+      validatedItems.push({
+        itemId: batch.itemId,
+        batchId: batch.id,
+        batchNumber: batch.batchNumber,
+        expiryDate: batch.expiryDate,
+        pack: rawItem.pack || '10 TAB',
+        strips: parseInt(rawItem.strips) || 0,
+        looseQty: parseInt(rawItem.looseQty) || 0,
+        quantity: qty,
+        freeQuantity: freeQty,
+        totalUnitsNeeded,
+        unitPrice,
+        mrp,
+        discountPercent: discountPct,
+        taxableAmount: Math.round(lineTaxable * 100) / 100,
+        gstRate,
+        cgstAmount: Math.round(lineCgst * 100) / 100,
+        sgstAmount: Math.round(lineSgst * 100) / 100,
+        igstAmount: Math.round(lineIgst * 100) / 100,
+        totalAmount: Math.round(lineTotal * 100) / 100
+      });
+    }
+
+    const numBillDiscountPct = Math.max(0, Math.min(100, parseFloat(billDiscountPct) || 0));
+    const billDiscountAmt = (taxableAmount * numBillDiscountPct) / 100;
+    const finalTaxable = Math.max(0, taxableAmount - billDiscountAmt);
+
+    if (numBillDiscountPct > 0) {
+      if (isInterState) {
+        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 12)) / 100;
+        totalCgst = 0;
+        totalSgst = 0;
+      } else {
+        const halfRate = (validatedItems[0]?.gstRate || 12) / 2;
+        totalCgst = (finalTaxable * halfRate) / 100;
+        totalSgst = (finalTaxable * halfRate) / 100;
+        totalIgst = 0;
+      }
+    }
+
+    const totalTax = totalCgst + totalSgst + totalIgst;
+    const numRoundOff = parseFloat(roundOff) || 0;
+    const computedGrandTotal = Math.round((finalTaxable + totalTax + numRoundOff) * 100) / 100;
+
+    const numPaid = Math.max(0, parseFloat(paidAmount) || (paymentMode === 'CASH' || paymentMode === 'UPI' || paymentMode === 'CARD' ? computedGrandTotal : 0));
+    const finalPaid = Math.min(numPaid, computedGrandTotal);
+    const balanceAmount = Math.max(0, computedGrandTotal - finalPaid);
+
+    let status = 'PAID';
+    if (balanceAmount > 0) {
+      status = finalPaid > 0 ? 'PARTIAL' : 'UNPAID';
+    }
+
+    const parsedInvoiceDate = new Date(invoiceDate || existingInvoice.invoiceDate);
+    const parsedDueDate = dueDate ? new Date(dueDate) : null;
+
+    // Execute atomic update with append-only reversing and fresh entries
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      // 1. REVERSE OLD ITEMS STOCK & WRITE COMPENSATING REVERSAL ENTRIES
+      for (const oldItem of existingInvoice.items) {
+        const oldUnits = oldItem.quantity + (oldItem.freeQuantity || 0);
+
+        // Increment batch stock back
+        await tx.batch.update({
+          where: { id: oldItem.batchId },
+          data: { currentStock: { increment: oldUnits } }
+        });
+
+        // Write append-only compensating reversal
+        await tx.stockLedger.create({
+          data: {
+            companyId,
+            itemId: oldItem.itemId,
+            batchId: oldItem.batchId,
+            entryType: 'SALE_RETURN',
+            quantity: oldUnits,
+            unitPrice: oldItem.unitPrice,
+            referenceId: existingInvoice.id,
+            notes: `Reversal for Edited Sales Invoice #${existingInvoice.invoiceNumber} (+${oldUnits} units restored)`,
+            createdBy: userId
+          }
+        });
+      }
+
+      // Revert old customer party outstanding balance if previous invoice had unpaid balance
+      if (existingInvoice.partyId) {
+        const oldTotal = Number(existingInvoice.grandTotal);
+        const oldPaid = Number(existingInvoice.paidAmount);
+        const oldUnpaid = Math.max(0, oldTotal - oldPaid);
+        if (oldUnpaid > 0) {
+          await tx.party.update({
+            where: { id: existingInvoice.partyId },
+            data: { outstandingBalance: { decrement: oldUnpaid } }
+          });
+        }
+      }
+
+      // 2. DEDUCT NEW ITEMS STOCK & WRITE NEW SALE ENTRIES
+      for (const item of validatedItems) {
+        // Fetch current batch stock (post reversal)
+        const batch = await tx.batch.findUnique({ where: { id: item.batchId } });
+        if (!batch || batch.currentStock < item.totalUnitsNeeded) {
+          throw new Error(`Insufficient stock for batch "${item.batchNumber}". Available: ${batch?.currentStock || 0}, Requested: ${item.totalUnitsNeeded}`);
+        }
+
+        // Deduct new stock
+        await tx.batch.update({
+          where: { id: item.batchId },
+          data: { currentStock: { decrement: item.totalUnitsNeeded } }
+        });
+
+        // Write append-only new SALE ledger entry
+        await tx.stockLedger.create({
+          data: {
+            companyId,
+            itemId: item.itemId,
+            batchId: item.batchId,
+            entryType: 'SALE',
+            quantity: -item.totalUnitsNeeded,
+            unitPrice: item.unitPrice,
+            referenceId: existingInvoice.id,
+            notes: `Sale Invoice #${existingInvoice.invoiceNumber} [REVISED] (${item.totalUnitsNeeded} units)`,
+            createdBy: userId
+          }
+        });
+      }
+
+      // 3. REPLACE INVOICE ITEMS
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+
+      for (const item of validatedItems) {
+        await tx.invoiceItem.create({
+          data: {
+            invoiceId: id,
+            itemId: item.itemId,
+            batchId: item.batchId,
+            pack: item.pack,
+            strips: item.strips,
+            looseQty: item.looseQty,
+            batchNumber: item.batchNumber,
+            expiryDate: item.expiryDate,
+            quantity: item.quantity,
+            freeQuantity: item.freeQuantity,
+            unitPrice: item.unitPrice,
+            mrp: item.mrp,
+            discountPercent: item.discountPercent,
+            taxableAmount: item.taxableAmount,
+            gstRate: item.gstRate,
+            cgstAmount: item.cgstAmount,
+            sgstAmount: item.sgstAmount,
+            igstAmount: item.igstAmount,
+            totalAmount: item.totalAmount
+          }
+        });
+      }
+
+      // 4. UPDATE INVOICE HEADER
+      const revisionNote = `[REVISED on ${new Date().toISOString()}]`;
+      const finalNotes = notes ? `${notes} ${revisionNote}` : (existingInvoice.notes ? `${existingInvoice.notes} ${revisionNote}` : revisionNote);
+
+      const invoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          partyId: customerParty ? customerParty.id : null,
+          invoiceDate: parsedInvoiceDate,
+          dueDate: parsedDueDate,
+          customerName: customerParty ? customerParty.name : cleanCustomerName,
+          customerPhone: customerPhone || (customerParty ? customerParty.phone : null),
+          customerAddress: customerAddress || (customerParty ? customerParty.address : null),
+          customerGstin: customerGstin || (customerParty ? customerParty.gstin : null),
+          doctorName: doctorName ? String(doctorName).trim() : null,
+          doctorRegNo: doctorRegNo ? String(doctorRegNo).trim() : null,
+          patientName: patientName ? String(patientName).trim() : null,
+          patientAddress: patientAddress ? String(patientAddress).trim() : null,
+          paymentMode,
+          subtotal: Math.round(subtotal * 100) / 100,
+          itemDiscount: Math.round(totalItemDiscount * 100) / 100,
+          billDiscountPct: numBillDiscountPct,
+          billDiscountAmt: Math.round(billDiscountAmt * 100) / 100,
+          taxableAmount: Math.round(finalTaxable * 100) / 100,
+          cgstAmount: Math.round(totalCgst * 100) / 100,
+          sgstAmount: Math.round(totalSgst * 100) / 100,
+          igstAmount: Math.round(totalIgst * 100) / 100,
+          totalTax: Math.round(totalTax * 100) / 100,
+          roundOff: numRoundOff,
+          grandTotal: computedGrandTotal,
+          paidAmount: finalPaid,
+          status,
+          notes: finalNotes
+        }
+      });
+
+      // 5. UPDATE NEW CUSTOMER OUTSTANDING BALANCE
+      if (customerParty && balanceAmount > 0) {
+        await tx.party.update({
+          where: { id: customerParty.id },
+          data: { outstandingBalance: { increment: balanceAmount } }
+        });
+      }
+
+      return invoice;
+    });
+
+    const resPaid = Number(updatedInvoice.paidAmount);
+    const resTotal = Number(updatedInvoice.grandTotal);
+
+    res.status(200).json({
+      invoice: {
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoiceNumber,
+        grandTotal: resTotal,
+        paidAmount: resPaid,
+        balanceAmount: Math.max(0, resTotal - resPaid),
+        status: updatedInvoice.status,
+        invoiceDate: updatedInvoice.invoiceDate.toISOString()
+      },
+      message: 'Sales invoice updated and stock adjusted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error updating sales invoice:', error);
+    res.status(500).json({ error: error.message || 'Failed to update sales invoice' });
+  }
+});
+
+/**
  * POST /invoices/:id/payment
  * Record customer settlement payment against a credit invoice
  */
@@ -712,11 +1067,13 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
 });
 
 /**
- * DELETE /invoices/:id
- * Delete a sale invoice — reverses stock deductions, removes stock-ledger entries, and adjusts customer balance
+ * DELETE /invoices/:id (and POST /invoices/:id/cancel)
+ * Cancels a sales invoice — marks status CANCELLED, writes append-only reversing stock ledger entries,
+ * restores batch stock, and adjusts customer balance without deleting historical rows.
  */
 router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
+  const userId = req.user!.userId;
   const { id } = req.params;
 
   try {
@@ -732,35 +1089,54 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
+    if (invoice.status === 'CANCELLED') {
+      res.status(400).json({ error: `Invoice "${invoice.invoiceNumber}" is already cancelled` });
+      return;
+    }
+
     await prisma.$transaction(async (tx) => {
-      // 1. Reverse stock deductions for each item
+      // 1. Mark the invoice as CANCELLED (never delete historical invoice or invoice_items)
+      await tx.invoice.update({
+        where: { id },
+        data: {
+          status: 'CANCELLED',
+          notes: invoice.notes ? `${invoice.notes} | [CANCELLED on ${new Date().toISOString()}]` : `[CANCELLED on ${new Date().toISOString()}]`
+        }
+      });
+
+      // 2. Reverse stock deductions for each item using append-only reversing entries
       for (const invItem of invoice.items) {
+        const returnedUnits = invItem.quantity + (invItem.freeQuantity || 0);
+
         // Add stock back to batch
         await tx.batch.update({
           where: { id: invItem.batchId },
           data: {
-            currentStock: { increment: invItem.quantity }
+            currentStock: { increment: returnedUnits }
           }
         });
 
-        // Remove stock ledger entries for this sale
-        await tx.stockLedger.deleteMany({
-          where: {
+        // Write append-only compensating reversal in stock_ledger (NEVER delete historical rows)
+        await tx.stockLedger.create({
+          data: {
             companyId,
+            itemId: invItem.itemId,
+            batchId: invItem.batchId,
+            entryType: 'SALE_RETURN',
+            quantity: returnedUnits, // Positive restores stock
+            unitPrice: invItem.unitPrice,
             referenceId: invoice.id,
-            itemId: invItem.itemId
+            notes: `Reversal for Cancelled Sales Invoice #${invoice.invoiceNumber} (+${returnedUnits} units restored)`,
+            createdBy: userId
           }
         });
       }
 
-      // 2. Remove invoice items
-      await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
-
-      // 3. Adjust customer outstanding balance (if there was unpaid amount)
+      // 3. Adjust customer outstanding balance if there was unpaid balance
       if (invoice.partyId) {
         const totalAmount = Number(invoice.grandTotal);
         const paidAmount = Number(invoice.paidAmount);
-        const unpaidAmount = totalAmount - paidAmount;
+        const unpaidAmount = Math.max(0, totalAmount - paidAmount);
         if (unpaidAmount > 0) {
           await tx.party.update({
             where: { id: invoice.partyId },
@@ -770,15 +1146,98 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
           });
         }
       }
-
-      // 4. Delete the invoice
-      await tx.invoice.delete({ where: { id } });
     });
 
-    res.status(200).json({ message: `Invoice "${invoice.invoiceNumber}" deleted and stock restored successfully` });
+    res.status(200).json({
+      message: `Invoice "${invoice.invoiceNumber}" cancelled and stock restored via append-only reversing ledger entries`,
+      status: 'CANCELLED'
+    });
   } catch (error: any) {
-    console.error('Error deleting invoice:', error);
-    res.status(500).json({ error: error.message || 'Failed to delete invoice' });
+    console.error('Error cancelling invoice:', error);
+    res.status(500).json({ error: error.message || 'Failed to cancel invoice' });
+  }
+});
+
+router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
+  // Alias for cancellation
+  const companyId = req.company!.id;
+  const userId = req.user!.userId;
+  const { id } = req.params;
+
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id, companyId },
+      include: {
+        items: true
+      }
+    });
+
+    if (!invoice) {
+      res.status(404).json({ error: 'Invoice not found' });
+      return;
+    }
+
+    if (invoice.status === 'CANCELLED') {
+      res.status(400).json({ error: `Invoice "${invoice.invoiceNumber}" is already cancelled` });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.invoice.update({
+        where: { id },
+        data: {
+          status: 'CANCELLED',
+          notes: invoice.notes ? `${invoice.notes} | [CANCELLED on ${new Date().toISOString()}]` : `[CANCELLED on ${new Date().toISOString()}]`
+        }
+      });
+
+      for (const invItem of invoice.items) {
+        const returnedUnits = invItem.quantity + (invItem.freeQuantity || 0);
+
+        await tx.batch.update({
+          where: { id: invItem.batchId },
+          data: {
+            currentStock: { increment: returnedUnits }
+          }
+        });
+
+        await tx.stockLedger.create({
+          data: {
+            companyId,
+            itemId: invItem.itemId,
+            batchId: invItem.batchId,
+            entryType: 'SALE_RETURN',
+            quantity: returnedUnits,
+            unitPrice: invItem.unitPrice,
+            referenceId: invoice.id,
+            notes: `Reversal for Cancelled Sales Invoice #${invoice.invoiceNumber} (+${returnedUnits} units restored)`,
+            createdBy: userId
+          }
+        });
+      }
+
+      if (invoice.partyId) {
+        const totalAmount = Number(invoice.grandTotal);
+        const paidAmount = Number(invoice.paidAmount);
+        const unpaidAmount = Math.max(0, totalAmount - paidAmount);
+        if (unpaidAmount > 0) {
+          await tx.party.update({
+            where: { id: invoice.partyId },
+            data: {
+              outstandingBalance: { decrement: unpaidAmount }
+            }
+          });
+        }
+      }
+    });
+
+    res.status(200).json({
+      message: `Invoice "${invoice.invoiceNumber}" cancelled and stock restored via append-only reversing ledger entries`,
+      status: 'CANCELLED'
+    });
+  } catch (error: any) {
+    console.error('Error cancelling invoice:', error);
+    res.status(500).json({ error: error.message || 'Failed to cancel invoice' });
   }
 });
 

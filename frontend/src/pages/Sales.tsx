@@ -18,7 +18,8 @@ import {
   Printer,
   User,
   Filter,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -36,7 +37,7 @@ interface InvoiceListItem {
   grandTotal: number;
   paidAmount: number;
   balanceAmount: number;
-  status: 'PAID' | 'PARTIAL' | 'UNPAID';
+  status: 'PAID' | 'PARTIAL' | 'UNPAID' | 'CANCELLED';
   notes?: string | null;
   party?: {
     id: string;
@@ -53,12 +54,13 @@ export default function Sales() {
   const { activeCompany } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'PARTIAL' | 'UNPAID'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'PARTIAL' | 'UNPAID' | 'CANCELLED'>('ALL');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // View / Creation State
   const [showPOS, setShowPOS] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
@@ -150,7 +152,7 @@ export default function Sales() {
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string) => {
     if (!activeCompany) return;
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Return items and quantity back to batch stock\n- Reverse stock ledger deduction entries\n- Adjust customer outstanding balance if unpaid`
+      `Are you sure you want to cancel sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Mark the invoice status as CANCELLED (preserving the audit trail)\n- Return items and quantity back to batch stock\n- Write append-only reversing ledger entries (SALE_RETURN)\n- Adjust customer outstanding balance if unpaid`
     );
     if (!confirmDelete) return;
 
@@ -165,8 +167,8 @@ export default function Sales() {
       }
       await fetchInvoices();
     } catch (err: any) {
-      console.error('Failed to delete invoice:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to delete invoice');
+      console.error('Failed to cancel invoice:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to cancel invoice');
     } finally {
       setLoading(false);
     }
@@ -175,11 +177,14 @@ export default function Sales() {
   if (showPOS) {
     return (
       <POSBilling
+        editingInvoiceId={editingInvoiceId}
         onBack={() => {
           setShowPOS(false);
+          setEditingInvoiceId(null);
           fetchInvoices();
         }}
         onInvoiceCreated={() => {
+          setEditingInvoiceId(null);
           fetchInvoices();
         }}
       />
@@ -193,9 +198,10 @@ export default function Sales() {
     (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalSalesVal = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-  const totalReceivedVal = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-  const totalReceivableVal = invoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
+  const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
+  const totalSalesVal = activeInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+  const totalReceivedVal = activeInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+  const totalReceivableVal = activeInvoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
 
   return (
     <div className="sales-container" style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
@@ -399,8 +405,20 @@ export default function Sales() {
                         borderRadius: '999px',
                         fontSize: '0.75rem',
                         fontWeight: '700',
-                        background: inv.status === 'PAID' ? 'rgba(34, 197, 94, 0.15)' : inv.status === 'PARTIAL' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                        color: inv.status === 'PAID' ? 'var(--accent-green)' : inv.status === 'PARTIAL' ? 'var(--accent-yellow)' : 'var(--accent-red)'
+                        background: inv.status === 'PAID'
+                          ? 'rgba(34, 197, 94, 0.15)'
+                          : inv.status === 'PARTIAL'
+                          ? 'rgba(234, 179, 8, 0.15)'
+                          : inv.status === 'CANCELLED'
+                          ? 'rgba(148, 163, 184, 0.2)'
+                          : 'rgba(239, 68, 68, 0.15)',
+                        color: inv.status === 'PAID'
+                          ? 'var(--accent-green)'
+                          : inv.status === 'PARTIAL'
+                          ? 'var(--accent-yellow)'
+                          : inv.status === 'CANCELLED'
+                          ? 'var(--text-muted)'
+                          : 'var(--accent-red)'
                       }}>
                         {inv.status}
                       </span>
@@ -424,7 +442,31 @@ export default function Sales() {
                         >
                           <Eye size={14} /> View
                         </button>
-                        {inv.balanceAmount > 0 && (
+                        {inv.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => {
+                              setEditingInvoiceId(inv.id);
+                              setShowPOS(true);
+                            }}
+                            style={{
+                              padding: '0.4rem 0.6rem',
+                              background: 'rgba(59, 130, 246, 0.12)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: '6px',
+                              color: '#2563eb',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              fontSize: '0.8rem',
+                              fontWeight: '600'
+                            }}
+                            title="Edit this invoice"
+                          >
+                            <Edit2 size={14} /> Edit
+                          </button>
+                        )}
+                        {inv.status !== 'CANCELLED' && inv.balanceAmount > 0 && (
                           <button
                             onClick={() => handleOpenPayment(inv)}
                             style={{
@@ -444,25 +486,27 @@ export default function Sales() {
                             <CreditCard size={14} /> Settle
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
-                          style={{
-                            padding: '0.4rem 0.6rem',
-                            background: 'rgba(239, 68, 68, 0.12)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            borderRadius: '6px',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontSize: '0.8rem',
-                            fontWeight: '600'
-                          }}
-                          title="Delete invoice and restore stock"
-                        >
-                          <Trash2 size={14} /> Delete
-                        </button>
+                        {inv.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                            style={{
+                              padding: '0.4rem 0.6rem',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              borderRadius: '6px',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              fontSize: '0.8rem',
+                              fontWeight: '600'
+                            }}
+                            title="Cancel invoice and reverse stock"
+                          >
+                            <Trash2 size={14} /> Cancel
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -509,25 +553,53 @@ export default function Sales() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => handleDeleteInvoice(viewingInvoice.id, viewingInvoice.invoiceNumber)}
-                  style={{
-                    padding: '0.5rem 0.9rem',
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    color: '#ef4444',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    fontSize: '0.85rem',
-                    fontWeight: '600'
-                  }}
-                  title="Delete invoice"
-                >
-                  <Trash2 size={15} /> Delete
-                </button>
+                {viewingInvoice.status !== 'CANCELLED' && (
+                  <button
+                    onClick={() => {
+                      const id = viewingInvoice.id;
+                      setViewingInvoice(null);
+                      setEditingInvoiceId(id);
+                      setShowPOS(true);
+                    }}
+                    style={{
+                      padding: '0.5rem 0.9rem',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      color: '#2563eb',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}
+                    title="Edit invoice"
+                  >
+                    <Edit2 size={15} /> Edit
+                  </button>
+                )}
+                {viewingInvoice.status !== 'CANCELLED' && (
+                  <button
+                    onClick={() => handleDeleteInvoice(viewingInvoice.id, viewingInvoice.invoiceNumber)}
+                    style={{
+                      padding: '0.5rem 0.9rem',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}
+                    title="Cancel invoice"
+                  >
+                    <Trash2 size={15} /> Cancel
+                  </button>
+                )}
                 <button
                   onClick={handlePrint}
                   style={{
