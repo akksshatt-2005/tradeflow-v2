@@ -166,7 +166,7 @@ router.post('/lookup', async (req: CompanyScopedRequest, res: Response) => {
 
             if (searchRes.ok) {
               const resJson = await searchRes.json() as any;
-              gstPayload = resJson.data || resJson;
+              gstPayload = resJson.data?.data || resJson.data || resJson;
             } else {
               console.warn(`[GST Lookup] Primary search endpoint returned ${searchRes.status}. Trying fallback GET endpoint...`);
               // Try Fallback GET Endpoint
