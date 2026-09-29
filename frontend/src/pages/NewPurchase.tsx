@@ -58,19 +58,20 @@ interface PurchaseRow {
   medicineName: string;
   genericName?: string;
   manufacturer?: string;
-  hsnCode?: string;
-  sku: string;
-  pack: string;
-  batchNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  quantity: string;
-  freeQuantity: string;
-  purchaseRate: string; // P.RATE/S (PTR)
-  mrp: string;
-  pts: string; // SRate (Selling Rate)
-  discountPercent: string; // DIS1%
-  gstRate: string;
+  oldMrp: string; // O/MRP
+  hsnCode: string; // HSN
+  batchNumber: string; // Batch
+  expiryMonth: string; // Exp. MM
+  expiryYear: string; // Exp. YY
+  quantity: string; // Qty.
+  freeQuantity: string; // Free
+  purchaseRate: string; // Rate (PTR)
+  discountPercent: string; // Disc%
+  gstRate: string; // GST%
+  mrp: string; // N/MRP
+  pts?: string;
+  pack?: string;
+  sku?: string;
   isNewCatalog?: boolean;
 }
 
@@ -106,7 +107,7 @@ export default function NewPurchase({
   // Active Row Focus for Footer Inspection HUD
   const [activeRowIndex, setActiveRowIndex] = useState<number>(0);
 
-  // Rows State
+  // Rows State - Initialized with sample pharma format
   const [rows, setRows] = useState<PurchaseRow[]>([
     {
       id: 'row-1',
@@ -114,19 +115,20 @@ export default function NewPurchase({
       medicineName: '',
       genericName: '',
       manufacturer: '',
+      oldMrp: '39.80',
       hsnCode: '3004',
       sku: '',
       pack: '10 TAB',
       batchNumber: '',
-      expiryMonth: '12',
-      expiryYear: String(new Date().getFullYear() + 2),
-      quantity: '10',
+      expiryMonth: '10',
+      expiryYear: '28',
+      quantity: '20',
       freeQuantity: '0',
-      purchaseRate: '100',
-      mrp: '140',
-      pts: '120',
+      purchaseRate: '18.14',
       discountPercent: '0',
-      gstRate: '12',
+      gstRate: '5',
+      mrp: '38.10',
+      pts: '35',
       isNewCatalog: false
     }
   ]);
@@ -200,7 +202,7 @@ export default function NewPurchase({
             const mappedRows: PurchaseRow[] = pur.items.map((pi: any, idx: number) => {
               const expDate = new Date(pi.expiryDate);
               const mm = isNaN(expDate.getTime()) ? '12' : String(expDate.getMonth() + 1).padStart(2, '0');
-              const yyyy = isNaN(expDate.getTime()) ? String(new Date().getFullYear() + 2) : String(expDate.getFullYear());
+              const yyyy = isNaN(expDate.getTime()) ? String(new Date().getFullYear() + 2).slice(-2) : String(expDate.getFullYear()).slice(-2);
 
               return {
                 id: `row-${idx + 1}`,
@@ -209,16 +211,18 @@ export default function NewPurchase({
                 genericName: pi.genericName || pi.item?.genericName || '',
                 sku: pi.sku || pi.item?.sku || '',
                 pack: pi.pack || '10 TAB',
+                oldMrp: String(pi.mrp || 0),
+                hsnCode: pi.hsnCode || pi.item?.hsnCode || '3004',
                 batchNumber: pi.batchNumber || '',
                 expiryMonth: mm,
                 expiryYear: yyyy,
                 quantity: String(pi.quantity || 1),
                 freeQuantity: String(pi.freeQuantity || 0),
                 purchaseRate: String(pi.purchaseRate || 0),
+                discountPercent: String(pi.discountPercent || 0),
+                gstRate: String(pi.gstRate || 5),
                 mrp: String(pi.mrp || 0),
                 pts: String(pi.mrp || 0),
-                discountPercent: String(pi.discountPercent || 0),
-                gstRate: String(pi.gstRate || 12),
                 isNewCatalog: false
               };
             });
@@ -242,19 +246,20 @@ export default function NewPurchase({
       medicineName: '',
       genericName: '',
       manufacturer: '',
+      oldMrp: '',
       hsnCode: '3004',
       sku: '',
       pack: '10 TAB',
       batchNumber: '',
       expiryMonth: '12',
-      expiryYear: String(new Date().getFullYear() + 2),
-      quantity: '10',
+      expiryYear: String(new Date().getFullYear() + 2).slice(-2),
+      quantity: '1',
       freeQuantity: '0',
-      purchaseRate: '100',
-      mrp: '140',
-      pts: '120',
+      purchaseRate: '0',
       discountPercent: '0',
-      gstRate: '12',
+      gstRate: '5',
+      mrp: '',
+      pts: '',
       isNewCatalog: false
     };
     setRows(prev => [...prev, newRow]);
@@ -278,6 +283,10 @@ export default function NewPurchase({
   };
 
   const handleSelectExistingMedicine = (index: number, med: MedicineItem) => {
+    const latestBatch = med.batches && med.batches.length > 0 ? med.batches[0] : null;
+    const existingMrp = latestBatch?.mrp ? String(latestBatch.mrp) : '';
+    const existingPtr = latestBatch?.ptr ? String(latestBatch.ptr) : '';
+
     setRows(prev => {
       const updated = [...prev];
       updated[index] = {
@@ -286,10 +295,13 @@ export default function NewPurchase({
         medicineName: med.name,
         genericName: med.genericName || '',
         manufacturer: med.manufacturer || '',
+        oldMrp: existingMrp || updated[index].oldMrp || '',
+        mrp: existingMrp || updated[index].mrp || '',
         hsnCode: med.hsnCode || '3004',
         sku: med.sku,
         pack: med.conversionFactor > 1 ? `${med.conversionFactor} ${med.unit}` : med.unit,
-        gstRate: String(med.gstRate || 12),
+        purchaseRate: existingPtr || updated[index].purchaseRate || '',
+        gstRate: String(med.gstRate || 5),
         isNewCatalog: false
       };
       return updated;
@@ -310,10 +322,11 @@ export default function NewPurchase({
         medicineName: cleanName,
         genericName: '',
         manufacturer: '',
+        oldMrp: updated[index].oldMrp || '',
         hsnCode: '3004',
         sku: '',
         pack: updated[index].pack || '10 TAB',
-        gstRate: updated[index].gstRate || '12',
+        gstRate: updated[index].gstRate || '5',
         isNewCatalog: true
       };
       return updated;
@@ -337,7 +350,7 @@ export default function NewPurchase({
         genericName: newMedForm.genericName.trim() || null,
         manufacturer: newMedForm.manufacturer.trim() || null,
         hsnCode: newMedForm.hsnCode || '3004',
-        gstRate: Number(newMedForm.gstRate) || 12,
+        gstRate: Number(newMedForm.gstRate) || 5,
         unit: newMedForm.unit || 'STRIP',
         conversionFactor: Number(newMedForm.conversionFactor) || 1
       }, {
@@ -357,10 +370,11 @@ export default function NewPurchase({
             medicineName: createdMed.name,
             genericName: createdMed.genericName || '',
             manufacturer: createdMed.manufacturer || '',
+            oldMrp: String(newMedForm.defaultMrp || 140),
             hsnCode: createdMed.hsnCode || '3004',
             sku: createdMed.sku,
             pack: createdMed.conversionFactor > 1 ? `${createdMed.conversionFactor} ${createdMed.unit}` : createdMed.unit,
-            gstRate: String(createdMed.gstRate || 12),
+            gstRate: String(createdMed.gstRate || 5),
             purchaseRate: String(newMedForm.defaultPtr || 100),
             mrp: String(newMedForm.defaultMrp || 140),
             pts: String(newMedForm.defaultPts || 120),
@@ -382,7 +396,7 @@ export default function NewPurchase({
         unit: 'STRIP',
         conversionFactor: 10,
         hsnCode: '3004',
-        gstRate: 12,
+        gstRate: 5,
         defaultPtr: 100,
         defaultMrp: 140,
         defaultPts: 120
@@ -449,7 +463,7 @@ export default function NewPurchase({
         setError(`Row #${i + 1}: Please enter a valid batch number for ${medName || 'item'}`);
         return;
       }
-      const qty = parseInt(r.quantity) || 0;
+      const qty = parseFloat(r.quantity) || 0;
       if (qty <= 0) {
         setError(`Row #${i + 1}: Quantity must be greater than 0`);
         return;
@@ -461,8 +475,9 @@ export default function NewPurchase({
       setError(null);
 
       const items = rows.map(r => {
-        const mm = r.expiryMonth.padStart(2, '0');
-        const yyyy = r.expiryYear.length === 2 ? `20${r.expiryYear}` : r.expiryYear;
+        const mm = (r.expiryMonth || '12').padStart(2, '0');
+        const rawY = r.expiryYear || String(new Date().getFullYear() + 2);
+        const yyyy = rawY.length === 2 ? `20${rawY}` : rawY;
         // Last day of the expiry month
         const lastDay = new Date(parseInt(yyyy), parseInt(mm), 0).getDate();
         const expiryDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
@@ -473,16 +488,16 @@ export default function NewPurchase({
           genericName: r.genericName?.trim() || undefined,
           manufacturer: r.manufacturer?.trim() || undefined,
           hsnCode: r.hsnCode?.trim() || '3004',
-          pack: r.pack,
+          pack: r.pack || '10 TAB',
           batchNumber: r.batchNumber.trim().toUpperCase(),
           expiryDate,
           quantity: parseInt(r.quantity) || 1,
           freeQuantity: parseInt(r.freeQuantity) || 0,
           purchaseRate: parseFloat(r.purchaseRate) || 0,
-          mrp: parseFloat(r.mrp) || parseFloat(r.purchaseRate) || 0,
-          pts: parseFloat(r.pts) || parseFloat(r.purchaseRate) || 0,
-          discountPercent: parseFloat(r.discountPercent) || 0,
-          gstRate: parseFloat(r.gstRate) || 12
+          mrp: parseFloat(r.mrp || '') || parseFloat(r.oldMrp || '') || parseFloat(r.purchaseRate || '') || 0,
+          pts: parseFloat(r.pts || '') || parseFloat(r.mrp || '') || parseFloat(r.purchaseRate || '') || 0,
+          discountPercent: parseFloat(r.discountPercent || '') || 0,
+          gstRate: parseFloat(r.gstRate || '') || 5
         };
       });
 
@@ -667,7 +682,7 @@ export default function NewPurchase({
         </div>
       </div>
 
-      {/* Product Entry Grid Table (Photo 2 Grid) */}
+      {/* Product Entry Grid Table Matching Wholesale Tax Invoice Exactly */}
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.2rem' }}>
         <div style={{ padding: '0.8rem 1.2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 132, 199, 0.03)' }}>
           <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -699,21 +714,23 @@ export default function NewPurchase({
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
-              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '0.75rem 0.8rem', width: '35px' }}>#</th>
-                <th style={{ padding: '0.75rem 0.8rem', minWidth: '240px' }}>PRODUCT / MEDICINE NAME</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '90px' }}>PACK</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '130px' }}>BATCH</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '110px' }}>EXPIRY</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '75px', textAlign: 'center' }}>QTY</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '70px', textAlign: 'center' }}>FREE</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '95px', textAlign: 'right' }}>P.RATE/S</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '80px', textAlign: 'center' }}>DIS1%</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '75px', textAlign: 'center' }}>GST%</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '110px', textAlign: 'right' }}>AMOUNT (₹)</th>
-                <th style={{ padding: '0.75rem 0.5rem', width: '35px' }}></th>
+              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
+                <th style={{ padding: '0.7rem 0.6rem', width: '38px', textAlign: 'center' }}>Sr.</th>
+                <th style={{ padding: '0.7rem 0.6rem', minWidth: '220px' }}>Description Of Goods</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '80px', textAlign: 'right' }}>O/MRP</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>HSN</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '105px' }}>Batch</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '90px', textAlign: 'center' }}>Exp.</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>Qty.</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '60px', textAlign: 'center' }}>Free</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>Rate</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>Disc%</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>GST%</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>N/MRP</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '95px', textAlign: 'right' }}>Amount</th>
+                <th style={{ padding: '0.7rem 0.4rem', width: '32px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -736,10 +753,13 @@ export default function NewPurchase({
                       transition: 'background 0.1s'
                     }}
                   >
-                    <td style={{ padding: '0.6rem 0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>{idx + 1}</td>
+                    {/* 1. Sr. */}
+                    <td style={{ padding: '0.5rem 0.6rem', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '600' }}>
+                      {idx + 1}
+                    </td>
 
-                    {/* Medicine Autocomplete & Direct Entry */}
-                    <td style={{ padding: '0.6rem 0.8rem', position: 'relative' }}>
+                    {/* 2. Description Of Goods (Medicine search & input) */}
+                    <td style={{ padding: '0.5rem 0.6rem', position: 'relative' }}>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <input
                           type="text"
@@ -793,8 +813,8 @@ export default function NewPurchase({
                         <div style={{
                           position: 'absolute',
                           top: '100%',
-                          left: '0.8rem',
-                          right: '0.8rem',
+                          left: '0.6rem',
+                          right: '0.6rem',
                           background: 'var(--card-bg)',
                           border: '1px solid var(--border-color)',
                           borderRadius: '8px',
@@ -858,117 +878,146 @@ export default function NewPurchase({
                       )}
                     </td>
 
-                    {/* Pack */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 3. O/MRP (Old MRP) */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
-                        type="text"
-                        value={row.pack}
-                        placeholder="10 TAB"
-                        onChange={e => handleRowChange(idx, 'pack', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.oldMrp}
+                        onChange={e => handleRowChange(idx, 'oldMrp', e.target.value)}
+                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right' }}
                       />
                     </td>
 
-                    {/* Batch */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 4. HSN */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                      <input
+                        type="text"
+                        placeholder="3004"
+                        value={row.hsnCode}
+                        onChange={e => handleRowChange(idx, 'hsnCode', e.target.value)}
+                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                      />
+                    </td>
+
+                    {/* 5. Batch */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="text"
                         placeholder="BATCH NO"
                         value={row.batchNumber}
                         onChange={e => handleRowChange(idx, 'batchNumber', e.target.value.toUpperCase())}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontFamily: 'monospace' }}
+                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontFamily: 'monospace' }}
                       />
                     </td>
 
-                    {/* Expiry MM/YY */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
-                      <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                    {/* 6. Exp. (MM/YY) */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                      <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center', justifyContent: 'center' }}>
                         <input
                           type="text"
                           maxLength={2}
                           placeholder="MM"
                           value={row.expiryMonth}
                           onChange={e => handleRowChange(idx, 'expiryMonth', e.target.value)}
-                          style={{ width: '38px', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          style={{ width: '34px', padding: '0.4rem 0.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                         />
-                        <span>/</span>
+                        <span style={{ color: 'var(--text-muted)' }}>/</span>
                         <input
                           type="text"
                           maxLength={4}
-                          placeholder="YYYY"
+                          placeholder="YY"
                           value={row.expiryYear}
                           onChange={e => handleRowChange(idx, 'expiryYear', e.target.value)}
-                          style={{ width: '52px', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          style={{ width: '42px', padding: '0.4rem 0.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                         />
                       </div>
                     </td>
 
-                    {/* Quantity */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 7. Qty. */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
                         min="1"
+                        step="any"
                         value={row.quantity}
                         onChange={e => handleRowChange(idx, 'quantity', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
+                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                       />
                     </td>
 
-                    {/* Free Qty */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 8. Free */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
                         min="0"
+                        step="any"
                         value={row.freeQuantity}
                         onChange={e => handleRowChange(idx, 'freeQuantity', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                       />
                     </td>
 
-                    {/* Purchase Rate (PTR) */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 9. Rate (PTR) */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
                         step="0.01"
                         value={row.purchaseRate}
                         onChange={e => handleRowChange(idx, 'purchaseRate', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
+                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
                       />
                     </td>
 
-                    {/* Discount % */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 10. Disc% */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
                         min="0"
                         max="100"
+                        step="0.01"
                         value={row.discountPercent}
                         onChange={e => handleRowChange(idx, 'discountPercent', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                       />
                     </td>
 
-                    {/* GST % */}
-                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                    {/* 11. GST% */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
+                        step="0.01"
                         value={row.gstRate}
                         onChange={e => handleRowChange(idx, 'gstRate', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                       />
                     </td>
 
-                    {/* Line Amount */}
-                    <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)' }}>
-                      ₹{rowCalc.total.toFixed(2)}
+                    {/* 12. N/MRP (New MRP) */}
+                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.mrp}
+                        onChange={e => handleRowChange(idx, 'mrp', e.target.value)}
+                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '700' }}
+                      />
                     </td>
 
-                    {/* Delete */}
-                    <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>
+                    {/* 13. Amount (Line Taxable Total e.g. Qty * Rate - Disc) */}
+                    <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                      ₹{rowCalc.taxable.toFixed(2)}
+                    </td>
+
+                    {/* Delete Action */}
+                    <td style={{ padding: '0.5rem 0.3rem', textAlign: 'center' }}>
                       {rows.length > 1 && (
                         <button
                           onClick={() => handleRemoveRow(idx)}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '2px' }}
+                          title="Remove line"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -982,8 +1031,8 @@ export default function NewPurchase({
         </div>
       </div>
 
-      {/* Split Bottom HUD (Photo 2 Bottom Section) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.2rem', alignItems: 'stretch' }}>
+      {/* Split Bottom HUD (Inspection HUD + Financial Breakdown) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.2rem', alignItems: 'stretch' }}>
         
         {/* Left Bottom HUD: Active Selected Line Item Details */}
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -1041,23 +1090,23 @@ export default function NewPurchase({
               </div>
 
               <div>
-                <span style={{ color: 'var(--text-secondary)' }}>M.R.P. (₹) : </span>
+                <span style={{ color: 'var(--text-secondary)' }}>O/MRP (₹) : </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={activeRow?.oldMrp}
+                  onChange={e => handleRowChange(activeRowIndex, 'oldMrp', e.target.value)}
+                  style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem' }}
+                />
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-secondary)' }}>N/MRP (₹) : </span>
                 <input
                   type="number"
                   step="0.01"
                   value={activeRow?.mrp}
                   onChange={e => handleRowChange(activeRowIndex, 'mrp', e.target.value)}
-                  style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem' }}
-                />
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-secondary)' }}>SRate (PTS ₹) : </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={activeRow?.pts}
-                  onChange={e => handleRowChange(activeRowIndex, 'pts', e.target.value)}
-                  style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem' }}
+                  style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem', fontWeight: '700' }}
                 />
               </div>
             </div>
@@ -1076,34 +1125,41 @@ export default function NewPurchase({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-              <span>VALUE OF GOODS :</span>
-              <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₹{valueOfGoods.toFixed(2)}</span>
+              <span>Sub Total (Taxable) :</span>
+              <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>₹{taxableValue.toFixed(2)}</span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
-              <span>DISCOUNT :</span>
-              <span>- ₹{totalDiscount.toFixed(2)}</span>
+            {totalDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
+                <span>Discount :</span>
+                <span>- ₹{totalDiscount.toFixed(2)}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+              <span>SGST (2.5%) :</span>
+              <span>₹{(totalGst / 2).toFixed(2)}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-              <span>TAXABLE VALUE :</span>
-              <span>₹{taxableValue.toFixed(2)}</span>
+              <span>CGST (2.5%) :</span>
+              <span>₹{(totalGst / 2).toFixed(2)}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-              <span>GST (CGST + SGST / IGST) :</span>
-              <span>₹{totalGst.toFixed(2)}</span>
+              <span>Total GST :</span>
+              <span style={{ fontWeight: '600' }}>₹{totalGst.toFixed(2)}</span>
             </div>
 
             {roundOff !== 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                <span>ROUND OFF :</span>
+                <span>Round Off :</span>
                 <span>{roundOff > 0 ? `+ ₹${roundOff.toFixed(2)}` : `- ₹${Math.abs(roundOff).toFixed(2)}`}</span>
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.6rem', marginTop: '0.2rem', fontSize: '1.1rem', fontWeight: '800', color: '#0284c7' }}>
-              <span>NET PAYABLE :</span>
+              <span>Grand Total :</span>
               <span>₹{grandTotal.toFixed(2)}</span>
             </div>
           </div>
