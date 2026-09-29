@@ -12,6 +12,7 @@ import partyRoutes from './routes/parties.js';
 import inventoryRoutes from './routes/inventory.js';
 import purchaseRoutes from './routes/purchases.js';
 import invoiceRoutes from './routes/invoices.js';
+import gstRoutes from './routes/gst.js';
 import prisma from './prisma.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,7 @@ app.use('/parties', partyRoutes);
 app.use('/inventory', inventoryRoutes);
 app.use('/purchases', purchaseRoutes);
 app.use('/invoices', invoiceRoutes);
+app.use('/gst', gstRoutes);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
@@ -81,6 +83,7 @@ app.use('/api/parties', partyRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/gst', gstRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

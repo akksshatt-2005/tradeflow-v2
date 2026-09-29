@@ -233,6 +233,68 @@ export default function Parties() {
     }
   };
 
+  // Automated GSTIN Government Lookup & Autofill
+  const [gstLookupLoading, setGstLookupLoading] = useState(false);
+  const [gstLookupMsg, setGstLookupMsg] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
+
+  const handleGstinLookup = async (overrideGstin?: string) => {
+    const targetGstin = (overrideGstin || gstin).trim().toUpperCase();
+    if (!targetGstin) {
+      setGstLookupMsg({ type: 'error', text: 'Please enter a 15-character GSTIN to lookup' });
+      return;
+    }
+
+    try {
+      setGstLookupLoading(true);
+      setGstLookupMsg(null);
+
+      const res = await api.post('/api/gst/lookup', { gstin: targetGstin }, {
+        companyId: activeCompany?.id
+      });
+
+      const d = res.data?.data;
+      if (d) {
+        if (d.legalName) setName(d.legalName);
+        if (d.tradeName) setMailTo(d.tradeName);
+        if (d.address) setAddress(d.address);
+        if (d.city) setStation(d.city);
+        if (d.state) setState(d.state);
+        if (d.stateCode) setStateCode(d.stateCode);
+        if (d.pincode) setPincode(d.pincode);
+        if (d.pan) setPanNo(d.pan);
+        if (d.phone) setMobile(d.phone);
+        if (d.email) setEmail(d.email);
+        if (d.dlNumber) setDrugLicenseNo(d.dlNumber);
+        if (d.taxpayerType === 'Composition') setLedgerCategory('COMPOSITE');
+        else if (d.taxpayerType === 'Regular') setLedgerCategory('REGISTERED');
+
+        const isLive = res.data?.source === 'GOVERNMENT_GSP_LIVE';
+        const isCache = res.data?.source === 'DATABASE_CACHE';
+        const srcLabel = isLive ? 'Govt GST Portal' : (isCache ? 'Database Records' : 'Smart Decoder');
+
+        if (d.status?.toLowerCase() === 'active') {
+          setGstLookupMsg({
+            type: 'success',
+            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state} (${d.taxpayerType || 'Regular'})`
+          });
+        } else {
+          setGstLookupMsg({
+            type: 'warning',
+            text: `⚠️ Warning: GSTIN status is ${d.status?.toUpperCase() || 'INACTIVE'}`
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error('GST Lookup failed:', err);
+      setGstLookupMsg({
+        type: 'error',
+        text: err.response?.data?.error || err.message || 'Failed to lookup GSTIN'
+      });
+    } finally {
+      setGstLookupLoading(false);
+    }
+  };
+
   const handleSaveParty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeCompany) return;
@@ -685,6 +747,74 @@ export default function Parties() {
               >
                 ✕
               </button>
+            </div>
+
+            {/* Quick GSTIN Autofill Banner */}
+            <div style={{
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '260px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  ⚡ GSTIN Autofill:
+                </span>
+                <input
+                  type="text"
+                  maxLength={15}
+                  placeholder="Enter 15-char GST No. (e.g. 09AOAPV7912G1ZO)"
+                  value={gstin}
+                  onChange={e => handleGstinChange(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleGstinLookup();
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    maxWidth: '300px',
+                    padding: '6px 10px',
+                    border: '1px solid #7dd3fc',
+                    borderRadius: '6px',
+                    fontSize: '12.5px',
+                    fontFamily: 'monospace',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    background: '#ffffff'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleGstinLookup()}
+                  disabled={gstLookupLoading || gstin.trim().length < 15}
+                  className="btn btn-primary"
+                  style={{ fontSize: '12px', padding: '6px 12px' }}
+                >
+                  {gstLookupLoading ? 'Fetching Govt Data...' : '⚡ Autofill Firm'}
+                </button>
+              </div>
+
+              {gstLookupMsg && (
+                <div style={{
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  background: gstLookupMsg.type === 'success' ? '#dcfce7' : gstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
+                  color: gstLookupMsg.type === 'success' ? '#15803d' : gstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
+                  border: `1px solid ${gstLookupMsg.type === 'success' ? '#bbf7d0' : gstLookupMsg.type === 'warning' ? '#fde68a' : '#fecaca'}`
+                }}>
+                  {gstLookupMsg.text}
+                </div>
+              )}
             </div>
 
             {/* Sub-Section Navigation Tabs */}
