@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
+import { generateUniqueItemSku } from '../utils/skuGenerator.js';
 
 const router = Router();
 
@@ -277,6 +278,8 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       });
 
       // 2. Process each item: Auto-catalog if needed, Batch upsert & Stock Ledger entry
+      const locallyReservedSkus = new Set<string>();
+
       for (const item of validatedItems) {
         let targetItemId = item.itemId;
 
@@ -308,8 +311,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
               }
             }
 
-            const itemCount = await tx.item.count({ where: { companyId } });
-            const autoSku = item.sku?.trim() || `MED-${String(itemCount + 1).padStart(4, '0')}`;
+            const autoSku = await generateUniqueItemSku(tx, companyId, item.sku, locallyReservedSkus);
 
             existingItem = await tx.item.create({
               data: {
@@ -653,6 +655,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
       // 2. APPLY NEW INWARD STOCK & WRITE NEW PURCHASE LEDGER ENTRIES
       const createdItemsWithBatch: any[] = [];
+      const locallyReservedSkus = new Set<string>();
 
       for (const item of validatedItems) {
         let targetItemId = item.itemId;
@@ -681,8 +684,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
               }
             }
 
-            const itemCount = await tx.item.count({ where: { companyId } });
-            const autoSku = `MED-${String(itemCount + 1).padStart(4, '0')}`;
+            const autoSku = await generateUniqueItemSku(tx, companyId, item.sku, locallyReservedSkus);
 
             existingItem = await tx.item.create({
               data: {

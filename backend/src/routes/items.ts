@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
+import { generateUniqueItemSku } from '../utils/skuGenerator.js';
 
 const router = Router();
 
@@ -132,31 +133,14 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
   }
 
   const trimmedName = name.trim();
-  let finalSku = (sku && typeof sku === 'string' && sku.trim().length > 0)
+  const preferredSku = (sku && typeof sku === 'string' && sku.trim().length > 0)
     ? sku.trim().toUpperCase()
-    : '';
+    : null;
 
   try {
-    // If no SKU provided, auto-generate sequential SKU
-    if (!finalSku) {
-      const count = await prisma.item.count({ where: { companyId } });
-      finalSku = `MED-${String(count + 1).padStart(4, '0')}`;
-    }
+    // Auto-generate or validate unique SKU
+    const finalSku = await generateUniqueItemSku(prisma, companyId, preferredSku);
 
-    // Check SKU collision in this company
-    const existing = await prisma.item.findUnique({
-      where: {
-        companyId_sku: {
-          companyId,
-          sku: finalSku
-        }
-      }
-    });
-
-    if (existing) {
-      res.status(409).json({ error: `An item with SKU "${finalSku}" already exists in this company` });
-      return;
-    }
 
     const item = await prisma.item.create({
       data: {
