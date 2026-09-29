@@ -158,6 +158,128 @@ export default function NewPurchase({
   });
   const [savingNewMed, setSavingNewMed] = useState(false);
 
+  // Quick Add Supplier Modal State
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [newSupGstin, setNewSupGstin] = useState('');
+  const [newSupName, setNewSupName] = useState('');
+  const [newSupStation, setNewSupStation] = useState('');
+  const [newSupAddress, setNewSupAddress] = useState('');
+  const [newSupState, setNewSupState] = useState('');
+  const [newSupStateCode, setNewSupStateCode] = useState('');
+  const [newSupPincode, setNewSupPincode] = useState('');
+  const [newSupPan, setNewSupPan] = useState('');
+  const [newSupMobile, setNewSupMobile] = useState('');
+  const [newSupDrugLicense, setNewSupDrugLicense] = useState('');
+  const [savingNewSup, setSavingNewSup] = useState(false);
+  const [supGstLookupLoading, setSupGstLookupLoading] = useState(false);
+  const [supGstLookupMsg, setSupGstLookupMsg] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
+
+  const handleQuickGstinLookup = async () => {
+    const clean = newSupGstin.trim().toUpperCase();
+    if (!clean) {
+      setSupGstLookupMsg({ type: 'error', text: 'Please enter a 15-character GSTIN' });
+      return;
+    }
+    try {
+      setSupGstLookupLoading(true);
+      setSupGstLookupMsg(null);
+      const res = await api.post('/api/gst/lookup', { gstin: clean }, {
+        companyId: activeCompany?.id
+      });
+      const d = res.data?.data;
+      if (d) {
+        if (d.legalName || d.tradeName) setNewSupName(d.legalName || d.tradeName);
+        if (d.address) setNewSupAddress(d.address);
+        if (d.city) setNewSupStation(d.city);
+        if (d.state) setNewSupState(d.state);
+        if (d.stateCode) setNewSupStateCode(d.stateCode);
+        if (d.pincode) setNewSupPincode(d.pincode);
+        if (d.pan) setNewSupPan(d.pan);
+        if (d.phone) setNewSupMobile(d.phone);
+        if (d.dlNumber) setNewSupDrugLicense(d.dlNumber);
+
+        const isLive = res.data?.source === 'GOVERNMENT_GSP_LIVE';
+        const isCache = res.data?.source === 'DATABASE_CACHE';
+        const srcLabel = isLive ? 'Govt GST Portal' : (isCache ? 'Database Records' : 'Smart Decoder');
+
+        if (d.status?.toLowerCase() === 'active') {
+          setSupGstLookupMsg({
+            type: 'success',
+            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state}`
+          });
+        } else {
+          setSupGstLookupMsg({
+            type: 'warning',
+            text: `⚠️ Status: ${d.status?.toUpperCase() || 'INACTIVE'}`
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error('GST lookup failed:', err);
+      setSupGstLookupMsg({
+        type: 'error',
+        text: err.response?.data?.error || err.message || 'Failed to lookup GSTIN'
+      });
+    } finally {
+      setSupGstLookupLoading(false);
+    }
+  };
+
+  const handleCreateSupplierQuick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCompany || !newSupName.trim()) return;
+    try {
+      setSavingNewSup(true);
+      const res = await api.post('/api/parties', {
+        name: newSupName.trim(),
+        type: 'supplier',
+        accountGroup: 'SUNDRY_CREDITORS',
+        balancingMethod: 'BILL_BY_BILL',
+        openingBalance: 0,
+        openingBalanceType: 'CR',
+        mailTo: newSupName.trim(),
+        address: newSupAddress.trim() || null,
+        station: newSupStation.trim() || null,
+        state: newSupState.trim() || null,
+        stateCode: newSupStateCode.trim() || null,
+        pincode: newSupPincode.trim() || null,
+        gstin: newSupGstin.trim().toUpperCase() || null,
+        panNo: newSupPan.trim().toUpperCase() || null,
+        mobile: newSupMobile.trim() || null,
+        drugLicenseNo: newSupDrugLicense.trim().toUpperCase() || null,
+        ledgerCategory: 'REGISTERED'
+      }, {
+        companyId: activeCompany.id
+      });
+
+      const newParty = res.data?.party;
+      if (newParty) {
+        setSuppliers(prev => [...prev, newParty]);
+        setSelectedSupplierId(newParty.id);
+      }
+      setShowAddSupplierModal(false);
+      setNewSupGstin('');
+      setNewSupName('');
+      setNewSupStation('');
+      setNewSupAddress('');
+      setNewSupState('');
+      setNewSupStateCode('');
+      setNewSupPincode('');
+      setNewSupPan('');
+      setNewSupMobile('');
+      setNewSupDrugLicense('');
+      setSupGstLookupMsg(null);
+    } catch (err: any) {
+      console.error('Failed to create supplier:', err);
+      setSupGstLookupMsg({
+        type: 'error',
+        text: err.response?.data?.error || err.message || 'Failed to save supplier'
+      });
+    } finally {
+      setSavingNewSup(false);
+    }
+  };
+
   // Close search dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -683,9 +805,30 @@ export default function NewPurchase({
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.2rem', marginBottom: '1.2rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '1rem', alignItems: 'end' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-              NAME : (SUPPLIER LEDGER) *
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                NAME : (SUPPLIER LEDGER) *
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAddSupplierModal(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0284c7',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}
+              >
+                + Quick Add (GSTIN)
+              </button>
+            </div>
             <select
               value={selectedSupplierId}
               onChange={e => setSelectedSupplierId(e.target.value)}
@@ -1501,6 +1644,195 @@ export default function NewPurchase({
                   }}
                 >
                   <Save size={15} /> {savingNewMed ? 'Saving...' : 'Add to Catalog & Use'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Quick Add Supplier with GSTIN Autofill */}
+      {showAddSupplierModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '560px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>⚡ Quick Add Supplier</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Enter GSTIN to instantly fetch registered legal firm details
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddSupplierModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSupplierQuick} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* GSTIN Autofill Bar */}
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
+                <label className="form-label" style={{ color: '#0369a1', fontWeight: 700 }}>
+                  GSTIN (15-Digit Number)
+                </label>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    placeholder="e.g. 09AOAPV7912G1ZO"
+                    value={newSupGstin}
+                    onChange={e => setNewSupGstin(e.target.value.toUpperCase())}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleQuickGstinLookup();
+                      }
+                    }}
+                    className="form-input"
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleQuickGstinLookup}
+                    disabled={supGstLookupLoading}
+                    className="btn btn-primary"
+                    style={{ minWidth: '110px' }}
+                  >
+                    {supGstLookupLoading ? 'Fetching...' : '⚡ Autofill'}
+                  </button>
+                </div>
+
+                {supGstLookupMsg && (
+                  <div style={{
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    marginTop: '8px',
+                    background: supGstLookupMsg.type === 'success' ? '#dcfce7' : supGstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
+                    color: supGstLookupMsg.type === 'success' ? '#15803d' : supGstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
+                    border: `1px solid ${supGstLookupMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                  }}>
+                    {supGstLookupMsg.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Supplier / Firm Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. ADMARIS PHARMACEUTICALS PVT. LTD."
+                  value={newSupName}
+                  onChange={e => setNewSupName(e.target.value)}
+                  className="form-input"
+                  style={{ fontWeight: 600 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Station / City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. LUCKNOW"
+                    value={newSupStation}
+                    onChange={e => setNewSupStation(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">State</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UTTAR PRADESH"
+                    value={newSupState}
+                    onChange={e => setNewSupState(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Registered Address</label>
+                <input
+                  type="text"
+                  placeholder="Street, area, locality..."
+                  value={newSupAddress}
+                  onChange={e => setNewSupAddress(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">PAN Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AOAPV7912G"
+                    value={newSupPan}
+                    onChange={e => setNewSupPan(e.target.value.toUpperCase())}
+                    className="form-input"
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Mobile Number</label>
+                  <input
+                    type="text"
+                    placeholder="10-digit mobile"
+                    value={newSupMobile}
+                    onChange={e => setNewSupMobile(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddSupplierModal(false)}
+                  className="btn btn-secondary"
+                  style={{ minWidth: '90px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingNewSup || !newSupName.trim()}
+                  className="btn btn-primary"
+                  style={{ minWidth: '130px' }}
+                >
+                  {savingNewSup ? 'Saving...' : 'Save & Select Supplier'}
                 </button>
               </div>
             </form>
