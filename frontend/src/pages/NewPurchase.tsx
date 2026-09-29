@@ -139,6 +139,7 @@ export default function NewPurchase({
   // Autocomplete search states
   const [activeSearchRowIndex, setActiveSearchRowIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
 
   // Quick Add Medicine Modal State
   const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
@@ -156,6 +157,42 @@ export default function NewPurchase({
     defaultPts: 120
   });
   const [savingNewMed, setSavingNewMed] = useState(false);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target as Node)) {
+        setActiveSearchRowIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Live real-time medicine search on typing
+  useEffect(() => {
+    if (!activeCompany || activeSearchRowIndex === null) return;
+    const q = searchQuery.trim();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get<{ items: MedicineItem[] }>(
+          `/api/items?search=${encodeURIComponent(q)}&limit=50`,
+          { companyId: activeCompany.id }
+        );
+        if (res.items && Array.isArray(res.items)) {
+          setMedicines(prev => {
+            const map = new Map<string, MedicineItem>();
+            prev.forEach(m => map.set(m.id, m));
+            res.items.forEach(m => map.set(m.id, m));
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching live medicine suggestions:', err);
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeSearchRowIndex, activeCompany?.id]);
 
   useEffect(() => {
     fetchInitialData();
@@ -669,8 +706,8 @@ export default function NewPurchase({
       </div>
 
       {/* Product Entry Grid Table Matching Wholesale Tax Invoice Exactly */}
-      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', marginBottom: '1.2rem' }}>
-        <div style={{ padding: '0.8rem 1.2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 132, 199, 0.03)' }}>
+      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'visible', marginBottom: '1.2rem', position: 'relative' }}>
+        <div style={{ padding: '0.8rem 1.2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 132, 199, 0.03)', borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
           <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Package size={16} style={{ color: '#0284c7' }} /> Inward Line Items ({rows.length})
             <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
@@ -699,7 +736,7 @@ export default function NewPurchase({
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'visible', minHeight: '120px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
@@ -723,10 +760,12 @@ export default function NewPurchase({
               {rows.map((row, idx) => {
                 const rowCalc = calculateRowTotal(row);
                 const isFocused = activeRowIndex === idx;
+                const cleanQuery = (searchQuery || '').trim().toLowerCase();
                 const filteredMedicines = medicines.filter(m =>
-                  m.name.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-                  m.sku.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-                  (m.genericName && m.genericName.toLowerCase().includes((searchQuery || '').toLowerCase()))
+                  !cleanQuery ||
+                  m.name.toLowerCase().includes(cleanQuery) ||
+                  m.sku.toLowerCase().includes(cleanQuery) ||
+                  (m.genericName && m.genericName.toLowerCase().includes(cleanQuery))
                 );
 
                 return (
@@ -745,7 +784,7 @@ export default function NewPurchase({
                     </td>
 
                     {/* 2. Description Of Goods (Medicine search & input) */}
-                    <td style={{ padding: '0.5rem 0.6rem', position: 'relative' }}>
+                    <td style={{ padding: '0.5rem 0.6rem', position: 'relative', overflow: 'visible' }}>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <input
                           type="text"
@@ -822,19 +861,23 @@ export default function NewPurchase({
                       </div>
 
                       {activeSearchRowIndex === idx && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: '0.6rem',
-                          right: '0.6rem',
-                          background: 'var(--card-bg)',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          maxHeight: '260px',
-                          overflowY: 'auto',
-                          zIndex: 80,
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-                        }}>
+                        <div
+                          ref={searchDropdownRef}
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 4px)',
+                            left: '0.6rem',
+                            width: '380px',
+                            minWidth: '320px',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            maxHeight: '280px',
+                            overflowY: 'auto',
+                            zIndex: 99999,
+                            boxShadow: '0 16px 40px rgba(0,0,0,0.45)'
+                          }}
+                        >
                           {/* Option to create new if user typed something */}
                           {searchQuery.trim().length > 0 && !medicines.some(m => m.name.toLowerCase() === searchQuery.trim().toLowerCase()) && (
                             <div
@@ -874,8 +917,8 @@ export default function NewPurchase({
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{med.name}</span>
-                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</span>
+                                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                                     {latestB && latestB.mrp > 0 && (
                                       <span style={{ fontSize: '0.7rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
                                         MRP: ₹{latestB.mrp.toFixed(2)} {latestB.ptr ? `• Rate: ₹${latestB.ptr.toFixed(2)}` : ''}
@@ -884,7 +927,7 @@ export default function NewPurchase({
                                     <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Stock: {med.totalStock ?? 0}</span>
                                   </div>
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                   {med.genericName ? `${med.genericName} • ` : ''}SKU: {med.sku} • GST: {med.gstRate}%
                                 </div>
                               </div>
