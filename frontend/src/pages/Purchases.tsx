@@ -287,15 +287,13 @@ export default function Purchases() {
           ))}
         </div>
 
-        <div style={{ position: 'relative', width: '280px' }}>
-          <Search size={15} style={{ position: 'absolute', left: '10px', top: '9px', color: 'var(--text-muted)' }} />
+        <div className="search-box" style={{ maxWidth: '340px', minWidth: '240px' }}>
+          <Search size={15} />
           <input
             type="text"
             placeholder="Search bill number or supplier..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input"
-            style={{ paddingLeft: '32px', fontSize: '12px', height: '34px' }}
           />
         </div>
       </div>

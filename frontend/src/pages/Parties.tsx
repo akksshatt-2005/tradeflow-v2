@@ -506,22 +506,13 @@ export default function Parties() {
           </button>
         </div>
 
-        <div style={{ position: 'relative', width: '320px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <div className="search-box" style={{ maxWidth: '340px', minWidth: '240px' }}>
+          <Search size={15} />
           <input
             type="text"
             placeholder="Search by name, station, GSTIN, DL..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.8rem 0.5rem 2rem',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem'
-            }}
           />
         </div>
       </div>

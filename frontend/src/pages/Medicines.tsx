@@ -293,27 +293,27 @@ export default function Medicines() {
 
       {/* Search & Filter Bar */}
       <div style={{
-        background: 'var(--surface)',
+        background: '#ffffff',
         padding: '12px 16px',
         borderRadius: '8px',
-        border: '1px solid var(--border)',
+        border: '1px solid #e2e8f0',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px'
+        justifyContent: 'space-between',
+        gap: '16px',
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
       }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: '450px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }} />
+        <div className="search-box" style={{ maxWidth: '480px' }}>
+          <Search size={16} />
           <input
             type="text"
             placeholder="Search by brand name, generic composition, SKU, or manufacturer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input"
-            style={{ paddingLeft: '34px', fontSize: '13px' }}
           />
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-          Total Items: <strong style={{ color: 'var(--text-main)' }}>{items.length}</strong>
+        <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap' }}>
+          Total Medicines: <strong style={{ color: '#0f172a' }}>{items.length}</strong>
         </div>
       </div>
 
@@ -911,7 +911,8 @@ export default function Medicines() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(3px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -922,85 +923,94 @@ export default function Medicines() {
             background: '#ffffff',
             borderRadius: '12px',
             width: '100%',
-            maxWidth: '540px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            maxWidth: '560px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0',
             overflow: 'hidden'
           }}>
             <div style={{
               padding: '16px 20px',
-              borderBottom: '1px solid var(--border)',
+              borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              background: '#f8fafc'
             }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Edit Medicine Details</h3>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>SKU: {editingItem.sku}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Edit Medicine Details</h3>
+                  <span style={{ fontSize: '11px', fontWeight: 600, background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                    {editingItem.sku}
+                  </span>
+                </div>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Update catalog master info, GST rate, and packaging formulas
+                </p>
               </div>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingItem(null);
                 }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateMedicine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleUpdateMedicine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
-                <label className="label">Brand / Commercial Name *</label>
+                <label className="form-label">Brand / Commercial Name *</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="input"
+                  className="form-input"
                   placeholder="e.g. Paracetamol 650mg Tablet"
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
-                  <label className="label">Generic / Salt Composition</label>
+                  <label className="form-label">Generic / Salt Composition</label>
                   <input
                     type="text"
                     value={editGeneric}
                     onChange={(e) => setEditGeneric(e.target.value)}
-                    className="input"
+                    className="form-input"
                     placeholder="e.g. Paracetamol IP"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="label">Manufacturer / Marketer</label>
+                  <label className="form-label">Manufacturer / Marketer</label>
                   <input
                     type="text"
                     value={editManufacturer}
                     onChange={(e) => setEditManufacturer(e.target.value)}
-                    className="input"
+                    className="form-input"
                     placeholder="e.g. Cipla Ltd."
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
-                  <label className="label">HSN Code</label>
+                  <label className="form-label">HSN Code</label>
                   <input
                     type="text"
                     value={editHsn}
                     onChange={(e) => setEditHsn(e.target.value)}
-                    className="input"
+                    className="form-input"
                     placeholder="3004"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="label">GST Rate (%)</label>
+                  <label className="form-label">GST Rate (%)</label>
                   <select
                     value={editGst}
                     onChange={(e) => setEditGst(e.target.value)}
-                    className="input"
+                    className="form-select"
                   >
                     <option value="0">0% (Exempted)</option>
                     <option value="5">5% (Life saving/vaccines)</option>
@@ -1010,13 +1020,13 @@ export default function Medicines() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
-                  <label className="label">Packing Unit</label>
+                  <label className="form-label">Packing Unit</label>
                   <select
                     value={editUnit}
                     onChange={(e) => setEditUnit(e.target.value)}
-                    className="input"
+                    className="form-select"
                   >
                     <option value="STRIP">STRIP</option>
                     <option value="BOX">BOX</option>
@@ -1027,28 +1037,28 @@ export default function Medicines() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="label">Units / Pack</label>
+                  <label className="form-label">Units / Pack</label>
                   <input
                     type="number"
                     min="1"
                     value={editConversion}
                     onChange={(e) => setEditConversion(e.target.value)}
-                    className="input"
+                    className="form-input"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="label">Min Stock Level</label>
+                  <label className="form-label">Min Stock Level</label>
                   <input
                     type="number"
                     min="0"
                     value={editMinStock}
                     onChange={(e) => setEditMinStock(e.target.value)}
-                    className="input"
+                    className="form-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -1056,6 +1066,7 @@ export default function Medicines() {
                     setEditingItem(null);
                   }}
                   className="btn btn-secondary"
+                  style={{ minWidth: '90px' }}
                 >
                   Cancel
                 </button>
@@ -1063,6 +1074,7 @@ export default function Medicines() {
                   type="submit"
                   disabled={submittingEdit}
                   className="btn btn-primary"
+                  style={{ minWidth: '120px' }}
                 >
                   {submittingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
