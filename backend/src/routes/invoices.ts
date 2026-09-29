@@ -612,7 +612,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       }
 
       return invoice;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     const resPaid = Number(savedInvoice.paidAmount);
     const resTotal = Number(savedInvoice.grandTotal);
@@ -967,7 +967,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       }
 
       return invoice;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     const resPaid = Number(updatedInvoice.paidAmount);
     const resTotal = Number(updatedInvoice.grandTotal);
