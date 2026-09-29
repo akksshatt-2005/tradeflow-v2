@@ -272,7 +272,15 @@ async function ensureTables() {
     )`,
     `CREATE INDEX IF NOT EXISTS "invoice_items_invoice_id_idx" ON "invoice_items"("invoice_id")`,
     `CREATE INDEX IF NOT EXISTS "invoice_items_item_id_idx" ON "invoice_items"("item_id")`,
-    `CREATE INDEX IF NOT EXISTS "invoice_items_batch_id_idx" ON "invoice_items"("batch_id")`,
+    // Company Master columns
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "gstin" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "drug_license_no" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "phone" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "email" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "address" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "city" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "state" TEXT`,
+    `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "pincode" TEXT`,
 
     // Party Ledger Master columns
     `ALTER TABLE "parties" ADD COLUMN IF NOT EXISTS "station" TEXT`,
