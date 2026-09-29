@@ -273,11 +273,13 @@ export default function Parties() {
         const srcLabel = isLive ? 'Govt GST Portal' : (isCache ? 'Database Records' : 'Smart Decoder');
 
         if (d.status?.toLowerCase() === 'active') {
+          setActiveSection('BASIC');
           setGstLookupMsg({
             type: 'success',
             text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state} (${d.taxpayerType || 'Regular'})`
           });
         } else {
+          setActiveSection('BASIC');
           setGstLookupMsg({
             type: 'warning',
             text: `⚠️ Warning: GSTIN status is ${d.status?.toUpperCase() || 'INACTIVE'}`
@@ -1109,14 +1111,37 @@ export default function Parties() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                        G.S.T.IN No.
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                          G.S.T.IN No.
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleGstinLookup()}
+                          disabled={gstLookupLoading}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#0284c7',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {gstLookupLoading ? 'Fetching...' : '⚡ Autofill Firm'}
+                        </button>
+                      </div>
                       <input
                         type="text"
                         placeholder="e.g. 09AANCA1902B1Z4"
                         value={gstin}
                         onChange={e => handleGstinChange(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleGstinLookup();
+                          }
+                        }}
                         style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontFamily: 'monospace' }}
                       />
                     </div>
