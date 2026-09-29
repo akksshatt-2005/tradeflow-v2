@@ -507,14 +507,20 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     const validatedItems: any[] = [];
 
     for (const rawItem of items) {
-      if (!rawItem.itemId || !rawItem.batchNumber || !rawItem.expiryDate) {
-        res.status(400).json({ error: 'Each item requires medicine, batch number, and expiry date' });
+      const medName = (rawItem.medicineName || rawItem.name || '').trim();
+      if (!rawItem.itemId && !medName) {
+        res.status(400).json({ error: 'Each item requires either a medicine name or catalog selection' });
+        return;
+      }
+
+      if (!rawItem.batchNumber || !rawItem.expiryDate) {
+        res.status(400).json({ error: `Batch number and expiry date are required for ${medName || 'each medicine'}` });
         return;
       }
 
       const qty = parseInt(rawItem.quantity) || 0;
       if (qty <= 0) {
-        res.status(400).json({ error: 'Quantity must be greater than 0' });
+        res.status(400).json({ error: `Quantity must be greater than 0 for ${medName || 'all items'}` });
         return;
       }
 
@@ -560,12 +566,16 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       }
 
       if (isNaN(parsedExpiry.getTime())) {
-        res.status(400).json({ error: `Invalid expiry date "${rawItem.expiryDate}"` });
+        res.status(400).json({ error: `Invalid expiry date "${rawItem.expiryDate}" for ${medName || 'item'}` });
         return;
       }
 
       validatedItems.push({
-        itemId: rawItem.itemId,
+        itemId: rawItem.itemId || null,
+        medicineName: medName,
+        genericName: rawItem.genericName || null,
+        manufacturer: rawItem.manufacturer || null,
+        hsnCode: rawItem.hsnCode || '3004',
         batchNumber: cleanBatch,
         expiryDate: parsedExpiry,
         pack: rawItem.pack || '10 TAB',
@@ -573,6 +583,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         freeQuantity: freeQty,
         purchaseRate,
         mrp,
+        pts: parseFloat(rawItem.pts) || mrp,
         discountPercent: discountPct,
         taxableValue: Math.round(lineTaxable * 100) / 100,
         gstRate,
@@ -644,6 +655,54 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       const createdItemsWithBatch: any[] = [];
 
       for (const item of validatedItems) {
+        let targetItemId = item.itemId;
+
+        // Auto-catalog medicine if itemId was not provided
+        if (!targetItemId) {
+          let existingItem = await tx.item.findFirst({
+            where: {
+              companyId,
+              name: { equals: item.medicineName, mode: 'insensitive' }
+            }
+          });
+
+          if (!existingItem) {
+            const packStr = (item.pack || '').trim().toUpperCase();
+            let unit = 'STRIP';
+            let conversionFactor = 1;
+
+            if (packStr) {
+              const match = packStr.match(/^(\d+)\s*([A-Z]*)/i);
+              if (match) {
+                conversionFactor = parseInt(match[1]) || 1;
+                if (match[2] && match[2].length > 1) {
+                  unit = match[2].toUpperCase();
+                }
+              }
+            }
+
+            const itemCount = await tx.item.count({ where: { companyId } });
+            const autoSku = `MED-${String(itemCount + 1).padStart(4, '0')}`;
+
+            existingItem = await tx.item.create({
+              data: {
+                companyId,
+                sku: autoSku,
+                name: item.medicineName,
+                genericName: item.genericName?.trim() || null,
+                manufacturer: item.manufacturer?.trim() || null,
+                hsnCode: item.hsnCode?.trim() || '3004',
+                gstRate: item.gstRate,
+                unit: unit || 'STRIP',
+                conversionFactor: conversionFactor > 0 ? conversionFactor : 1,
+                minStockLevel: 0
+              }
+            });
+          }
+
+          targetItemId = existingItem.id;
+        }
+
         const totalUnitsInward = item.quantity + item.freeQuantity;
 
         // Upsert Batch
@@ -651,7 +710,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           where: {
             companyId_itemId_batchNumber: {
               companyId,
-              itemId: item.itemId,
+              itemId: targetItemId,
               batchNumber: item.batchNumber
             }
           }
@@ -666,19 +725,19 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
               expiryDate: item.expiryDate,
               mrp: item.mrp,
               ptr: item.purchaseRate,
-              pts: item.mrp
+              pts: item.pts
             }
           });
         } else {
           batch = await tx.batch.create({
             data: {
               companyId,
-              itemId: item.itemId,
+              itemId: targetItemId,
               batchNumber: item.batchNumber,
               expiryDate: item.expiryDate,
               mrp: item.mrp,
               ptr: item.purchaseRate,
-              pts: item.mrp,
+              pts: item.pts,
               currentStock: totalUnitsInward
             }
           });
@@ -686,6 +745,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
         createdItemsWithBatch.push({
           ...item,
+          itemId: targetItemId,
           batchId: batch.id
         });
 
@@ -693,7 +753,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         await tx.stockLedger.create({
           data: {
             companyId,
-            itemId: item.itemId,
+            itemId: targetItemId,
             batchId: batch.id,
             entryType: 'PURCHASE',
             quantity: totalUnitsInward,
