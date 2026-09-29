@@ -9,8 +9,28 @@ export interface User {
 export interface Company {
   id: string;
   name: string;
+  gstin?: string;
+  drugLicenseNo?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   role: string;
   createdAt?: string;
+}
+
+export interface CreateCompanyPayload {
+  name: string;
+  gstin?: string;
+  drugLicenseNo?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
 }
 
 interface AuthContextType {
@@ -21,7 +41,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   signup: (username: string, password: string) => Promise<void>;
   selectCompany: (company: Company) => void;
-  createCompany: (name: string) => Promise<Company>;
+  createCompany: (payload: string | CreateCompanyPayload) => Promise<Company>;
   logout: () => Promise<void>;
   refreshCompanies: () => Promise<void>;
 }
@@ -161,8 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createCompany = async (name: string): Promise<Company> => {
-    const data = await api.post('/companies', { name });
+  const createCompany = async (payload: string | CreateCompanyPayload): Promise<Company> => {
+    const body = typeof payload === 'string' ? { name: payload } : payload;
+    const data = await api.post('/companies', body);
     const newComp: Company = data.company;
     const updated = [...companies, newComp];
     setCompanies(updated);
