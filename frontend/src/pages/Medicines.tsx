@@ -303,7 +303,7 @@ export default function Medicines() {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}`, {
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
         companyId: activeCompany.id
       });
       setItems(res.items || []);

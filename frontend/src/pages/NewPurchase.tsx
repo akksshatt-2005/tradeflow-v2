@@ -354,7 +354,7 @@ export default function NewPurchase({
       setLoadingSuppliers(true);
       const [supRes, medRes] = await Promise.all([
         api.get<{ parties: Supplier[] }>('/api/parties?type=supplier', { companyId: activeCompany.id }),
-        api.get<{ items: MedicineItem[] }>('/api/items?limit=200', { companyId: activeCompany.id })
+        api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', { companyId: activeCompany.id })
       ]);
       setSuppliers(supRes.parties || []);
       setMedicines(medRes.items || []);

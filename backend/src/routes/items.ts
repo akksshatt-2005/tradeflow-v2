@@ -19,7 +19,9 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.min(500, Math.max(1, parseInt(req.query.limit as string) || 50));
+  const limit = req.query.limit === 'all'
+    ? 10000
+    : Math.min(10000, Math.max(1, parseInt(req.query.limit as string) || 2000));
   const skip = (page - 1) * limit;
 
   try {

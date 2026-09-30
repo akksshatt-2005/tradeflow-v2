@@ -143,7 +143,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setError(null);
 
       const [itemsRes, partiesRes, nextNumRes] = await Promise.all([
-        api.get<{ items: MedicineItem[] }>('/api/items?limit=100', {
+        api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', {
           companyId: activeCompany.id
         }),
         api.get<{ parties: CustomerParty[] }>('/api/parties?type=customer', {
