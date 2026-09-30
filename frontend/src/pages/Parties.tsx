@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import * as XLSX from 'xlsx';
 import {
   Users,
   Search,
@@ -21,8 +22,12 @@ import {
   Edit2,
   FileText,
   CheckCircle,
+  CheckCircle2,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Download,
+  UploadCloud,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface PartyLedger {
@@ -71,7 +76,165 @@ export default function Parties() {
   const [activeTab, setActiveTab] = useState<'all' | 'customer' | 'supplier'>('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [deletingPartyId, setDeletingPartyId] = useState<string | null>(null);
+
+  // Bulk Import State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [previewParties, setPreviewParties] = useState<any[]>([]);
+  const [importSearch, setImportSearch] = useState('');
+
+  const handleExportParties = () => {
+    if (parties.length === 0) {
+      alert('No ledger records available to export.');
+      return;
+    }
+    const data = parties.map((p, idx) => ({
+      'S.No': idx + 1,
+      'Ledger Name': p.name,
+      'Billing / Mail Name': p.mailTo || p.name,
+      'Type': p.type.toUpperCase(),
+      'Account Group': p.accountGroup || (p.type === 'supplier' ? 'SUNDRY_CREDITORS' : 'SUNDRY_DEBTORS'),
+      'Ledger Category': p.ledgerCategory,
+      'GSTIN': p.gstin || '',
+      'Drug License (20B/21B)': p.drugLicenseNo || '',
+      'DL Expiry': p.dlExpiryDate ? p.dlExpiryDate.split('T')[0] : '',
+      'FSSAI No': p.fssaiNo || '',
+      'PAN No': p.panNo || '',
+      'Station': p.station || '',
+      'State': p.state || '',
+      'Address': p.address || '',
+      'Pincode': p.pincode || '',
+      'Phone': p.phone || '',
+      'Mobile': p.mobile || '',
+      'Email': p.email || '',
+      'Contact Person': p.contactPerson || '',
+      'Balancing Method': p.balancingMethod,
+      'Opening Balance (₹)': p.openingBalance,
+      'Opening Balance Type': p.openingBalanceType,
+      'Current Outstanding (₹)': p.outstandingBalance,
+      'Credit Limit (₹)': p.creditLimit
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Party Ledgers');
+    const compName = (activeCompany?.name || 'Ledger').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(workbook, `Party_Ledgers_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportPartyTemplate = () => {
+    const templateData = [
+      {
+        'Ledger Name': 'GUPTA PHARMA DISTRIBUTORS',
+        'Billing / Mail Name': 'GUPTA PHARMA DISTRIBUTORS PVT LTD',
+        'Type': 'supplier',
+        'Ledger Category': 'REGISTERED',
+        'GSTIN': '09AAAAA0000A1Z5',
+        'Drug License': 'UP-LKO-20B-123456',
+        'Station': 'LUCKNOW',
+        'State': 'UTTAR PRADESH',
+        'Mobile': '9876543210',
+        'Email': 'contact@guptapharma.com',
+        'Opening Balance': 0,
+        'Opening Balance Type': 'CR'
+      },
+      {
+        'Ledger Name': 'DR. SHARMA CLINIC',
+        'Billing / Mail Name': 'DR. SHARMA CLINIC',
+        'Type': 'customer',
+        'Ledger Category': 'CONSUMER',
+        'GSTIN': '',
+        'Drug License': '',
+        'Station': 'LOCAL',
+        'State': 'UTTAR PRADESH',
+        'Mobile': '9812345678',
+        'Email': 'sharmaclinic@gmail.com',
+        'Opening Balance': 0,
+        'Opening Balance Type': 'DR'
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Party_Template');
+    XLSX.writeFile(workbook, `Party_Ledger_Import_Template.xlsx`);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        const parsed: any[] = [];
+        for (const row of json) {
+          const name = row['Ledger Name'] || row['name'] || row['Firm Name'] || row['Party Name'] || row['Company'];
+          if (!name) continue;
+          parsed.push({
+            name: String(name).trim(),
+            mailTo: row['Billing / Mail Name'] || row['mailTo'] || name,
+            type: String(row['Type'] || row['type'] || 'supplier').toLowerCase().includes('cust') ? 'customer' : 'supplier',
+            gstin: row['GSTIN'] || row['gstin'] || '',
+            drugLicenseNo: row['Drug License'] || row['drugLicenseNo'] || row['DL No'] || '',
+            station: row['Station'] || row['station'] || 'LOCAL',
+            state: row['State'] || row['state'] || 'UTTAR PRADESH',
+            mobile: row['Mobile'] || row['mobile'] || row['Phone'] || '',
+            email: row['Email'] || row['email'] || '',
+            openingBalance: parseFloat(row['Opening Balance'] || row['openingBalance'] || '0') || 0,
+            openingBalanceType: String(row['Opening Balance Type'] || 'CR').toUpperCase() === 'DR' ? 'DR' : 'CR'
+          });
+        }
+
+        if (parsed.length > 0) {
+          setPreviewParties(parsed);
+          setSuccessMsg(`Loaded ${parsed.length} party ledgers from file.`);
+          setTimeout(() => setSuccessMsg(null), 4000);
+        } else {
+          setError('Could not extract any valid ledger rows from this file.');
+        }
+      } catch (err: any) {
+        console.error('Failed to parse file:', err);
+        setError('Failed to read Excel/CSV file: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkImport = async () => {
+    if (!activeCompany || previewParties.length === 0) return;
+    try {
+      setImporting(true);
+      setError(null);
+      setImportProgress(25);
+
+      const res = await api.post<{ success: boolean; importedCount: number; message: string }>(
+        '/api/parties/bulk-import',
+        { parties: previewParties },
+        { companyId: activeCompany.id }
+      );
+
+      setImportProgress(100);
+      setSuccessMsg(res.message || `Successfully imported ${res.importedCount} party ledgers!`);
+      setTimeout(() => setSuccessMsg(null), 5000);
+      setShowImportModal(false);
+      await fetchParties();
+    } catch (err: any) {
+      console.error('Failed to import party ledgers:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to import party ledgers');
+    } finally {
+      setImporting(false);
+      setImportProgress(0);
+    }
+  };
 
   // Modal State for Ledger Modification / Creation (Photo 1)
   const [showModal, setShowModal] = useState(false);
@@ -445,14 +608,55 @@ export default function Parties() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.8rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={handleExportParties}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.65rem 1rem',
+              background: '#f8fafc',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}
+            title="Export all party ledgers to Excel (.xlsx)"
+          >
+            <Download size={15} /> Export Excel
+          </button>
+          <button
+            onClick={() => {
+              setPreviewParties([]);
+              setShowImportModal(true);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.65rem 1rem',
+              background: '#f0fdf4',
+              color: '#15803d',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}
+            title="Import party ledgers from Excel or CSV"
+          >
+            <UploadCloud size={15} /> Import Excel
+          </button>
           <button
             onClick={() => handleOpenCreateModal('supplier')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.65rem 1.2rem',
+              padding: '0.65rem 1.1rem',
               background: '#0284c7',
               color: '#fff',
               border: 'none',
@@ -462,7 +666,7 @@ export default function Parties() {
               cursor: 'pointer'
             }}
           >
-            <Plus size={16} /> Add Sundry Creditor (Supplier)
+            <Plus size={16} /> + Supplier Ledger
           </button>
           <button
             onClick={() => handleOpenCreateModal('customer')}
@@ -470,7 +674,7 @@ export default function Parties() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.65rem 1.2rem',
+              padding: '0.65rem 1.1rem',
               background: 'var(--brand-teal)',
               color: '#fff',
               border: 'none',
@@ -480,10 +684,29 @@ export default function Parties() {
               cursor: 'pointer'
             }}
           >
-            <Plus size={16} /> Add Sundry Debtor (Customer)
+            <Plus size={16} /> + Customer Ledger
           </button>
         </div>
       </div>
+
+      {successMsg && (
+        <div style={{
+          background: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#15803d',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '13px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '1.2rem',
+          fontWeight: '500'
+        }}>
+          <CheckCircle2 size={18} color="#16a34a" />
+          {successMsg}
+        </div>
+      )}
 
       {/* KPI Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -1363,6 +1586,245 @@ export default function Parties() {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Ledgers Modal */}
+      {showImportModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            maxWidth: '850px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#dcfce7', padding: '8px', borderRadius: '8px', color: '#16a34a' }}>
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>Import Party Ledgers</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    Bulk load suppliers and customer ledgers from Excel or CSV sheet.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !importing && setShowImportModal(false)}
+                disabled={importing}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Option Selector Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                <div
+                  style={{
+                    border: '2px dashed #0284c7',
+                    background: '#f0f9ff',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <UploadCloud size={16} color="#0284c7" />
+                    Upload Excel (.xlsx / .xls / .csv)
+                  </div>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleFileUpload}
+                    disabled={importing}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#0284c7' }}>
+                    Supports columns: Ledger Name, Type, GSTIN, DL No, Station, State, Mobile, Opening Balance.
+                  </div>
+                </div>
+
+                <div
+                  onClick={handleExportPartyTemplate}
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Download size={16} color="#64748b" />
+                    Download Sample Party Template
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Get a formatted Excel sheet with supplier & customer sample columns.
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview List */}
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}>
+                <div style={{
+                  padding: '10px 14px',
+                  background: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Preview Ledgers ({previewParties.length})</span>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>
+                      (Duplicates with existing ledger names will be safely skipped)
+                    </span>
+                  </div>
+                  <div style={{ maxWidth: '240px' }}>
+                    <input
+                      type="text"
+                      placeholder="Filter preview..."
+                      value={importSearch}
+                      onChange={(e) => setImportSearch(e.target.value)}
+                      style={{ fontSize: '12px', padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '4px', width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                  {previewParties.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                      No party ledgers loaded yet. Please select an Excel/CSV file above.
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 12px', width: '35px' }}>#</th>
+                          <th style={{ padding: '8px 12px' }}>Ledger Name</th>
+                          <th style={{ padding: '8px 12px' }}>Type</th>
+                          <th style={{ padding: '8px 12px' }}>GSTIN</th>
+                          <th style={{ padding: '8px 12px' }}>Station / State</th>
+                          <th style={{ padding: '8px 12px' }}>Mobile</th>
+                          <th style={{ padding: '8px 12px' }}>Opening Bal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewParties
+                          .filter(p =>
+                            !importSearch ||
+                            p.name.toLowerCase().includes(importSearch.toLowerCase()) ||
+                            (p.gstin && p.gstin.toLowerCase().includes(importSearch.toLowerCase()))
+                          )
+                          .map((p, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '6px 12px', color: '#94a3b8' }}>{idx + 1}</td>
+                              <td style={{ padding: '6px 12px', fontWeight: 600, color: '#0f172a' }}>{p.name}</td>
+                              <td style={{ padding: '6px 12px' }}>
+                                <span style={{
+                                  background: p.type === 'supplier' ? '#e0f2fe' : '#dcfce7',
+                                  color: p.type === 'supplier' ? '#0369a1' : '#15803d',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: 600
+                                }}>
+                                  {p.type.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: '6px 12px', color: '#64748b' }}>{p.gstin || '—'}</td>
+                              <td style={{ padding: '6px 12px', color: '#64748b' }}>{p.station || 'LOCAL'} ({p.state || 'UP'})</td>
+                              <td style={{ padding: '6px 12px', color: '#64748b' }}>{p.mobile || '—'}</td>
+                              <td style={{ padding: '6px 12px', color: '#64748b' }}>₹{p.openingBalance} {p.openingBalanceType}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {importing && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#166534', marginBottom: '6px' }}>
+                    <span>Importing party ledgers into database...</span>
+                    <span>{importProgress}%</span>
+                  </div>
+                  <div style={{ height: '8px', width: '100%', background: '#dcfce7', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${importProgress}%`, background: '#22c55e', transition: 'width 0.2s ease-in-out' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                Ready to insert <strong>{previewParties.length}</strong> party ledgers.
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  disabled={importing}
+                  style={{ padding: '0.5rem 1rem', background: '#e2e8f0', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkImport}
+                  disabled={importing || previewParties.length === 0}
+                  style={{
+                    padding: '0.5rem 1.2rem',
+                    background: previewParties.length === 0 ? '#94a3b8' : '#16a34a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: previewParties.length === 0 || importing ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {importing ? `Importing (${importProgress}%)...` : `Confirm & Import (${previewParties.length})`}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

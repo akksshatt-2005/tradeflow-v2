@@ -102,9 +102,67 @@ export default function Medicines() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
-  const [previewItems, setPreviewItems] = useState<any[]>(book1Medicines);
+  const [previewItems, setPreviewItems] = useState<any[]>([]);
   const [importSearch, setImportSearch] = useState('');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleExportMedicines = () => {
+    if (items.length === 0) {
+      alert('No medicines available to export.');
+      return;
+    }
+    const data = items.map((item, idx) => ({
+      'S.No': idx + 1,
+      'SKU / Code': item.sku,
+      'Medicine Name': item.name,
+      'Generic Composition': item.genericName || '',
+      'Manufacturer': item.manufacturer || '',
+      'HSN Code': item.hsnCode,
+      'GST Rate (%)': item.gstRate,
+      'Packaging': item.conversionFactor > 1 ? `1*${item.conversionFactor}` : '1*1',
+      'Base Unit': item.unit,
+      'Tablets per Pack': item.conversionFactor,
+      'In Stock (Packs)': item.totalStock,
+      'Active Batches': item.activeBatchesCount,
+      'Min Alert Level': item.minStockLevel
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicine Catalog');
+    const compName = (activeCompany?.name || 'Catalog').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(workbook, `Medicines_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportTemplate = () => {
+    const templateData = [
+      {
+        'Item Name': 'PARACETAMOL 650MG',
+        'Description': '1*10 TAB',
+        'Company': 'GSK PHARMA',
+        'HSN': '3004',
+        'GST': 12
+      },
+      {
+        'Item Name': 'AMOXICILLIN 500MG CAP',
+        'Description': '1*10',
+        'Company': 'CIPLA',
+        'HSN': '3004',
+        'GST': 12
+      },
+      {
+        'Item Name': 'COUGH SYRUP 100ML',
+        'Description': '1*1 BOTTLE',
+        'Company': 'DABUR',
+        'HSN': '3004',
+        'GST': 12
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicine_Template');
+    XLSX.writeFile(workbook, `Medicine_Import_Template.xlsx`);
+  };
 
   const handleBulkImport = async (itemsToImport = previewItems) => {
     if (!activeCompany) return;
@@ -423,10 +481,27 @@ export default function Medicines() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={handleExportMedicines}
+            className="btn btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#f8fafc',
+              color: '#334155',
+              borderColor: '#cbd5e1',
+              fontWeight: '600'
+            }}
+            title="Export full catalog to Excel (.xlsx)"
+          >
+            <Download size={15} />
+            Export Excel
+          </button>
           <button
             onClick={() => {
-              setPreviewItems(book1Medicines);
+              setPreviewItems([]);
               setShowImportModal(true);
             }}
             className="btn btn-secondary"
@@ -439,9 +514,10 @@ export default function Medicines() {
               borderColor: '#bbf7d0',
               fontWeight: '600'
             }}
+            title="Import medicines from Excel or CSV"
           >
-            <UploadCloud size={16} />
-            Import Excel Catalog ({book1Medicines.length})
+            <UploadCloud size={15} />
+            Import Excel
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -1400,11 +1476,68 @@ export default function Medicines() {
 
             <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Option Selector Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
                 <div
-                  onClick={() => setPreviewItems(book1Medicines)}
                   style={{
-                    border: '2px solid #22c55e',
+                    border: '2px dashed #0284c7',
+                    background: '#f0f9ff',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <UploadCloud size={16} color="#0284c7" />
+                    Upload Excel (.xlsx / .xls / .csv)
+                  </div>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleFileUpload}
+                    disabled={importing}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#0284c7' }}>
+                    Supports custom column formats (Name, Pack, Company, etc.)
+                  </div>
+                </div>
+
+                <div
+                  onClick={handleExportTemplate}
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Download size={16} color="#64748b" />
+                    Download Sample Excel Template
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Pre-configured blank table template ready for your medicine data.
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setPreviewItems(book1Medicines);
+                    setSuccessMsg(`Loaded ${book1Medicines.length} medicines from Book1.xlsx`);
+                    setTimeout(() => setSuccessMsg(null), 3000);
+                  }}
+                  style={{
+                    border: '1px solid #bbf7d0',
                     background: '#f0fdf4',
                     borderRadius: '8px',
                     padding: '14px',
@@ -1416,43 +1549,17 @@ export default function Medicines() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 700, fontSize: '14px', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <Sparkles size={16} />
-                      Book1.xlsx (MARG Clinic)
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={15} />
+                      Book1.xlsx
                     </span>
                     <span style={{ background: '#22c55e', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>
                       478 ITEMS
                     </span>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>
-                    Pre-parsed master list from your Mental Wellness Clinic catalog with correct packaging & manufacturers.
+                  <div style={{ fontSize: '11px', color: '#166534' }}>
+                    Clinic MARG catalog pre-parsed master set.
                   </div>
-                </div>
-
-                <div
-                  style={{
-                    border: '1px dashed #cbd5e1',
-                    background: '#f8fafc',
-                    borderRadius: '8px',
-                    padding: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    position: 'relative'
-                  }}
-                >
-                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <UploadCloud size={16} color="#64748b" />
-                    Upload Custom Excel / CSV
-                  </div>
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls, .csv"
-                    onChange={handleFileUpload}
-                    disabled={importing}
-                    style={{ fontSize: '12px' }}
-                  />
                 </div>
               </div>
 

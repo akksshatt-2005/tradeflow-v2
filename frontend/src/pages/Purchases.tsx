@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import * as XLSX from 'xlsx';
 import NewPurchase from './NewPurchase';
 import {
   Truck,
@@ -17,7 +18,8 @@ import {
   CreditCard,
   Building2,
   Trash2,
-  Edit2
+  Edit2,
+  Download
 } from 'lucide-react';
 
 interface PurchaseItemDetail {
@@ -110,6 +112,43 @@ export default function Purchases() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportPurchases = () => {
+    if (purchases.length === 0) {
+      alert('No purchase bills to export.');
+      return;
+    }
+    const data = purchases.map((p, idx) => ({
+      'S.No': idx + 1,
+      'Bill / Invoice #': p.invoiceNumber,
+      'Bill Date': p.purchaseDate ? p.purchaseDate.split('T')[0] : '',
+      'Due Date': p.dueDate ? p.dueDate.split('T')[0] : '',
+      'Supplier / Firm Name': p.supplier.mailTo || p.supplier.name,
+      'Supplier GSTIN': p.supplier.gstin || '',
+      'Supplier DL No': p.supplier.drugLicenseNo || '',
+      'Payment Mode': p.paymentMode,
+      'Items Count': p.itemsCount,
+      'Subtotal (₹)': p.subtotal,
+      'Total Discount (₹)': p.totalDiscount,
+      'Taxable Amount (₹)': p.taxableAmount,
+      'CGST (₹)': p.cgstAmount,
+      'SGST (₹)': p.sgstAmount,
+      'IGST (₹)': p.igstAmount,
+      'Round Off (₹)': p.roundOff,
+      'Total Amount (₹)': p.totalAmount,
+      'Paid Amount (₹)': p.paidAmount,
+      'Balance Due (₹)': p.totalAmount - p.paidAmount,
+      'Bill Status': p.status,
+      'Created By': p.createdByUser,
+      'Notes': p.notes || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Purchase Bills');
+    const compName = (activeCompany?.name || 'Purchases').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(workbook, `Purchases_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleOpenDetails = async (id: string) => {
@@ -228,14 +267,33 @@ export default function Purchases() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowNewPurchase(true)}
-          className="btn btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-        >
-          <Plus size={16} />
-          New Purchase Inward
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={handleExportPurchases}
+            className="btn btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#f8fafc',
+              color: '#334155',
+              borderColor: '#cbd5e1',
+              fontWeight: '600'
+            }}
+            title="Export all purchase bills to Excel (.xlsx)"
+          >
+            <Download size={15} />
+            Export Excel
+          </button>
+          <button
+            onClick={() => setShowNewPurchase(true)}
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Plus size={16} />
+            New Purchase Inward
+          </button>
+        </div>
       </div>
 
       {/* Metrics Row */}

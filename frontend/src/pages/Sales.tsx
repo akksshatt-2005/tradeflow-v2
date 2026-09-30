@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import * as XLSX from 'xlsx';
 import POSBilling from './POSBilling';
 import {
   ShoppingCart,
@@ -19,7 +20,8 @@ import {
   User,
   Filter,
   Trash2,
-  Edit2
+  Edit2,
+  Download
 } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -92,6 +94,40 @@ export default function Sales() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportSales = () => {
+    if (invoices.length === 0) {
+      alert('No sales invoices to export.');
+      return;
+    }
+    const data = invoices.map((inv, idx) => ({
+      'S.No': idx + 1,
+      'Invoice #': inv.invoiceNumber,
+      'Invoice Date': inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '',
+      'Due Date': inv.dueDate ? inv.dueDate.split('T')[0] : '',
+      'Customer / Party Name': inv.party?.mailTo || inv.party?.name || inv.customerName,
+      'Customer Phone': inv.customerPhone || inv.party?.phone || '',
+      'Customer GSTIN': inv.party?.gstin || '',
+      'Doctor Name': inv.doctorName || '',
+      'Patient Name': inv.patientName || '',
+      'Payment Mode': inv.paymentMode,
+      'Items Count': inv.itemsCount,
+      'Taxable Amount (₹)': inv.taxableAmount,
+      'Total GST (₹)': inv.totalTax,
+      'Grand Total (₹)': inv.grandTotal,
+      'Paid Amount (₹)': inv.paidAmount,
+      'Balance Due (₹)': inv.balanceAmount,
+      'Invoice Status': inv.status,
+      'Billed By': inv.createdByUser,
+      'Notes': inv.notes || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Invoices');
+    const compName = (activeCompany?.name || 'Sales').replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(workbook, `Sales_Invoices_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleViewInvoice = async (invoiceId: string) => {
@@ -222,26 +258,47 @@ export default function Sales() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowPOS(true)}
-          className="btn btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.4rem',
-            fontSize: '0.95rem',
-            fontWeight: '600',
-            background: 'var(--brand-teal)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(20, 184, 166, 0.3)'
-          }}
-        >
-          <Plus size={18} /> Open POS Terminal (New Bill)
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleExportSales}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.75rem 1.1rem',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              background: '#f8fafc',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+            title="Export all sales invoices to Excel (.xlsx)"
+          >
+            <Download size={16} /> Export Excel
+          </button>
+          <button
+            onClick={() => setShowPOS(true)}
+            className="btn btn-primary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.4rem',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              background: 'var(--brand-teal)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(20, 184, 166, 0.3)'
+            }}
+          >
+            <Plus size={18} /> Open POS Terminal (New Bill)
+          </button>
+        </div>
       </div>
 
       {/* Summary KPI Cards */}

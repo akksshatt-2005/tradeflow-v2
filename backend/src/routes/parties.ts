@@ -135,6 +135,100 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
 });
 
 /**
+ * POST /parties/bulk-import
+ * Bulk import party ledgers from Excel or CSV
+ */
+router.post('/bulk-import', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { parties } = req.body;
+
+  if (!Array.isArray(parties) || parties.length === 0) {
+    res.status(400).json({ error: 'parties array is required and must not be empty' });
+    return;
+  }
+
+  try {
+    // Fetch existing party names for deduplication
+    const existingParties = await prisma.party.findMany({
+      where: { companyId },
+      select: { name: true, mailTo: true }
+    });
+
+    const existingNames = new Set(
+      existingParties.flatMap(p => [
+        p.name.toLowerCase().trim(),
+        (p.mailTo || '').toLowerCase().trim()
+      ]).filter(Boolean)
+    );
+
+    const validParties: any[] = [];
+    const seenNames = new Set<string>();
+
+    for (const p of parties) {
+      const name = (p.name || p.ledgerName || p['Ledger Name'] || p.firmName || '').toString().trim();
+      if (!name) continue;
+
+      const normalized = name.toLowerCase();
+      if (existingNames.has(normalized) || seenNames.has(normalized)) {
+        continue; // Skip duplicate
+      }
+      seenNames.add(normalized);
+
+      const type = (p.type || 'supplier').toString().toLowerCase() === 'customer' ? 'customer' : 'supplier';
+      const openBal = parseFloat(p.openingBalance || p['Opening Balance'] || '0') || 0;
+      const openBalType = (p.openingBalanceType || 'CR').toString().toUpperCase() === 'DR' ? 'DR' : 'CR';
+
+      validParties.push({
+        companyId,
+        name,
+        mailTo: p.mailTo || p['Billing / Mail Name'] || name,
+        type,
+        station: (p.station || p['Station'] || 'LOCAL').toString(),
+        accountGroup: (p.accountGroup || (type === 'supplier' ? 'SUNDRY_CREDITORS' : 'SUNDRY_DEBTORS')).toString(),
+        balancingMethod: (p.balancingMethod || 'BILL_BY_BILL').toString(),
+        openingBalance: openBal,
+        openingBalanceType: openBalType,
+        outstandingBalance: openBal,
+        address: (p.address || p['Address'] || null)?.toString() || null,
+        pincode: (p.pincode || p['Pincode'] || null)?.toString() || null,
+        state: (p.state || p['State'] || 'UTTAR PRADESH').toString(),
+        stateCode: (p.stateCode || '09').toString(),
+        country: 'INDIA',
+        phone: (p.phone || p['Phone'] || null)?.toString() || null,
+        mobile: (p.mobile || p['Mobile'] || null)?.toString() || null,
+        email: (p.email || p['Email'] || null)?.toString() || null,
+        contactPerson: (p.contactPerson || p['Contact Person'] || null)?.toString() || null,
+        designation: (p.designation || null)?.toString() || null,
+        gstin: (p.gstin || p['GSTIN'] || null)?.toString().toUpperCase() || null,
+        drugLicenseNo: (p.drugLicenseNo || p['Drug License'] || p['DL No'] || null)?.toString() || null,
+        fssaiNo: (p.fssaiNo || p['FSSAI'] || null)?.toString() || null,
+        panNo: (p.panNo || p['PAN'] || null)?.toString().toUpperCase() || null,
+        ledgerCategory: (p.ledgerCategory || (p.gstin ? 'REGISTERED' : 'UNREGISTERED')),
+        creditLimit: parseFloat(p.creditLimit || '0') || 0,
+        isCash: false
+      });
+    }
+
+    if (validParties.length > 0) {
+      await prisma.party.createMany({
+        data: validParties,
+        skipDuplicates: true
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      importedCount: validParties.length,
+      skippedCount: parties.length - validParties.length,
+      message: `Successfully imported ${validParties.length} party ledgers.`
+    });
+  } catch (error: any) {
+    console.error('Failed to bulk import party ledgers:', error);
+    res.status(500).json({ error: error.message || 'Failed to bulk import party ledgers' });
+  }
+});
+
+/**
  * POST /parties
  * Create new party (Supplier or Customer Ledger)
  */
