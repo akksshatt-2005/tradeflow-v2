@@ -670,7 +670,14 @@ export default function Sales() {
                       {new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
                     </td>
                     <td style={{ padding: '0.6rem 0.4rem', textAlign: 'center', fontWeight: '600' }}>
-                      {item.quantity}{item.freeQuantity > 0 ? `+${item.freeQuantity}` : ''}
+                      {item.strips > 0 && item.looseQty > 0
+                        ? `${item.strips} Str + ${item.looseQty} Tab`
+                        : item.strips > 0
+                        ? `${item.strips} Strip`
+                        : item.looseQty > 0
+                        ? `${item.looseQty} Tab`
+                        : item.quantity}
+                      {item.freeQuantity > 0 ? ` (+${item.freeQuantity} free)` : ''}
                     </td>
                     <td style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>₹{Number(item.unitPrice).toFixed(2)}</td>
                     <td style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>{item.gstRate}%</td>

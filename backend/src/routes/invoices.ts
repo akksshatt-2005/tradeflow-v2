@@ -288,9 +288,12 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           sku: i.item.sku,
           unit: i.item.unit,
           hsnCode: i.item.hsnCode,
+          pack: i.pack || '10 TAB',
           batchId: i.batchId,
           batchNumber: i.batchNumber,
           expiryDate: i.expiryDate.toISOString(),
+          strips: i.strips || 0,
+          looseQty: i.looseQty || 0,
           quantity: i.quantity,
           freeQuantity: i.freeQuantity,
           unitPrice: Number(i.unitPrice),
@@ -401,24 +404,53 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         return;
       }
 
-      const qty = parseInt(rawItem.quantity) || 0;
-      if (qty <= 0) {
-        res.status(400).json({ error: `Quantity must be greater than 0` });
-        return;
-      }
-
-      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
-      const totalUnitsNeeded = qty + freeQty;
-
       // Fetch batch from DB with lock / check stock
       const batch = await prisma.batch.findFirst({
         where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
-        include: { item: { select: { name: true } } }
+        include: { item: { select: { name: true, conversionFactor: true, unit: true } } }
       });
 
       if (!batch) {
         res.status(404).json({ error: `Batch not found for selected item` });
         return;
+      }
+
+      const factor = batch.item?.conversionFactor || (rawItem.pack ? parseInt(rawItem.pack) : 1) || 1;
+      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
+      const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
+      const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
+      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
+
+      const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
+      const rawLoose = rawItem.looseQty !== undefined ? parseInt(rawItem.looseQty) : undefined;
+
+      let strips = 0;
+      let looseQty = 0;
+      let qty = parseInt(rawItem.quantity) || 0;
+      let lineGross = 0;
+      let totalUnitsNeeded = 0;
+
+      if (rawStrips !== undefined || rawLoose !== undefined) {
+        strips = Math.max(0, rawStrips || 0);
+        looseQty = Math.max(0, rawLoose || 0);
+        totalUnitsNeeded = (strips * factor) + looseQty + freeQty;
+        qty = (strips * factor) + looseQty;
+
+        if (totalUnitsNeeded <= 0) {
+          res.status(400).json({ error: 'Quantity must be greater than 0' });
+          return;
+        }
+
+        // Calculate line gross value: full strips * strip price + loose tablets * per tablet price
+        lineGross = (strips * unitPrice) + (looseQty * (unitPrice / factor));
+      } else {
+        if (qty <= 0) {
+          res.status(400).json({ error: `Quantity must be greater than 0` });
+          return;
+        }
+        totalUnitsNeeded = qty + freeQty;
+        lineGross = qty * unitPrice;
       }
 
       if (batch.currentStock < totalUnitsNeeded) {
@@ -428,12 +460,6 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         return;
       }
 
-      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
-      const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
-      const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
-
-      const lineGross = qty * unitPrice;
       const lineDiscount = (lineGross * discountPct) / 100;
       const lineTaxable = lineGross - lineDiscount;
 
@@ -460,8 +486,11 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       validatedItems.push({
         itemId: batch.itemId,
         batchId: batch.id,
+        pack: rawItem.pack || (factor > 1 ? `${factor} TAB` : '10 TAB'),
         batchNumber: batch.batchNumber,
         expiryDate: batch.expiryDate,
+        strips,
+        looseQty,
         quantity: qty,
         freeQuantity: freeQty,
         unitPrice,
@@ -562,8 +591,11 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
             invoiceId: invoice.id,
             itemId: item.itemId,
             batchId: item.batchId,
+            pack: item.pack,
             batchNumber: item.batchNumber,
             expiryDate: item.expiryDate,
+            strips: item.strips,
+            looseQty: item.looseQty,
             quantity: item.quantity,
             freeQuantity: item.freeQuantity,
             unitPrice: item.unitPrice,
@@ -718,18 +750,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         return;
       }
 
-      const qty = parseInt(rawItem.quantity) || 0;
-      if (qty <= 0) {
-        res.status(400).json({ error: 'Quantity must be greater than 0' });
-        return;
-      }
-
-      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
-      const totalUnitsNeeded = qty + freeQty;
-
       const batch = await prisma.batch.findFirst({
         where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
-        include: { item: { select: { name: true } } }
+        include: { item: { select: { name: true, conversionFactor: true, unit: true } } }
       });
 
       if (!batch) {
@@ -737,12 +760,44 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         return;
       }
 
+      const factor = batch.item?.conversionFactor || (rawItem.pack ? parseInt(rawItem.pack) : 1) || 1;
       const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
 
-      const lineGross = qty * unitPrice;
+      const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
+      const rawLoose = rawItem.looseQty !== undefined ? parseInt(rawItem.looseQty) : undefined;
+
+      let strips = 0;
+      let looseQty = 0;
+      let qty = parseInt(rawItem.quantity) || 0;
+      let lineGross = 0;
+      let totalUnitsNeeded = 0;
+
+      if (rawStrips !== undefined || rawLoose !== undefined) {
+        strips = Math.max(0, rawStrips || 0);
+        looseQty = Math.max(0, rawLoose || 0);
+        totalUnitsNeeded = (strips * factor) + looseQty + freeQty;
+        qty = (strips * factor) + looseQty;
+
+        if (totalUnitsNeeded <= 0) {
+          res.status(400).json({ error: 'Quantity must be greater than 0' });
+          return;
+        }
+
+        // Calculate line gross value: full strips * strip price + loose tablets * per tablet price
+        lineGross = (strips * unitPrice) + (looseQty * (unitPrice / factor));
+      } else {
+        if (qty <= 0) {
+          res.status(400).json({ error: 'Quantity must be greater than 0' });
+          return;
+        }
+        totalUnitsNeeded = qty + freeQty;
+        lineGross = qty * unitPrice;
+      }
+
       const lineDiscount = (lineGross * discountPct) / 100;
       const lineTaxable = lineGross - lineDiscount;
 
@@ -771,9 +826,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         batchId: batch.id,
         batchNumber: batch.batchNumber,
         expiryDate: batch.expiryDate,
-        pack: rawItem.pack || '10 TAB',
-        strips: parseInt(rawItem.strips) || 0,
-        looseQty: parseInt(rawItem.looseQty) || 0,
+        pack: rawItem.pack || (factor > 1 ? `${factor} TAB` : '10 TAB'),
+        strips,
+        looseQty,
         quantity: qty,
         freeQuantity: freeQty,
         totalUnitsNeeded,

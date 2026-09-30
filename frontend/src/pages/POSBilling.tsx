@@ -1142,7 +1142,15 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       <td style={{ padding: '0.4rem 0' }}>{item.medicineName}</td>
                       <td style={{ padding: '0.4rem 0' }}>{item.batchNumber}</td>
                       <td style={{ padding: '0.4rem 0' }}>{new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}</td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>{item.quantity}</td>
+                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>
+                        {item.strips > 0 && item.looseQty > 0
+                          ? `${item.strips} Str + ${item.looseQty} Tab`
+                          : item.strips > 0
+                          ? `${item.strips} Strip`
+                          : item.looseQty > 0
+                          ? `${item.looseQty} Tab`
+                          : item.quantity}
+                      </td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.mrp).toFixed(2)}</td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.unitPrice).toFixed(2)}</td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'right', fontWeight: 'bold' }}>₹{Number(item.totalAmount).toFixed(2)}</td>
