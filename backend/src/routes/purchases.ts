@@ -5,6 +5,51 @@ import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
 import { generateUniqueItemSku } from '../utils/skuGenerator.js';
 
+export function parsePackingString(packStr?: string | null, defaultUnit = 'STRIP', defaultFactor = 10): { unit: string; conversionFactor: number } {
+  if (!packStr || typeof packStr !== 'string') {
+    return { unit: defaultUnit, conversionFactor: defaultFactor };
+  }
+  const clean = packStr.trim().toUpperCase();
+
+  // Case 1: 1*10 or 1X10 or 1*15 or 1*4 or 1*5 or 10*10 or 1*1
+  const multMatch = clean.match(/^(\d+)\s*[\*xX]\s*(\d+)(?:\s*([A-Z]+))?/);
+  if (multMatch) {
+    const num1 = parseInt(multMatch[1]) || 1;
+    const num2 = parseInt(multMatch[2]) || 1;
+    // Standard format: 1*10 -> 10 tabs per strip
+    // If format is 10*10 -> 10 tabs per strip (or 100 if box)
+    const factor = num1 === 1 ? num2 : num2;
+    let unit = multMatch[3] || defaultUnit;
+    if (!multMatch[3]) {
+      unit = factor === 1 ? 'BOTTLE' : 'STRIP';
+    }
+    return { unit, conversionFactor: factor > 0 ? factor : 1 };
+  }
+
+  // Case 2: 10 TAB or 15 CAP or 10'S or 10 TABLETS
+  const singleMatch = clean.match(/^(\d+)\s*([A-Z]*)/);
+  if (singleMatch) {
+    const factor = parseInt(singleMatch[1]) || defaultFactor;
+    let unit = singleMatch[2] || defaultUnit;
+    if (unit.startsWith('TAB')) unit = 'STRIP';
+    else if (unit.startsWith('CAP')) unit = 'STRIP';
+    return { unit: unit || defaultUnit, conversionFactor: factor > 0 ? factor : 1 };
+  }
+
+  // Case 3: BOTTLE, VIAL, TUBE, SYRUP, DROP, AMP
+  if (clean.includes('BOTTLE') || clean.includes('SYRUP') || clean.includes('SUSP') || clean.includes('ML')) {
+    return { unit: 'BOTTLE', conversionFactor: 1 };
+  }
+  if (clean.includes('TUBE') || clean.includes('OINT') || clean.includes('CREAM') || clean.includes('GEL')) {
+    return { unit: 'TUBE', conversionFactor: 1 };
+  }
+  if (clean.includes('VIAL') || clean.includes('INJ') || clean.includes('AMP')) {
+    return { unit: 'VIAL', conversionFactor: 1 };
+  }
+
+  return { unit: defaultUnit, conversionFactor: defaultFactor };
+}
+
 const router = Router();
 
 // Require auth and company access
@@ -305,22 +350,11 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           });
 
           if (!existingItem) {
-            // Auto-detect unit and conversion factor from pack (e.g., "10 TAB" -> 10 TAB)
-            const packStr = (item.pack || '').trim().toUpperCase();
-            let unit = (item.unit || 'STRIP').trim().toUpperCase();
-            let conversionFactor = parseInt(item.conversionFactor) || 1;
-
-            if (packStr) {
-              const match = packStr.match(/^(\d+)\s*([A-Z]*)/i);
-              if (match) {
-                if (!item.conversionFactor && match[1]) {
-                  conversionFactor = parseInt(match[1]) || 1;
-                }
-                if (!item.unit && match[2] && match[2].length > 1) {
-                  unit = match[2].toUpperCase();
-                }
-              }
-            }
+            // Auto-detect unit and conversion factor from pack (e.g., "1*10", "1*5", "1*4", "10 TAB")
+            const packStr = (item.pack || '').trim();
+            const parsedPack = parsePackingString(packStr, item.unit || 'STRIP', item.conversionFactor ? parseInt(item.conversionFactor) : 10);
+            const unit = (item.unit || parsedPack.unit || 'STRIP').trim().toUpperCase();
+            const conversionFactor = item.conversionFactor ? Math.max(1, parseInt(item.conversionFactor)) : parsedPack.conversionFactor;
 
             const autoSku = await generateUniqueItemSku(tx, companyId, item.sku, locallyReservedSkus);
 
@@ -692,19 +726,10 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           });
 
           if (!existingItem) {
-            const packStr = (item.pack || '').trim().toUpperCase();
-            let unit = 'STRIP';
-            let conversionFactor = 1;
-
-            if (packStr) {
-              const match = packStr.match(/^(\d+)\s*([A-Z]*)/i);
-              if (match) {
-                conversionFactor = parseInt(match[1]) || 1;
-                if (match[2] && match[2].length > 1) {
-                  unit = match[2].toUpperCase();
-                }
-              }
-            }
+            const packStr = (item.pack || '').trim();
+            const parsedPack = parsePackingString(packStr, item.unit || 'STRIP', item.conversionFactor ? parseInt(item.conversionFactor) : 10);
+            const unit = (item.unit || parsedPack.unit || 'STRIP').trim().toUpperCase();
+            const conversionFactor = item.conversionFactor ? Math.max(1, parseInt(item.conversionFactor)) : parsedPack.conversionFactor;
 
             const autoSku = await generateUniqueItemSku(tx, companyId, item.sku, locallyReservedSkus);
 

@@ -397,12 +397,17 @@ export default function Medicines() {
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{
                       background: '#f1f5f9',
-                      padding: '3px 6px',
+                      color: '#334155',
+                      padding: '4px 8px',
                       borderRadius: '4px',
                       fontSize: '11px',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center'
                     }}>
-                      1 {item.unit} = {item.conversionFactor} Base Units
+                      {item.conversionFactor > 1 
+                        ? `1*${item.conversionFactor} (${item.conversionFactor} Tabs/Strip)` 
+                        : `1*1 (1 ${item.unit || 'Unit'})`}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -584,42 +589,92 @@ export default function Medicines() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="label">Packaging Unit</label>
+                  <label className="label">Pack Type</label>
                   <select
                     value={newItemUnit}
                     onChange={(e) => setNewItemUnit(e.target.value)}
                     className="input"
                   >
                     <option value="STRIP">STRIP</option>
-                    <option value="TAB">TABLET</option>
-                    <option value="BOTTLE">BOTTLE</option>
-                    <option value="VIAL">VIAL / INJ</option>
+                    <option value="BOTTLE">BOTTLE / SYRUP</option>
+                    <option value="VIAL">VIAL / INJECTION</option>
+                    <option value="TUBE">TUBE / OINTMENT</option>
                     <option value="BOX">BOX</option>
-                    <option value="TUBE">TUBE / OINT</option>
+                    <option value="TAB">TABLET (Loose)</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="label">Tabs / Units Per Pack</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newItemConversion}
-                    onChange={(e) => setNewItemConversion(e.target.value)}
-                    className="input"
-                  />
+              {/* Strip Packaging & Conversion Size */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="label" style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                    Strip Size / Tablets per Strip (1*X)
+                  </label>
+                  <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>
+                    Current: 1*{newItemConversion} ({newItemConversion} {newItemUnit === 'BOTTLE' ? 'Bottle' : 'Tabs'} / Pack)
+                  </span>
                 </div>
-                <div className="form-group">
-                  <label className="label">Min Alert Stock Level</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newItemMinStock}
-                    onChange={(e) => setNewItemMinStock(e.target.value)}
-                    className="input"
-                  />
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {[
+                    { label: '1*10 (10 Tabs)', val: '10', unit: 'STRIP' },
+                    { label: '1*15 (15 Caps)', val: '15', unit: 'STRIP' },
+                    { label: '1*4 (4 Tabs)', val: '4', unit: 'STRIP' },
+                    { label: '1*5 (5 Tabs)', val: '5', unit: 'STRIP' },
+                    { label: '1*6', val: '6', unit: 'STRIP' },
+                    { label: '1*20', val: '20', unit: 'STRIP' },
+                    { label: '1*1 (Bottle/Tube)', val: '1', unit: 'BOTTLE' }
+                  ].map(preset => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setNewItemConversion(preset.val);
+                        if (preset.unit) setNewItemUnit(preset.unit);
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '11px',
+                        fontWeight: newItemConversion === preset.val ? '700' : '500',
+                        borderRadius: '4px',
+                        border: '1px solid',
+                        borderColor: newItemConversion === preset.val ? '#0284c7' : '#cbd5e1',
+                        background: newItemConversion === preset.val ? '#e0f2fe' : '#ffffff',
+                        color: newItemConversion === preset.val ? '#0369a1' : '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Custom Tablets / Units per Strip</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 10"
+                      value={newItemConversion}
+                      onChange={(e) => setNewItemConversion(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Min Alert Stock Level</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newItemMinStock}
+                      onChange={(e) => setNewItemMinStock(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+                  💡 <em>e.g. <strong>1*10</strong> means 1 strip contains 10 tablets. For bottles/syrups, select <strong>1*1</strong>.</em>
                 </div>
               </div>
 
@@ -1022,39 +1077,92 @@ export default function Medicines() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
                 <div className="form-group">
-                  <label className="form-label">Packing Unit</label>
+                  <label className="form-label">Pack Type</label>
                   <select
                     value={editUnit}
                     onChange={(e) => setEditUnit(e.target.value)}
                     className="form-select"
                   >
                     <option value="STRIP">STRIP</option>
+                    <option value="BOTTLE">BOTTLE / SYRUP</option>
+                    <option value="VIAL">VIAL / INJECTION</option>
+                    <option value="TUBE">TUBE / OINTMENT</option>
                     <option value="BOX">BOX</option>
-                    <option value="BOTTLE">BOTTLE</option>
-                    <option value="VIAL">VIAL</option>
-                    <option value="TUBE">TUBE</option>
                     <option value="PIECE">PIECE</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Units / Pack</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editConversion}
-                    onChange={(e) => setEditConversion(e.target.value)}
-                    className="form-input"
-                  />
+              </div>
+
+              {/* Strip Packaging & Conversion Size */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                    Strip Size / Tablets per Strip (1*X)
+                  </label>
+                  <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>
+                    Current: 1*{editConversion} ({editConversion} {editUnit === 'BOTTLE' ? 'Bottle' : 'Tabs'} / Pack)
+                  </span>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Min Stock Level</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editMinStock}
-                    onChange={(e) => setEditMinStock(e.target.value)}
-                    className="form-input"
-                  />
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {[
+                    { label: '1*10 (10 Tabs)', val: '10', unit: 'STRIP' },
+                    { label: '1*15 (15 Caps)', val: '15', unit: 'STRIP' },
+                    { label: '1*4 (4 Tabs)', val: '4', unit: 'STRIP' },
+                    { label: '1*5 (5 Tabs)', val: '5', unit: 'STRIP' },
+                    { label: '1*6', val: '6', unit: 'STRIP' },
+                    { label: '1*20', val: '20', unit: 'STRIP' },
+                    { label: '1*1 (Bottle/Tube)', val: '1', unit: 'BOTTLE' }
+                  ].map(preset => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setEditConversion(preset.val);
+                        if (preset.unit) setEditUnit(preset.unit);
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '11px',
+                        fontWeight: editConversion === preset.val ? '700' : '500',
+                        borderRadius: '4px',
+                        border: '1px solid',
+                        borderColor: editConversion === preset.val ? '#0284c7' : '#cbd5e1',
+                        background: editConversion === preset.val ? '#e0f2fe' : '#ffffff',
+                        color: editConversion === preset.val ? '#0369a1' : '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11px' }}>Custom Tablets / Units per Strip</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 10"
+                      value={editConversion}
+                      onChange={(e) => setEditConversion(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11px' }}>Min Alert Stock Level</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editMinStock}
+                      onChange={(e) => setEditMinStock(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+                  💡 <em>e.g. <strong>1*10</strong> means 1 strip contains 10 tablets.</em>
                 </div>
               </div>
 

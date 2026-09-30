@@ -118,7 +118,7 @@ export default function NewPurchase({
     oldMrp: '',
     hsnCode: '',
     sku: '',
-    pack: '',
+    pack: '1*10',
     batchNumber: '',
     expiryMonth: '',
     expiryYear: '',
@@ -148,7 +148,7 @@ export default function NewPurchase({
     name: '',
     genericName: '',
     manufacturer: '',
-    pack: '10 TAB',
+    pack: '1*10',
     unit: 'STRIP',
     conversionFactor: 10,
     hsnCode: '3004',
@@ -455,7 +455,7 @@ export default function NewPurchase({
         pts: existingPts,
         hsnCode: med.hsnCode || '3004',
         sku: med.sku,
-        pack: med.conversionFactor > 1 ? `${med.conversionFactor} ${med.unit}` : med.unit,
+        pack: med.conversionFactor > 1 ? `1*${med.conversionFactor}` : `1*1 (${med.unit || 'Unit'})`,
         gstRate: String(med.gstRate ?? 5),
         isNewCatalog: false
       };
@@ -483,7 +483,7 @@ export default function NewPurchase({
         pts: '',
         hsnCode: '3004',
         sku: '',
-        pack: updated[index].pack || '10 TAB',
+        pack: updated[index].pack || '1*10',
         gstRate: updated[index].gstRate || '5',
         isNewCatalog: true
       };
@@ -531,7 +531,7 @@ export default function NewPurchase({
             oldMrp: String(newMedForm.defaultMrp || 140),
             hsnCode: createdMed.hsnCode || '3004',
             sku: createdMed.sku,
-            pack: createdMed.conversionFactor > 1 ? `${createdMed.conversionFactor} ${createdMed.unit}` : createdMed.unit,
+            pack: createdMed.conversionFactor > 1 ? `1*${createdMed.conversionFactor}` : `1*1 (${createdMed.unit || 'Unit'})`,
             gstRate: String(createdMed.gstRate || 5),
             purchaseRate: String(newMedForm.defaultPtr || 100),
             mrp: String(newMedForm.defaultMrp || 140),
@@ -550,7 +550,7 @@ export default function NewPurchase({
         name: '',
         genericName: '',
         manufacturer: '',
-        pack: '10 TAB',
+        pack: '1*10',
         unit: 'STRIP',
         conversionFactor: 10,
         hsnCode: '3004',
@@ -942,7 +942,8 @@ export default function NewPurchase({
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
                 <th style={{ padding: '0.7rem 0.6rem', width: '38px', textAlign: 'center' }}>Sr.</th>
-                <th style={{ padding: '0.7rem 0.6rem', minWidth: '220px' }}>Description Of Goods</th>
+                <th style={{ padding: '0.7rem 0.6rem', minWidth: '200px' }}>Description Of Goods</th>
+                <th style={{ padding: '0.7rem 0.5rem', width: '85px', textAlign: 'center' }}>Pack (1*X)</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '80px', textAlign: 'right' }}>O/MRP</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>HSN</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '105px' }}>Batch</th>
@@ -1019,7 +1020,7 @@ export default function NewPurchase({
                                   pts: existingPts,
                                   hsnCode: exactMatch.hsnCode || '3004',
                                   sku: exactMatch.sku,
-                                  pack: exactMatch.conversionFactor > 1 ? `${exactMatch.conversionFactor} ${exactMatch.unit}` : exactMatch.unit,
+                                  pack: exactMatch.conversionFactor > 1 ? `1*${exactMatch.conversionFactor}` : `1*1 (${exactMatch.unit || 'Unit'})`,
                                   gstRate: String(exactMatch.gstRate ?? 5),
                                   isNewCatalog: false
                                 };
@@ -1129,7 +1130,7 @@ export default function NewPurchase({
                                   </div>
                                 </div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  {med.genericName ? `${med.genericName} • ` : ''}SKU: {med.sku} • GST: {med.gstRate}%
+                                  {med.genericName ? `${med.genericName} • ` : ''}Pack: 1*{med.conversionFactor || 10} • SKU: {med.sku} • GST: {med.gstRate}%
                                 </div>
                               </div>
                             );
@@ -1144,7 +1145,29 @@ export default function NewPurchase({
                       )}
                     </td>
 
-                    {/* 3. O/MRP (Old MRP) */}
+                    {/* 3. Pack (1*10, 1*15, 1*4, 1*5, 1*1) */}
+                    <td style={{ padding: '0.5rem 0.4rem' }}>
+                      <input
+                        type="text"
+                        placeholder="1*10"
+                        value={row.pack || '1*10'}
+                        onChange={e => handleRowChange(idx, 'pack', e.target.value)}
+                        title="Pack format e.g. 1*10 (10 Tabs per strip), 1*15, 1*4, 1*5, 1*1"
+                        style={{
+                          width: '100%',
+                          padding: '0.4rem 0.3rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontWeight: '600',
+                          fontSize: '0.8rem'
+                        }}
+                      />
+                    </td>
+
+                    {/* 4. O/MRP (Old MRP) */}
                     <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
@@ -1375,6 +1398,45 @@ export default function NewPurchase({
                   style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem', fontWeight: '700' }}
                 />
               </div>
+
+              {/* Strip Packaging Selector in HUD */}
+              <div style={{ gridColumn: 'span 2', background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border-color)', marginTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', fontWeight: 600 }}>Packing (1*X) :</span>
+                  <input
+                    type="text"
+                    placeholder="1*10"
+                    value={activeRow?.pack || '1*10'}
+                    onChange={e => handleRowChange(activeRowIndex, 'pack', e.target.value)}
+                    style={{ width: '70px', padding: '0.2rem 0.4rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '700', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    (1 strip has how many tablets)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {['1*10', '1*15', '1*4', '1*5', '1*1'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => handleRowChange(activeRowIndex, 'pack', p)}
+                      style={{
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: (activeRow?.pack || '1*10') === p ? '700' : '500',
+                        borderRadius: '4px',
+                        border: '1px solid',
+                        borderColor: (activeRow?.pack || '1*10') === p ? '#0284c7' : 'var(--border-color)',
+                        background: (activeRow?.pack || '1*10') === p ? '#e0f2fe' : 'var(--card-bg)',
+                        color: (activeRow?.pack || '1*10') === p ? '#0369a1' : 'var(--text-primary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1549,32 +1611,80 @@ export default function NewPurchase({
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
-                    UNIT & PACK SIZE
-                  </label>
+                <div style={{ gridColumn: 'span 2', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                      PACK TYPE & STRIP SIZE (1*10, 1*15, 1*4, 1*5)
+                    </label>
+                    <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '700' }}>
+                      Selected: 1*{newMedForm.conversionFactor} ({newMedForm.conversionFactor} {newMedForm.unit === 'BOTTLE' ? 'Bottle' : 'Tabs'} / Pack)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                    {[
+                      { label: '1*10 (10 Tabs)', val: 10, unit: 'STRIP' },
+                      { label: '1*15 (15 Caps)', val: 15, unit: 'STRIP' },
+                      { label: '1*4 (4 Tabs)', val: 4, unit: 'STRIP' },
+                      { label: '1*5 (5 Tabs)', val: 5, unit: 'STRIP' },
+                      { label: '1*6', val: 6, unit: 'STRIP' },
+                      { label: '1*20', val: 20, unit: 'STRIP' },
+                      { label: '1*1 (Bottle/Tube)', val: 1, unit: 'BOTTLE' }
+                    ].map(preset => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setNewMedForm({ ...newMedForm, conversionFactor: preset.val, unit: preset.unit, pack: `1*${preset.val}` })}
+                        style={{
+                          padding: '2px 7px',
+                          fontSize: '11px',
+                          fontWeight: newMedForm.conversionFactor === preset.val ? '700' : '500',
+                          borderRadius: '4px',
+                          border: '1px solid',
+                          borderColor: newMedForm.conversionFactor === preset.val ? '#0284c7' : 'var(--border-color)',
+                          background: newMedForm.conversionFactor === preset.val ? '#e0f2fe' : 'var(--card-bg)',
+                          color: newMedForm.conversionFactor === preset.val ? '#0369a1' : 'var(--text-primary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-                    <select
-                      value={newMedForm.unit}
-                      onChange={e => setNewMedForm({ ...newMedForm, unit: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}
-                    >
-                      <option value="STRIP">STRIP</option>
-                      <option value="TAB">TAB</option>
-                      <option value="CAP">CAP</option>
-                      <option value="BOTTLE">BOTTLE</option>
-                      <option value="VIAL">VIAL</option>
-                      <option value="TUBE">TUBE</option>
-                      <option value="BOX">BOX</option>
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Units"
-                      value={newMedForm.conversionFactor}
-                      onChange={e => setNewMedForm({ ...newMedForm, conversionFactor: parseInt(e.target.value) || 1 })}
-                      style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontSize: '0.85rem' }}
-                    />
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Pack Type:</span>
+                      <select
+                        value={newMedForm.unit}
+                        onChange={e => setNewMedForm({ ...newMedForm, unit: e.target.value })}
+                        style={{ width: '100%', padding: '0.4rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.82rem', marginTop: '2px' }}
+                      >
+                        <option value="STRIP">STRIP</option>
+                        <option value="BOTTLE">BOTTLE / SYRUP</option>
+                        <option value="VIAL">VIAL / INJ</option>
+                        <option value="TUBE">TUBE / OINT</option>
+                        <option value="BOX">BOX</option>
+                        <option value="TAB">TABLET (Loose)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tabs per Strip (1*X):</span>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 10"
+                        value={newMedForm.conversionFactor}
+                        onChange={e => {
+                          const factor = parseInt(e.target.value) || 1;
+                          setNewMedForm({ ...newMedForm, conversionFactor: factor, pack: `1*${factor}` });
+                        }}
+                        style={{ width: '100%', padding: '0.4rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontSize: '0.82rem', marginTop: '2px', fontWeight: '700' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    💡 <em>e.g. <strong>1*10</strong> means 1 strip contains 10 tablets.</em>
                   </div>
                 </div>
 
