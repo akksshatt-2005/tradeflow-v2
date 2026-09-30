@@ -293,7 +293,10 @@ router.post('/:id/clear-data', requireAuth, async (req: AuthenticatedRequest, re
       await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" ENABLE TRIGGER ALL;`).catch(() => {});
     }
 
-    // 4. Reset Party Balances
+    // 4. Delete Medicine Catalog Items
+    await prisma.item.deleteMany({ where: { companyId } });
+
+    // 5. Reset Party Balances
     await prisma.party.updateMany({
       where: { companyId },
       data: { outstandingBalance: 0.0 }
@@ -301,7 +304,7 @@ router.post('/:id/clear-data', requireAuth, async (req: AuthenticatedRequest, re
 
     res.json({
       success: true,
-      message: 'All purchases, sales, batches, and ledger transactions cleared successfully. Company is fresh for testing!'
+      message: 'All purchases, sales, inventory batches, medicine catalog items, and ledger transactions cleared successfully. Company is completely fresh for testing!'
     });
   } catch (error: any) {
     console.error('Error clearing company data:', error);
