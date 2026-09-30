@@ -219,6 +219,7 @@ router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res: Respon
 
     // Cascade delete in transaction
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
       // 1. Invoices
       await tx.invoiceItem.deleteMany({ where: { invoice: { companyId } } });
       await tx.invoice.deleteMany({ where: { companyId } });

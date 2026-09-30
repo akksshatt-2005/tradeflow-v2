@@ -463,6 +463,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
 
     // 4. Perform clean deletion in atomic transaction
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
       // Remove any purchase item references from cancelled purchases
       await tx.purchaseItem.deleteMany({ where: { itemId: id } });
       // Remove any invoice item references from cancelled invoices

@@ -1078,6 +1078,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     if (purchase.status === 'CANCELLED') {
       // Permanently delete cancelled purchase bill and its item records
       await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
         await tx.purchaseItem.deleteMany({ where: { purchaseId: id } });
         await tx.stockLedger.deleteMany({ where: { referenceId: id } });
         await tx.purchase.delete({ where: { id } });
