@@ -849,14 +849,17 @@ export default function Parties() {
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                        Ledger Name *
+                        Mail To (Mailing Display Name) *
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. ADMARIS PHARMACEUTICALS PVT. LTD."
-                        value={name}
-                        onChange={e => setName(e.target.value)}
+                        placeholder="Display Name for Invoices & Statements (e.g. SHREE GANESH MEDICOS)"
+                        value={mailTo}
+                        onChange={e => {
+                          setMailTo(e.target.value);
+                          if (!name) setName(e.target.value);
+                        }}
                         style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
                       />
                     </div>
@@ -929,13 +932,13 @@ export default function Parties() {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                      Mail To (Mailing Display Name)
+                      Ledger Name (Legal / Registered Name)
                     </label>
                     <input
                       type="text"
-                      placeholder="Display Name for Invoices & Statements"
-                      value={mailTo}
-                      onChange={e => setMailTo(e.target.value)}
+                      placeholder="e.g. ADMARIS PHARMACEUTICALS PVT. LTD."
+                      value={name}
+                      onChange={e => setName(e.target.value)}
                       style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
                     />
                   </div>
