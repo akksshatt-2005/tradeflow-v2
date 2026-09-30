@@ -282,20 +282,18 @@ router.post('/:id/clear-data', requireAuth, async (req: AuthenticatedRequest, re
     await prisma.purchaseItem.deleteMany({ where: { purchase: { companyId } } });
     await prisma.purchase.deleteMany({ where: { companyId } });
 
-    // 3. Stock Ledger (safely bypass append-only trigger for clean purge)
+    // 3. Stock Ledger & Batches (safely bypass append-only trigger for clean purge)
     try {
       await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" DISABLE TRIGGER ALL;`);
       await prisma.$executeRawUnsafe(`DELETE FROM "stock_ledger" WHERE "company_id" = '${companyId}';`);
+      await prisma.$executeRawUnsafe(`DELETE FROM "batches" WHERE "company_id" = '${companyId}';`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" ENABLE TRIGGER ALL;`);
     } catch (sqlErr) {
       console.warn('Direct trigger bypass warning:', sqlErr);
-      await prisma.stockLedger.deleteMany({ where: { companyId } }).catch(() => {});
+      await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" ENABLE TRIGGER ALL;`).catch(() => {});
     }
 
-    // 4. Batches
-    await prisma.batch.deleteMany({ where: { companyId } });
-
-    // 5. Reset Party Balances
+    // 4. Reset Party Balances
     await prisma.party.updateMany({
       where: { companyId },
       data: { outstandingBalance: 0.0 }
