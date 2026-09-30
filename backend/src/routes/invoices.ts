@@ -1145,7 +1145,14 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     }
 
     if (invoice.status === 'CANCELLED') {
-      res.status(400).json({ error: `Invoice "${invoice.invoiceNumber}" is already cancelled` });
+      // Permanently delete cancelled sales invoice and its item records
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
+        await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+        await tx.stockLedger.deleteMany({ where: { referenceId: id } });
+        await tx.invoice.delete({ where: { id } });
+      });
+      res.status(200).json({ message: `Cancelled sales invoice "${invoice.invoiceNumber}" permanently deleted` });
       return;
     }
 

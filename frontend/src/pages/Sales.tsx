@@ -152,8 +152,13 @@ export default function Sales() {
 
   const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string) => {
     if (!activeCompany) return;
+    const target = invoices.find(inv => inv.id === invoiceId);
+    const isCancelled = target?.status === 'CANCELLED';
+
     const confirmDelete = window.confirm(
-      `Are you sure you want to cancel sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Mark the invoice status as CANCELLED (preserving the audit trail)\n- Return items and quantity back to batch stock\n- Write append-only reversing ledger entries (SALE_RETURN)\n- Adjust customer outstanding balance if unpaid`
+      isCancelled
+        ? `Permanently delete cancelled sale invoice #${invoiceNumber}?`
+        : `Are you sure you want to cancel sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Mark the invoice status as CANCELLED (preserving the audit trail)\n- Return items and quantity back to batch stock\n- Write append-only reversing ledger entries (SALE_RETURN)\n- Adjust customer outstanding balance if unpaid`
     );
     if (!confirmDelete) return;
 
@@ -490,27 +495,25 @@ export default function Sales() {
                             <CreditCard size={14} /> Settle
                           </button>
                         )}
-                        {inv.status !== 'CANCELLED' && (
-                          <button
-                            onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
-                            style={{
-                              padding: '0.4rem 0.6rem',
-                              background: 'rgba(239, 68, 68, 0.12)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '6px',
-                              color: '#ef4444',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                              fontSize: '0.8rem',
-                              fontWeight: '600'
-                            }}
-                            title="Cancel invoice and reverse stock"
-                          >
-                            <Trash2 size={14} /> Cancel
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                          style={{
+                            padding: '0.4rem 0.6rem',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}
+                          title={inv.status === 'CANCELLED' ? "Permanently delete cancelled invoice" : "Cancel invoice and reverse stock"}
+                        >
+                          <Trash2 size={14} /> {inv.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -583,27 +586,25 @@ export default function Sales() {
                     <Edit2 size={15} /> Edit
                   </button>
                 )}
-                {viewingInvoice.status !== 'CANCELLED' && (
-                  <button
-                    onClick={() => handleDeleteInvoice(viewingInvoice.id, viewingInvoice.invoiceNumber)}
-                    style={{
-                      padding: '0.5rem 0.9rem',
-                      background: 'rgba(239, 68, 68, 0.12)',
-                      color: '#ef4444',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      fontSize: '0.85rem',
-                      fontWeight: '600'
-                    }}
-                    title="Cancel invoice"
-                  >
-                    <Trash2 size={15} /> Cancel
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDeleteInvoice(viewingInvoice.id, viewingInvoice.invoiceNumber)}
+                  style={{
+                    padding: '0.5rem 0.9rem',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontSize: '0.85rem',
+                    fontWeight: '600'
+                  }}
+                  title={viewingInvoice.status === 'CANCELLED' ? "Permanently delete cancelled invoice" : "Cancel invoice"}
+                >
+                  <Trash2 size={15} /> {viewingInvoice.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
+                </button>
                 <button
                   onClick={handlePrint}
                   style={{
