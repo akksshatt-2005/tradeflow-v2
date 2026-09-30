@@ -154,8 +154,13 @@ export default function Purchases() {
 
   const handleDeletePurchase = async (id: string, invoiceNumber: string) => {
     if (!activeCompany) return;
+    const target = purchases.find(p => p.id === id);
+    const isCancelled = target?.status === 'CANCELLED';
+
     const confirmDelete = window.confirm(
-      `Are you sure you want to cancel purchase bill #${invoiceNumber}?\n\nThis will atomically:\n- Mark the purchase bill as CANCELLED (preserving the audit trail)\n- Deduct inward stock from batch inventory\n- Write append-only reversing ledger entries (PURCHASE_RETURN)\n- Revert supplier outstanding balance if unpaid`
+      isCancelled
+        ? `Permanently delete cancelled purchase bill #${invoiceNumber}?`
+        : `Are you sure you want to cancel purchase bill #${invoiceNumber}?\n\nThis will atomically:\n- Mark the purchase bill as CANCELLED (preserving the audit trail)\n- Deduct inward stock from batch inventory\n- Write append-only reversing ledger entries (PURCHASE_RETURN)\n- Revert supplier outstanding balance if unpaid`
     );
     if (!confirmDelete) return;
 
@@ -440,28 +445,26 @@ export default function Purchases() {
                             <Edit2 size={13} /> Edit
                           </button>
                         )}
-                        {p.status !== 'CANCELLED' && (
-                          <button
-                            onClick={() => handleDeletePurchase(p.id, p.invoiceNumber)}
-                            className="btn btn-sm"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '11.5px',
-                              fontWeight: '600',
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              border: '1px solid #fca5a5',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              borderRadius: '4px'
-                            }}
-                            title="Delete / Cancel purchase bill"
-                          >
-                            <Trash2 size={13} /> Delete
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeletePurchase(p.id, p.invoiceNumber)}
+                          className="btn btn-sm"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11.5px',
+                            fontWeight: '600',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fca5a5',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            borderRadius: '4px'
+                          }}
+                          title={p.status === 'CANCELLED' ? "Permanently delete cancelled bill" : "Cancel purchase bill"}
+                        >
+                          <Trash2 size={13} /> {p.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -656,24 +659,22 @@ export default function Purchases() {
                     <Edit2 size={14} /> Edit Bill
                   </button>
                 )}
-                {viewingPurchase.status !== 'CANCELLED' && (
-                  <button
-                    onClick={() => handleDeletePurchase(viewingPurchase.id, viewingPurchase.invoiceNumber)}
-                    className="btn btn-sm"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      background: '#fef2f2',
-                      color: '#dc2626',
-                      border: '1px solid #fca5a5',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Trash2 size={14} /> Delete Bill
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDeletePurchase(viewingPurchase.id, viewingPurchase.invoiceNumber)}
+                  className="btn btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    border: '1px solid #fca5a5',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} /> {viewingPurchase.status === 'CANCELLED' ? 'Delete Bill' : 'Cancel Bill'}
+                </button>
                 <button
                   onClick={() => setViewingPurchase(null)}
                   className="btn btn-secondary btn-sm"

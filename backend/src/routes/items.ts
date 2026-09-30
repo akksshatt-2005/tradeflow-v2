@@ -413,8 +413,17 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     const item = await prisma.item.findFirst({
       where: { id, companyId },
       include: {
-        purchaseItems: { take: 1 },
-        invoiceItems: { take: 1 }
+        purchaseItems: {
+          include: {
+            purchase: { select: { id: true, invoiceNumber: true, status: true } }
+          }
+        },
+        invoiceItems: {
+          include: {
+            invoice: { select: { id: true, invoiceNumber: true, status: true } }
+          }
+        },
+        batches: true
       }
     });
 
@@ -423,32 +432,46 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
-    if (item.purchaseItems.length > 0) {
-      res.status(409).json({ error: 'Cannot delete this medicine — it has purchase bill entries. Delete the purchase bills first.' });
-      return;
-    }
-
-    if (item.invoiceItems.length > 0) {
-      res.status(409).json({ error: 'Cannot delete this medicine — it has sale invoice entries. Delete the invoices first.' });
-      return;
-    }
-
-    // Check if any audit stock ledger entries exist for this item
-    const ledgerCount = await prisma.stockLedger.count({
-      where: { itemId: id, companyId }
-    });
-
-    if (ledgerCount > 0) {
+    // 1. Check if there are active (non-cancelled) purchase bills
+    const activePurchases = item.purchaseItems.filter(pi => pi.purchase && pi.purchase.status !== 'CANCELLED');
+    if (activePurchases.length > 0) {
+      const billNos = activePurchases.map(pi => pi.purchase.invoiceNumber).slice(0, 3).join(', ');
       res.status(409).json({
-        error: `Cannot delete "${item.name}" because ${ledgerCount} audit stock ledger records exist for it. Medicine records with transaction history cannot be deleted to preserve audit trails.`
+        error: `Cannot delete "${item.name}" — it is in active purchase bill(s) (#${billNos}). Cancel or delete those purchase bills first.`
       });
       return;
     }
 
+    // 2. Check if there are active (non-cancelled) sale invoices
+    const activeInvoices = item.invoiceItems.filter(ii => ii.invoice && ii.invoice.status !== 'CANCELLED');
+    if (activeInvoices.length > 0) {
+      const invNos = activeInvoices.map(ii => ii.invoice.invoiceNumber).slice(0, 3).join(', ');
+      res.status(409).json({
+        error: `Cannot delete "${item.name}" — it is in active sale invoice(s) (#${invNos}). Cancel those invoices first.`
+      });
+      return;
+    }
+
+    // 3. Check active stock across batches
+    const totalStock = item.batches.reduce((sum, b) => sum + (b.currentStock || 0), 0);
+    if (totalStock > 0) {
+      res.status(409).json({
+        error: `Cannot delete "${item.name}" because it still has ${totalStock} units in stock. Cancel the purchases or adjust stock to 0 first.`
+      });
+      return;
+    }
+
+    // 4. Perform clean deletion in atomic transaction
     await prisma.$transaction(async (tx) => {
-      // Remove unused zero-stock batches if any
+      // Remove any purchase item references from cancelled purchases
+      await tx.purchaseItem.deleteMany({ where: { itemId: id } });
+      // Remove any invoice item references from cancelled invoices
+      await tx.invoiceItem.deleteMany({ where: { itemId: id } });
+      // Remove associated stock ledger entries
+      await tx.stockLedger.deleteMany({ where: { itemId: id, companyId } });
+      // Remove batches
       await tx.batch.deleteMany({ where: { itemId: id, companyId } });
-      // Remove unused item
+      // Remove the medicine item
       await tx.item.delete({ where: { id } });
     });
 

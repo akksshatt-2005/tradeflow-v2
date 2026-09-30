@@ -1076,7 +1076,13 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     }
 
     if (purchase.status === 'CANCELLED') {
-      res.status(400).json({ error: `Purchase bill "${purchase.invoiceNumber}" is already cancelled` });
+      // Permanently delete cancelled purchase bill and its item records
+      await prisma.$transaction(async (tx) => {
+        await tx.purchaseItem.deleteMany({ where: { purchaseId: id } });
+        await tx.stockLedger.deleteMany({ where: { referenceId: id } });
+        await tx.purchase.delete({ where: { id } });
+      });
+      res.status(200).json({ message: `Cancelled purchase bill "${purchase.invoiceNumber}" permanently deleted` });
       return;
     }
 
