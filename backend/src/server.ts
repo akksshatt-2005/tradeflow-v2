@@ -317,10 +317,13 @@ async function ensureTables() {
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "strips" INTEGER DEFAULT 0`,
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "loose_qty" INTEGER DEFAULT 0`,
 
-    // Append-Only Immutability Trigger for stock_ledger
+    // Append-Only Immutability Trigger for stock_ledger (Bypassable for owner company reset)
     `CREATE OR REPLACE FUNCTION prevent_stock_ledger_mutation()
     RETURNS TRIGGER AS $$
     BEGIN
+        IF current_setting('app.allow_ledger_cleanup', true) = 'on' THEN
+            RETURN OLD;
+        END IF;
         RAISE EXCEPTION 'stock_ledger is an append-only audit ledger: UPDATE and DELETE operations are strictly prohibited.';
     END;
     $$ LANGUAGE plpgsql;`,

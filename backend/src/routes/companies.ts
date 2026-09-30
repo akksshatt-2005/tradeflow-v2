@@ -274,31 +274,30 @@ router.post('/:id/clear-data', requireAuth, async (req: AuthenticatedRequest, re
       return;
     }
 
-    // 1. Invoices (cascade items)
-    await prisma.invoiceItem.deleteMany({ where: { invoice: { companyId } } });
-    await prisma.invoice.deleteMany({ where: { companyId } });
+    // Atomic clean purge of transactions, stock ledger, batches, and catalog items
+    await prisma.$transaction(async (tx) => {
+      // 1. Enable session bypass for stock ledger trigger
+      await tx.$executeRawUnsafe(`SET LOCAL app.allow_ledger_cleanup = 'on';`);
 
-    // 2. Purchases (cascade items)
-    await prisma.purchaseItem.deleteMany({ where: { purchase: { companyId } } });
-    await prisma.purchase.deleteMany({ where: { companyId } });
+      // 2. Invoices (cascade items)
+      await tx.invoiceItem.deleteMany({ where: { invoice: { companyId } } });
+      await tx.invoice.deleteMany({ where: { companyId } });
 
-    // 3. Stock Ledger, Batches & Catalog Items (safely bypass append-only trigger for clean purge)
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" DISABLE TRIGGER ALL;`);
-      await prisma.$executeRawUnsafe(`DELETE FROM "stock_ledger" WHERE "company_id" = '${companyId}';`);
-      await prisma.$executeRawUnsafe(`DELETE FROM "batches" WHERE "company_id" = '${companyId}';`);
-      await prisma.$executeRawUnsafe(`DELETE FROM "items" WHERE "company_id" = '${companyId}';`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" ENABLE TRIGGER ALL;`);
-    } catch (sqlErr) {
-      console.warn('Direct trigger bypass warning:', sqlErr);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "stock_ledger" ENABLE TRIGGER ALL;`).catch(() => {});
-    }
+      // 3. Purchases (cascade items)
+      await tx.purchaseItem.deleteMany({ where: { purchase: { companyId } } });
+      await tx.purchase.deleteMany({ where: { companyId } });
 
-    // 4. Reset Party Balances
-    await prisma.party.updateMany({
-      where: { companyId },
-      data: { outstandingBalance: 0.0 }
-    });
+      // 4. Stock Ledger & Batches & Catalog Items
+      await tx.stockLedger.deleteMany({ where: { companyId } });
+      await tx.batch.deleteMany({ where: { companyId } });
+      await tx.item.deleteMany({ where: { companyId } });
+
+      // 5. Reset Party Balances
+      await tx.party.updateMany({
+        where: { companyId },
+        data: { outstandingBalance: 0.0 }
+      });
+    }, { maxWait: 15000, timeout: 30000 });
 
     res.json({
       success: true,
