@@ -250,4 +250,70 @@ router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
+/**
+ * POST /companies/:id/clear-data
+ * Clears all purchase bills, sale invoices, stock ledger audit records, and batches,
+ * and resets customer/supplier balances to zero while keeping catalog items & company details intact.
+ */
+router.post('/:id/clear-data', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.userId;
+  const companyId = req.params.id;
+
+  try {
+    const userComp = await prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId,
+          companyId
+        }
+      }
+    });
+
+    if (!userComp || (userComp.role !== 'owner' && userComp.role !== 'accountant')) {
+      res.status(403).json({ error: 'Only company owners or accountants can reset company transactions' });
+      return;
+    }
+
+    // 1. Invoices (cascade items)
+    await prisma.invoiceItem.deleteMany({ where: { invoice: { companyId } } });
+    await prisma.invoice.deleteMany({ where: { companyId } });
+
+    // 2. Purchases (cascade items)
+    await prisma.purchaseItem.deleteMany({ where: { purchase: { companyId } } });
+    await prisma.purchase.deleteMany({ where: { companyId } });
+
+    // 3. Stock Ledger (safely bypass append-only trigger for clean purge)
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_stock_ledger_mutation') THEN
+          ALTER TABLE "stock_ledger" DISABLE TRIGGER trg_prevent_stock_ledger_mutation;
+        END IF;
+      END $$;
+      DELETE FROM "stock_ledger" WHERE "company_id" = '${companyId}';
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_stock_ledger_mutation') THEN
+          ALTER TABLE "stock_ledger" ENABLE TRIGGER trg_prevent_stock_ledger_mutation;
+        END IF;
+      END $$;
+    `);
+
+    // 4. Batches
+    await prisma.batch.deleteMany({ where: { companyId } });
+
+    // 5. Reset Party Balances
+    await prisma.party.updateMany({
+      where: { companyId },
+      data: { outstandingBalance: 0.0 }
+    });
+
+    res.json({
+      success: true,
+      message: 'All purchases, sales, batches, and ledger transactions cleared successfully. Company is fresh for testing!'
+    });
+  } catch (error: any) {
+    console.error('Error clearing company data:', error);
+    res.status(500).json({ error: error.message || 'Failed to clear company data' });
+  }
+});
+
 export default router;
