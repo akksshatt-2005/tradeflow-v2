@@ -268,8 +268,11 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestOpti
         }
       }
 
-      // If successful or client error (4xx)
-      if (res.status < 500) {
+      // If successful or application error (4xx, 500)
+      // Only 502, 503, 504 indicate Render gateway cold-start container boot
+      const isGatewayBooting = (res.status === 502 || res.status === 503 || res.status === 504);
+
+      if (!isGatewayBooting) {
         if (serverState.isWakingUp || !serverState.isOnline) {
           updateServerState({ isWakingUp: false, isOnline: true, elapsedSeconds: 0, error: null });
         }

@@ -284,13 +284,23 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       for (const item of validatedItems) {
         let targetItemId = item.itemId;
 
-        // Auto-catalog medicine if itemId was not provided
+        // Verify itemId belongs to company if provided
+        if (targetItemId) {
+          const verifiedItem = await tx.item.findFirst({
+            where: { id: targetItemId, companyId }
+          });
+          if (!verifiedItem) {
+            targetItemId = null;
+          }
+        }
+
+        // Auto-catalog medicine if itemId was not provided or invalid
         if (!targetItemId) {
-          // Check if medicine already exists with same name (case-insensitive) in this company
+          const cleanName = (item.medicineName || '').trim();
           let existingItem = await tx.item.findFirst({
             where: {
               companyId,
-              name: { equals: item.medicineName, mode: 'insensitive' }
+              name: { equals: cleanName, mode: 'insensitive' }
             }
           });
 
@@ -318,7 +328,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
               data: {
                 companyId,
                 sku: autoSku,
-                name: item.medicineName,
+                name: cleanName,
                 genericName: item.genericName?.trim() || null,
                 manufacturer: item.manufacturer?.trim() || null,
                 hsnCode: item.hsnCode?.trim() || '3004',
@@ -661,12 +671,23 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       for (const item of validatedItems) {
         let targetItemId = item.itemId;
 
-        // Auto-catalog medicine if itemId was not provided
+        // Verify itemId belongs to company if provided
+        if (targetItemId) {
+          const verifiedItem = await tx.item.findFirst({
+            where: { id: targetItemId, companyId }
+          });
+          if (!verifiedItem) {
+            targetItemId = null;
+          }
+        }
+
+        // Auto-catalog medicine if itemId was not provided or invalid
         if (!targetItemId) {
+          const cleanName = (item.medicineName || '').trim();
           let existingItem = await tx.item.findFirst({
             where: {
               companyId,
-              name: { equals: item.medicineName, mode: 'insensitive' }
+              name: { equals: cleanName, mode: 'insensitive' }
             }
           });
 
@@ -691,7 +712,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
               data: {
                 companyId,
                 sku: autoSku,
-                name: item.medicineName,
+                name: cleanName,
                 genericName: item.genericName?.trim() || null,
                 manufacturer: item.manufacturer?.trim() || null,
                 hsnCode: item.hsnCode?.trim() || '3004',
