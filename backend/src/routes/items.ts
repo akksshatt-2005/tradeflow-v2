@@ -174,6 +174,108 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
 });
 
 /**
+ * POST /items/bulk-import
+ * Bulk upload/import medicines into company catalog
+ */
+router.post('/bulk-import', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { items } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: 'Array of medicine items is required for bulk import' });
+    return;
+  }
+
+  try {
+    const existingItems = await prisma.item.findMany({
+      where: { companyId },
+      select: { id: true, name: true, sku: true }
+    });
+
+    const existingNameMap = new Map<string, any>();
+    const skuSet = new Set<string>();
+
+    for (const item of existingItems) {
+      existingNameMap.set(item.name.trim().toLowerCase(), item);
+      if (item.sku) skuSet.add(item.sku.toUpperCase());
+    }
+
+    const createdItems: any[] = [];
+    const skippedItems: any[] = [];
+    let counter = existingItems.length + 1;
+
+    for (const raw of items) {
+      const name = (raw.name || raw.medicineName || raw.itemName || '').trim();
+      if (!name || name.length < 2) {
+        continue;
+      }
+
+      const key = name.toLowerCase();
+      if (existingNameMap.has(key)) {
+        skippedItems.push(name);
+        continue;
+      }
+
+      // Generate next SKU
+      let candidateSku = (raw.sku || '').trim().toUpperCase();
+      if (!candidateSku || skuSet.has(candidateSku)) {
+        candidateSku = `MED-${String(counter).padStart(4, '0')}`;
+        while (skuSet.has(candidateSku)) {
+          counter++;
+          candidateSku = `MED-${String(counter).padStart(4, '0')}`;
+        }
+      }
+      skuSet.add(candidateSku);
+      counter++;
+
+      const factor = parseInt(raw.conversionFactor) || 10;
+      let unit = (raw.unit || 'STRIP').trim().toUpperCase();
+      if (factor === 1 && unit === 'STRIP') {
+        unit = 'BOTTLE';
+      }
+
+      const newItemData = {
+        companyId,
+        sku: candidateSku,
+        name,
+        genericName: raw.genericName ? String(raw.genericName).trim() : null,
+        manufacturer: raw.manufacturer ? String(raw.manufacturer).trim() : null,
+        hsnCode: raw.hsnCode ? String(raw.hsnCode).trim() : '3004',
+        gstRate: raw.gstRate !== undefined ? Number(raw.gstRate) : 12.0,
+        unit,
+        conversionFactor: factor > 0 ? factor : 1,
+        minStockLevel: raw.minStockLevel ? Math.max(0, parseInt(raw.minStockLevel)) : 0
+      };
+
+      createdItems.push(newItemData);
+      existingNameMap.set(key, newItemData);
+    }
+
+    // Batch insert using createMany
+    if (createdItems.length > 0) {
+      for (let i = 0; i < createdItems.length; i += 100) {
+        const chunk = createdItems.slice(i, i + 100);
+        await prisma.item.createMany({
+          data: chunk,
+          skipDuplicates: true
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      importedCount: createdItems.length,
+      skippedCount: skippedItems.length,
+      totalReceived: items.length,
+      message: `Successfully imported ${createdItems.length} medicines into catalog!`
+    });
+  } catch (error: any) {
+    console.error('Error bulk importing items:', error);
+    res.status(500).json({ error: error.message || 'Failed to bulk import items' });
+  }
+});
+
+/**
  * GET /items/:id
  * Get item details with all batches
  */

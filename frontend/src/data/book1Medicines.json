@@ -1,0 +1,4304 @@
+[
+  {
+    "name": "2 LOO SYRUP",
+    "manufacturer": "TRIGAT",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ACCET MR TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ACCET SP TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ACRONITE 150",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ADDITEK N",
+    "manufacturer": "ADDITEK",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AGIDOL 0.5 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ALLIVAX XL 75 MG",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ALMITAK 10 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ALMITAK 25 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ALSPER 150 MG TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AMIMED 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AMIMED 200MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AMIRUS 100 MG TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AMIRUS TAB 100 MG",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ANXITRIP H",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AQUITI 100 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AQUITI SR 50 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARGILIX PLUS SATCHET",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARIFINE 2.5 MG TAB",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARIZEP 5 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARIZEX PLUS TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARIZOLE 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ARPTIZ",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ASERT 100 MG TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ASPRITO 2 MG TAB",
+    "manufacturer": "INTAS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATECLOZ 20 TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATECLOZ ASP",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATENDATE SR 36 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATIGAL 2 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATPROL CR 500",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ATROJET AM TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUMEGA 4G",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUPAM 1 MG",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUPAM 2 MG",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUPRA 10 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUPRA 30 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUPRA 5 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AURDEP 20 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AURDEP 40 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AURTRIP DS",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUXAMIN 100 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUXEN D 500 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUXMET 300 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AUXMET 600 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AVERSOL 666 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AVOL 500 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "I T E M D E S C R I P T I O N",
+    "manufacturer": "Compnay",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "AZOGUT",
+    "manufacturer": "AZMED",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "B12 MD TAB",
+    "manufacturer": "PURE LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BACFEN XL 30 TAB",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BACLOGAL OD 30 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BACSTRO 50",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BACTANE ML",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BALEM OIL",
+    "manufacturer": "EMSALVE",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAGAL 20 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAGAL 40",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAGAL 4O MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAGAL C 0.25 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETANAZ TR",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAPRO 20 ET",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BETAREX FORTE",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BIOTAL TAB 10 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BIPOLAZ 10 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BIPOLAZ 5 MG",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BIZIRON 10 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BIZIRON TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BLEN 25 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BULLETRIP SR 300 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BUPPION SR 300 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BUPROKEM ER 150 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "BUPROLIX SR 150 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CALMARIS",
+    "manufacturer": "ADMARIS",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CARIPZINE 1.5 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CARIPZINE 3 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CARIZESS 1.5 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CERETOR FORTE TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CERNOS DEPOT INJECTION",
+    "manufacturer": "SUN PHARMA",
+    "pack": "1*10",
+    "unit": "VIAL",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CILONIC GEL",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*10",
+    "unit": "TUBE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CITIKEM FORTE",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CITIQ FORTE",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*6",
+    "unit": "STRIP",
+    "conversionFactor": 6,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLATOXIA 90",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOFAGAL 50 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOKEM 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOKEM 50",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLONAX M TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOPRAN 0.25 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOPRAN 0.5 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOPRAN ES TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CLOPRAN PLUS",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "COGNIFOL",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CRAMPGEN E",
+    "manufacturer": "NERVEGEN",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CYBAND TABLET",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "CZPEX 10 MG TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEDON FORTE TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEDON PLUS TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEFLAPEX 6 MG",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEPAZET 20 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEPAZET 30 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEPROL PLUS",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DETLAM 0.25 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DETLAM 0.5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEVENLAF - XR 100 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DEXDOM 500 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DIAFENAC GM",
+    "manufacturer": "PURE LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "dictaol oil",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DIFNOX 180 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DIFNOX M TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DISCERN 1000 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*6",
+    "unit": "STRIP",
+    "conversionFactor": 6,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DISPRIN TAB",
+    "manufacturer": null,
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DISVAN OD 100 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DISVAN OD 50 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DIVALDEC ER 1 GM",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOLARAY OD",
+    "manufacturer": "AZMED",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOLPINE 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOLPINE 5 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DONAKEM M 10",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTHIDEP 50 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTHIKEM 100 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTHIKEM 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTHIKEM 75 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTIDEP 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTIDEP 50 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DOTIDEP 75 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DROLAN M",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DROTACID TAB",
+    "manufacturer": "AZMED HEALTHCARE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DULOKEM 20",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DULOKEM 30 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DULOX 60 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DUXEL 60",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "D-VENLAF ER 50 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DV PEX 100",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "DV PEX 50",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ECPEX 20 MG TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EDFOL SHOTS",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*6",
+    "unit": "STRIP",
+    "conversionFactor": 6,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ED FOL SYRUP",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "BOTTLE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EFON 20 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EFON 40",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EFON 60 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EJITAB 0.25MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EJITAB 0.5 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EJITAB PRO TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ELEMOGINE 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ELITH 450 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMIPRIDE 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMIPRIDE 200 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMIPRIDE 400 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMIPRIDE 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMOXET CR 12.5 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMOXET CR 25 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMOXET CR 37.5 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMPIRE NT TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EMTRAMOL TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EPIZOX OD 600 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EPRIONE 150",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EPRIPEX AP TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EPROX 1000 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EPROX 500 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESCITOGAL 20 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESLOPRAM 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESLOPRAM 20 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESLOPRAM PLUS",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESMOPEX 40 MG TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESMOPEX DSR TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ESMOPEX L TAB",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETADOL 100MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETIBAN 0.5 MG TAB",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETIKEM FORTE TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETIREG S 10 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETIZEST 1 MG",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ETIZEST ER 1.5 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EXITRACE 1 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "EZOLAC PLUS TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FEBOVOX 4O MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FECOLAX",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FECOLAX TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FEVIGOLD",
+    "manufacturer": "ADMARIS",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FIRAM 500 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FLENZIT",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FLURTRIP 10 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FLUSEE 60 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FLUXNORM 40 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FLYUP 60 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FOCUZ 10 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FUNNIGHT 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FUNNIGHT 20 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FUXAMIN 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "FUXAMINE 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GABALEX AT TAB",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GABAPATH NT",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GABAWIN ER 82.5",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GABAWIN ER 82.5 MG",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GABAWIN GEL",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "TUBE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GENPRO PLUS TAB",
+    "manufacturer": "NERVEGEN",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GLIMBEST M1 TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GLIMBEST M2 TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "GLYLATE 2 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALO 0.25 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALO 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALO 5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALOP 10 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALOP 5 MG",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HALOP INJECTION",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "VIAL",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HAPYON 25 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HEADRIX TAB",
+    "manufacturer": "SMRITI PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HITPAX FORTE",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HIXTIN 24 MG TAB",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "HOMIN PF 5",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "INJ ENTIXAL DEPOT 20 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "INSPIRAL 10 SR",
+    "manufacturer": "IPCA PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "INSPIRAL 20 MG TAB",
+    "manufacturer": "IPCA PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ITOLAN 50 MG TAB",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "IXADAN 10 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "IXADAN 5MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "JOINTCARE",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "TUBE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIDEP 25 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KILAX TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIVICALM 10 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIVI CALM 5 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIVIDOL DT 1.5 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIVIDOL DT 5 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KIVIT GA TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "KLONAZ 1 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LACOSERN",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LARGICON DS SYRUP",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LAXIGO VEDA",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LEMOFORCE 200 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LEMZ OD 100 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LEPIRA 500 MG TABLET",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LEVIKEM 500 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LEVINXT 500 MG TAB",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LITSAM SR 400 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LIVODOX PLUS",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LOR 1 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LOR 2 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LOR 3 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LOXET 40 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LURA 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "LUROTRIP 40 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MAGSOOTHE TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MAXTAN 10 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MAXTAN 5 MG",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MELZOM 10 MG TAB",
+    "manufacturer": "NERVEGEN",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MELZOM H",
+    "manufacturer": "NERVEGEN",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MEMINZER 10 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MERIGRAIN",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METAZOGAL 30",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METONEP 5 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METONEP TAB 10 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METOTRIP 10 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METOTRIP 5 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METOTRIP GN",
+    "manufacturer": "TRIPADA",
+    "pack": "1*3",
+    "unit": "STRIP",
+    "conversionFactor": 3,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "METOXY 25 MG TAB",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MIGRAPAC EC TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MIGSERN 500 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MIRDEP 30 MG TAB",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MITRA 15 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MITRA 30",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MIZPAD 15 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MODAKEM 200 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MODALIX 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MODALIX 200 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MODFINE 200 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MODNITE 100 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MONTFLOW",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MRIGTRIP TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MYGRAFIT PLUS TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "MYGRANOL PLUS",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAAZ 0.25 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAAZ 0.5 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAAZ 2 MG TAB 1* 10",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NALTRUST 50 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAPROXIA D 500 TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAZFORCE 10 MG",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*5",
+    "unit": "STRIP",
+    "conversionFactor": 5,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAZFORCE 5 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NAZTOP 50 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NERGICA TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NEUTAPRIG 150 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NICOTRIP 4 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NORGIC 25",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "NORIP 25 MG",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ODIN 2.5 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ODIN 5 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ODIN PLUS",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OEL 10 MG TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OEL 5 MG TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OGB NT TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OLANEP 20 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OLAPAD 20 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OLONAZ 2.5 MG",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ORAJ D",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSFLU M",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSPENTIN NT",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSRIBACT",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSRIGABA 75 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSTEL 40",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OSTEL BETA",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OXEPINE 300 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OXEPINE 600 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OXEZER 600 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OXHEAL 300 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OXSAL OD 600",
+    "manufacturer": "SALAS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "OZTRIP D CAP",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PACESET A",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PACESET GEL",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PACESET MR",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PALMOPEX",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PANVEL DSR CAP",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PAXROT 12.5 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PAXROT CR 25 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PENTORIK IT",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PETRA LV CAP",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PL 20 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PL 40 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PLESSI 0.5 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PRAMIP 1 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PRAPEXOLE 0.5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PREBIOLAC",
+    "manufacturer": "PURE LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PREGAL 50",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PREGSAL NT 50/10 TAB",
+    "manufacturer": "SALAS",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PRINLIX 12.5",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PRINLIX 25 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PROMIG 10 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PRUROLEX 2 MG",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PSYORID 1 MG",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PSYORID PLUS 2",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PSYORID PLUS 3",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PSYORID PLUS 4",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "PURENERVE 75 MG TAB",
+    "manufacturer": "PURE LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "QL 100MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "QL 200 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "QL 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "QSIZ SR 200MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RABEGUT DSR CAP",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RADOXETINE 37.5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "REGAL PLUS H",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RENIDYL 2 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "REPAPID DSR",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESP F TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESPIN 0.5 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESPIN 1 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESP T",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESP T TAB",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESTID FORTE TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESTKEM 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RESZEP 0.5 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RETHIUM 450 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "REXIPRA 15 MG TAB",
+    "manufacturer": "INTAS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "REXUP CR 37.5",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "REXUP CR 37.5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIBOPEX",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIPOVIT CD3 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIPPICLONE 0.25 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIPPICLONE 0.5",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIPPICLONE 1 MG",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RIPPICLONE 2 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RISDONE LS",
+    "manufacturer": "INTAS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "RISOPRAM FORTE TAB",
+    "manufacturer": "RISE PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ROZEP 1 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SATISTRIP V",
+    "manufacturer": "TRIPADA",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "S CITAPAD 15",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "S CITAPAD 5 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SEIZPEX 500",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SERIGAL 1.5 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SERIGAL 5 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SETA 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SETA 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SHANLA 100 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SHANLA 50",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SLETRAL 200 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "STABIGRA GOLD SATCHET",
+    "manufacturer": "TRIPADA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "STROXIME CR 12.5 TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "STROXIME CR 25 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SUNPURE 6O K CAP",
+    "manufacturer": "ADMARIS",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SV BOOSTER",
+    "manufacturer": "VERBIANCE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP BENFOPEX M 1",
+    "manufacturer": "NEUROPEX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP CYPROGUARD 1",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP FEVIGOLD",
+    "manufacturer": "ADMARIS",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP LATOSE",
+    "manufacturer": "AURUM",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP PICFRESH 1",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP RIPOVIT",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP ZUCYP 1",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP ZUKRID O 1",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYP ZYAUM",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP EMVOXY",
+    "manufacturer": "EMSALVE",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP LARGICON DS 1",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "BOTTLE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP LIVOCIP",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP LOZRA",
+    "manufacturer": "AURUM",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP QATIZ L 1",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "BOTTLE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP RIPOVIT IQ",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP VERMEGA IQ 1",
+    "manufacturer": "VERBIANCE",
+    "pack": "1*10",
+    "unit": "BOTTLE",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "SYRUP ZYAUM",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TAB HEADRIX",
+    "manufacturer": "HETERO HEALTHCARE",
+    "pack": "1*2",
+    "unit": "STRIP",
+    "conversionFactor": 2,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TADAFAST 5 MG",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TALOCIT 20 TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TALONXT 10 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TELBICURE AMH",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TELCLA 40 MG TAB",
+    "manufacturer": "AURUM KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TELCLA H TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TELGOSAL H TAB",
+    "manufacturer": "SALAS",
+    "pack": "1*15",
+    "unit": "STRIP",
+    "conversionFactor": 15,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TELLME AMH TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TEPLEX 50 MG TAB",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TFA 200 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "T-FIL 10 MG TAB",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "THIAONE 100 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "THIAONE INJECTION",
+    "manufacturer": "TRIPADA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "T LOR 2 MG INJECTION",
+    "manufacturer": "TRIPADA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "T LOR 3 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TOFISERN 50 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TOPIGAL 50 MG TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TOPILIX 50 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TORIBEST MR TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TOSSIR CHRONO 300 MG",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TOSSIR CHRONO 500 MG TAB",
+    "manufacturer": "EMSALVE",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TQP TAB",
+    "manufacturer": "RISE PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRAMACON SR 100 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRAMAPIL",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRAZOKEM 50 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIDON 100 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIF 10MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIF 5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIFLUXY C 25",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIFLUXY C 50 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRITEL H",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRITIN 80 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRITIN PLUS",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TRIVON 10 MG TAB",
+    "manufacturer": "INTAS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "TURNCAL D3",
+    "manufacturer": "RISE PHARMA",
+    "pack": "1*4",
+    "unit": "STRIP",
+    "conversionFactor": 4,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ULTRA TP TAB",
+    "manufacturer": "NERVEGEN",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "unidep n",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "UNILAX TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "URIBAN 40 MG TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "URSODIN 300",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "URSOGAL 300 TAB",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VAIO L SATCHET",
+    "manufacturer": "SHAMBHU MEDICALS",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VAKIN D",
+    "manufacturer": "ATRAL LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VARNITRIP 1 MG",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VEGOSET 10 MG TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VEGOSET 1O SR",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VEGOSET 20MG SR TAB",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VENLAF ER 150",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VENLAF ER 75 TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VENORAX 75 MG",
+    "manufacturer": "CONSERN PHARMA LTD",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VENPAD XR 150 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VERTIDEP D",
+    "manufacturer": "REGAL",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VERTIREST OD 48 MG TAB",
+    "manufacturer": "LINUX",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VIKORATE CHRONO 500 MG STRIP",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VILAPAD 20 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VITABLAST TAB",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VIZEP 10 MG",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VIZEP 25 MG",
+    "manufacturer": "KIWI",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VOCE 10 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VOMIROOK 4 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VORTIFRESH 10 MG",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "VOXA 100 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "WELLMOD 100 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "WELLMOD 200 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "WELLPRIDE 100 MG TAB",
+    "manufacturer": "TRIPADA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "WIZETONE M",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "XUFOL PLUS TAB",
+    "manufacturer": "ZAIVA LIFE SCIENCES",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "YOHNEX 6 MG",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "Z2 HAIR",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZAMBA 10 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZAMBA 5 MG TAB",
+    "manufacturer": "RD PHARMA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZBAC CAP",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZENISPAS",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZENTAP 50 MG TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZENTIDON LS",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "zentox",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLCROSS",
+    "manufacturer": "ADMARIS",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLNYT 10 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLNYT 5 MG TAB",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLNYT M",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLOJET 10 MG TAB",
+    "manufacturer": "TRIGAT",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZOLSWIFT SL SPRAY",
+    "manufacturer": "TROIKAA",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZROTA P TAB",
+    "manufacturer": "ZENTIVA",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZUKRID O",
+    "manufacturer": "AURUM",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZUPENOL INSTA",
+    "manufacturer": "ICON LIFE SCIENCES",
+    "pack": "1*1",
+    "unit": "BOTTLE",
+    "conversionFactor": 1,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  },
+  {
+    "name": "ZYAUM CAP",
+    "manufacturer": "AURUM",
+    "pack": "1*10",
+    "unit": "STRIP",
+    "conversionFactor": 10,
+    "hsnCode": "3004",
+    "gstRate": 12.0
+  }
+]

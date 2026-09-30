@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import * as XLSX from 'xlsx';
+import book1Medicines from '../data/book1Medicines.json';
 import {
   Pill,
   Search,
@@ -14,7 +16,11 @@ import {
   Building2,
   FileText,
   Edit2,
-  Trash2
+  Trash2,
+  UploadCloud,
+  FileSpreadsheet,
+  Sparkles,
+  Download
 } from 'lucide-react';
 
 interface BatchInfo {
@@ -91,6 +97,144 @@ export default function Medicines() {
   const [editConversion, setEditConversion] = useState('10');
   const [editMinStock, setEditMinStock] = useState('10');
   const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  // Bulk Import State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [previewItems, setPreviewItems] = useState<any[]>(book1Medicines);
+  const [importSearch, setImportSearch] = useState('');
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleBulkImport = async (itemsToImport = previewItems) => {
+    if (!activeCompany) return;
+    if (!itemsToImport || itemsToImport.length === 0) {
+      setError('No valid medicine items found to import.');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      setError(null);
+      setImportProgress(10);
+
+      // Send in chunks of 150
+      const chunkSize = 150;
+      let totalImported = 0;
+
+      for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+        const chunk = itemsToImport.slice(i, i + chunkSize);
+        const res = await api.post<{ success: boolean; importedCount: number }>(
+          '/api/items/bulk-import',
+          { items: chunk },
+          { companyId: activeCompany.id }
+        );
+        totalImported += res.importedCount || chunk.length;
+        setImportProgress(Math.min(95, Math.round(((i + chunk.length) / itemsToImport.length) * 100)));
+      }
+
+      setImportProgress(100);
+      setSuccessMsg(`Successfully imported ${totalImported} medicines into catalog!`);
+      setTimeout(() => setSuccessMsg(null), 5000);
+      setShowImportModal(false);
+      await fetchItems();
+    } catch (err: any) {
+      console.error('Failed to bulk import medicines:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to import medicines');
+    } finally {
+      setImporting(false);
+      setImportProgress(0);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        const parsed: any[] = [];
+        const seenNames = new Set<string>();
+
+        for (let i = 0; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row || row.length === 0) continue;
+
+          const cell0 = String(row[0] || '').trim();
+          const cell1 = String(row[1] || '').trim();
+          const cell2 = String(row[2] || '').trim();
+          const cell3 = String(row[3] || '').trim();
+
+          if (cell0.toLowerCase().includes('sno') || cell1.toLowerCase().includes('item') || cell1.toLowerCase().includes('name')) {
+            continue;
+          }
+
+          let name = cell1;
+          let desc = cell2;
+          let company = cell3;
+
+          if (!name && desc) {
+            name = desc;
+            desc = '';
+          }
+
+          if (!name || name.length < 2) continue;
+
+          let pack = '1*10';
+          const packMatch = (desc + ' ' + name).match(/(\d+[\*xX]\d+)/);
+          if (packMatch) {
+            pack = packMatch[1].replace('X', '*').replace('x', '*');
+          }
+
+          const descClean = desc.replace(/\s*\d+[\*xX]\d+\s*/, ' ').trim();
+          const fullName = [name, descClean].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+          if (seenNames.has(fullName.toLowerCase())) continue;
+          seenNames.add(fullName.toLowerCase());
+
+          let factor = 10;
+          const mult = pack.match(/(\d+)\*(\d+)/);
+          if (mult) factor = parseInt(mult[2]) || 10;
+
+          let unit = 'STRIP';
+          if (fullName.toUpperCase().includes('SYRUP') || fullName.toUpperCase().includes('SUSP') || factor === 1) {
+            unit = 'BOTTLE';
+          } else if (fullName.toUpperCase().includes('INJ') || fullName.toUpperCase().includes('VIAL')) {
+            unit = 'VIAL';
+          }
+
+          parsed.push({
+            name: fullName,
+            manufacturer: company || null,
+            pack,
+            unit,
+            conversionFactor: factor,
+            hsnCode: '3004',
+            gstRate: 12.0
+          });
+        }
+
+        if (parsed.length > 0) {
+          setPreviewItems(parsed);
+          setSuccessMsg(`Loaded ${parsed.length} medicines from file. Click Confirm to import!`);
+          setTimeout(() => setSuccessMsg(null), 4000);
+        } else {
+          setError('Could not extract any valid medicine rows from this file.');
+        }
+      } catch (err: any) {
+        console.error('Failed to parse file:', err);
+        setError('Failed to read Excel/CSV file: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   useEffect(() => {
     fetchItems();
@@ -281,6 +425,25 @@ export default function Medicines() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
+            onClick={() => {
+              setPreviewItems(book1Medicines);
+              setShowImportModal(true);
+            }}
+            className="btn btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#f0fdf4',
+              color: '#15803d',
+              borderColor: '#bbf7d0',
+              fontWeight: '600'
+            }}
+          >
+            <UploadCloud size={16} />
+            Import Excel Catalog ({book1Medicines.length})
+          </button>
+          <button
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -290,6 +453,24 @@ export default function Medicines() {
           </button>
         </div>
       </div>
+
+      {successMsg && (
+        <div style={{
+          background: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#15803d',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '13px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: '500'
+        }}>
+          <CheckCircle2 size={18} color="#16a34a" />
+          {successMsg}
+        </div>
+      )}
 
       {/* Search & Filter Bar */}
       <div style={{
@@ -1188,6 +1369,206 @@ export default function Medicines() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Modal */}
+      {showImportModal && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-card" style={{ maxWidth: '850px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#dcfce7', padding: '8px', borderRadius: '8px', color: '#16a34a' }}>
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Import Medicine Catalog</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    Bulk load medicines from MARG ERP Book1.xlsx or upload your own Excel / CSV sheet.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !importing && setShowImportModal(false)}
+                className="btn-close"
+                disabled={importing}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Option Selector Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div
+                  onClick={() => setPreviewItems(book1Medicines)}
+                  style={{
+                    border: '2px solid #22c55e',
+                    background: '#f0fdf4',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 700, fontSize: '14px', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={16} />
+                      Book1.xlsx (MARG Clinic)
+                    </span>
+                    <span style={{ background: '#22c55e', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>
+                      478 ITEMS
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#166534' }}>
+                    Pre-parsed master list from your Mental Wellness Clinic catalog with correct packaging & manufacturers.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    border: '1px dashed #cbd5e1',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <UploadCloud size={16} color="#64748b" />
+                    Upload Custom Excel / CSV
+                  </div>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleFileUpload}
+                    disabled={importing}
+                    style={{ fontSize: '12px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview List */}
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}>
+                <div style={{
+                  padding: '10px 14px',
+                  background: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Preview Items ({previewItems.length})</span>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>
+                      (Duplicates with existing catalog will be safely skipped)
+                    </span>
+                  </div>
+                  <div className="search-box" style={{ maxWidth: '240px', padding: '4px 8px' }}>
+                    <Search size={14} />
+                    <input
+                      type="text"
+                      placeholder="Filter preview..."
+                      value={importSearch}
+                      onChange={(e) => setImportSearch(e.target.value)}
+                      style={{ fontSize: '12px' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', width: '35px' }}>#</th>
+                        <th style={{ padding: '8px 12px' }}>Medicine Name</th>
+                        <th style={{ padding: '8px 12px' }}>Manufacturer</th>
+                        <th style={{ padding: '8px 12px' }}>Pack</th>
+                        <th style={{ padding: '8px 12px' }}>Unit</th>
+                        <th style={{ padding: '8px 12px' }}>HSN</th>
+                        <th style={{ padding: '8px 12px' }}>GST</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewItems
+                        .filter(item => 
+                          !importSearch ||
+                          item.name.toLowerCase().includes(importSearch.toLowerCase()) ||
+                          (item.manufacturer && item.manufacturer.toLowerCase().includes(importSearch.toLowerCase()))
+                        )
+                        .slice(0, 100)
+                        .map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '6px 12px', color: '#94a3b8' }}>{idx + 1}</td>
+                            <td style={{ padding: '6px 12px', fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
+                            <td style={{ padding: '6px 12px', color: '#475569' }}>{item.manufacturer || '—'}</td>
+                            <td style={{ padding: '6px 12px' }}>
+                              <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: 500 }}>
+                                {item.pack || `1*${item.conversionFactor || 10}`}
+                              </span>
+                            </td>
+                            <td style={{ padding: '6px 12px', color: '#64748b' }}>{item.unit || 'STRIP'}</td>
+                            <td style={{ padding: '6px 12px', color: '#64748b' }}>{item.hsnCode || '3004'}</td>
+                            <td style={{ padding: '6px 12px', color: '#64748b' }}>{item.gstRate || 12}%</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  {previewItems.length > 100 && (
+                    <div style={{ padding: '8px', textAlign: 'center', background: '#f8fafc', fontSize: '11px', color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
+                      Showing first 100 of {previewItems.length} items. All items will be imported.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {importing && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#166534', marginBottom: '6px' }}>
+                    <span>Importing medicines into catalog...</span>
+                    <span>{importProgress}%</span>
+                  </div>
+                  <div style={{ height: '8px', width: '100%', background: '#dcfce7', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${importProgress}%`, background: '#22c55e', transition: 'width 0.2s ease-in-out' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                Ready to insert <strong>{previewItems.length}</strong> medicines.
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(false)}
+                  className="btn btn-secondary"
+                  disabled={importing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBulkImport()}
+                  disabled={importing || previewItems.length === 0}
+                  className="btn btn-primary"
+                  style={{ background: '#16a34a', borderColor: '#16a34a', minWidth: '150px' }}
+                >
+                  {importing ? `Importing (${importProgress}%)...` : `Confirm & Import (${previewItems.length})`}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
