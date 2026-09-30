@@ -69,6 +69,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
+        { mailTo: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search, mode: 'insensitive' } },
         { mobile: { contains: search, mode: 'insensitive' } },
         { gstin: { contains: search, mode: 'insensitive' } },

@@ -149,7 +149,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
       prisma.invoice.findMany({
         where,
         include: {
-          party: { select: { id: true, name: true, phone: true, gstin: true } },
+          party: { select: { id: true, name: true, mailTo: true, phone: true, gstin: true } },
           creator: { select: { username: true } },
           items: {
             select: { id: true }
@@ -559,7 +559,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           invoiceNumber: finalInvoiceNumber,
           invoiceDate: parsedInvoiceDate,
           dueDate: parsedDueDate,
-          customerName: customerParty ? customerParty.name : cleanCustomerName,
+          customerName: customerParty ? (customerParty.mailTo || customerParty.name) : cleanCustomerName,
           customerPhone: customerPhone || (customerParty ? customerParty.phone : null),
           customerAddress: customerAddress || (customerParty ? customerParty.address : null),
           customerGstin: customerGstin || (customerParty ? customerParty.gstin : null),
@@ -987,7 +987,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           partyId: customerParty ? customerParty.id : null,
           invoiceDate: parsedInvoiceDate,
           dueDate: parsedDueDate,
-          customerName: customerParty ? customerParty.name : cleanCustomerName,
+          customerName: customerParty ? (customerParty.mailTo || customerParty.name) : cleanCustomerName,
           customerPhone: customerPhone || (customerParty ? customerParty.phone : null),
           customerAddress: customerAddress || (customerParty ? customerParty.address : null),
           customerGstin: customerGstin || (customerParty ? customerParty.gstin : null),

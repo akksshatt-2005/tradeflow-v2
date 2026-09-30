@@ -46,6 +46,7 @@ interface MedicineItem {
 interface CustomerParty {
   id: string;
   name: string;
+  mailTo?: string | null;
   type: string;
   station?: string | null;
   phone?: string | null;

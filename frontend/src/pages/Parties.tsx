@@ -254,8 +254,14 @@ export default function Parties() {
 
       const d = (res as any)?.data || res;
       if (d) {
-        if (d.legalName) setName(d.legalName);
-        if (d.tradeName) setMailTo(d.tradeName);
+        const firmTradeName = (d.tradeName || d.mailTo || d.legalName || '').trim();
+        const legalName = (d.legalName || d.tradeName || '').trim();
+
+        if (firmTradeName) setMailTo(firmTradeName);
+        if (legalName) setName(legalName);
+        if (!firmTradeName && legalName) setMailTo(legalName);
+        if (!legalName && firmTradeName) setName(firmTradeName);
+
         if (d.address) setAddress(d.address);
         if (d.city) setStation(d.city);
         if (d.state) setState(d.state);
@@ -276,7 +282,7 @@ export default function Parties() {
           setActiveSection('BASIC');
           setGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state} (${d.taxpayerType || 'Regular'})`
+            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Taxpayer'}${legalName && legalName !== firmTradeName ? ` (Legal: ${legalName})` : ''} — ${d.state} (${d.taxpayerType || 'Regular'})`
           });
         } else {
           setActiveSection('BASIC');
@@ -301,8 +307,11 @@ export default function Parties() {
     e.preventDefault();
     if (!activeCompany) return;
 
-    if (!name.trim()) {
-      setError('Ledger Name is required');
+    const finalMailTo = mailTo.trim() || name.trim();
+    const finalName = name.trim() || mailTo.trim();
+
+    if (!finalMailTo && !finalName) {
+      setError('Firm / Display Name or Ledger Name is required');
       return;
     }
 
@@ -313,14 +322,14 @@ export default function Parties() {
       const computedType = accountGroup === 'SUNDRY_CREDITORS' ? 'supplier' : 'customer';
 
       const payload = {
-        name: name.trim(),
+        name: finalName,
         type: computedType,
         station: station.trim() || null,
         accountGroup,
         balancingMethod,
         openingBalance: parseFloat(openingBalance) || 0,
         openingBalanceType,
-        mailTo: mailTo.trim() || name.trim(),
+        mailTo: finalMailTo,
         address: address.trim() || null,
         pincode: pincode.trim() || null,
         state: state.trim() || null,
@@ -401,6 +410,7 @@ export default function Parties() {
   };
 
   const filteredParties = parties.filter(p =>
+    (p.mailTo && p.mailTo.toLowerCase().includes(search.toLowerCase())) ||
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.station && p.station.toLowerCase().includes(search.toLowerCase())) ||
     (p.phone && p.phone.includes(search)) ||
@@ -597,7 +607,7 @@ export default function Parties() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                  <th style={{ padding: '0.9rem 1.2rem' }}>Ledger Name & Station</th>
+                  <th style={{ padding: '0.9rem 1.2rem' }}>Firm / Trade Name & Station</th>
                   <th style={{ padding: '0.9rem 1.2rem' }}>Account Group</th>
                   <th style={{ padding: '0.9rem 1.2rem' }}>Contact & Mobile</th>
                   <th style={{ padding: '0.9rem 1.2rem' }}>GSTIN / PAN</th>
@@ -611,7 +621,7 @@ export default function Parties() {
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '0.9rem 1.2rem' }}>
                       <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        {p.name}
+                        {p.mailTo || p.name}
                         {p.isCash && (
                           <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(20, 184, 166, 0.15)', color: 'var(--brand-teal)' }}>
                             CASH
@@ -619,6 +629,9 @@ export default function Parties() {
                         )}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {p.mailTo && p.name && p.mailTo !== p.name && (
+                          <span style={{ color: 'var(--text-muted)' }}>Legal: {p.name} • </span>
+                        )}
                         {p.station ? `Station: ${p.station} ` : ''}{p.state ? `• ${p.state}` : ''}
                       </div>
                     </td>

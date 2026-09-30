@@ -42,6 +42,7 @@ interface InvoiceListItem {
   party?: {
     id: string;
     name: string;
+    mailTo?: string | null;
     phone?: string | null;
     gstin?: string | null;
   } | null;
@@ -368,7 +369,10 @@ export default function Sales() {
                       {new Date(inv.invoiceDate).toLocaleDateString('en-IN')}
                     </td>
                     <td style={{ padding: '0.9rem 1.2rem' }}>
-                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{inv.customerName}</div>
+                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer'}</div>
+                      {inv.party?.mailTo && inv.party?.name && inv.party.mailTo !== inv.party.name && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Legal: {inv.party.name}</div>
+                      )}
                       {inv.doctorName && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Dr. {inv.doctorName}</div>
                       )}

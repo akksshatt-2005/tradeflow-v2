@@ -59,6 +59,7 @@ interface PurchaseBill {
   supplier: {
     id: string;
     name: string;
+    mailTo?: string | null;
     phone?: string | null;
     gstin?: string | null;
     drugLicenseNo?: string | null;
@@ -196,7 +197,7 @@ export default function Purchases() {
   const filtered = purchases.filter(p => {
     const s = search.toLowerCase();
     return p.invoiceNumber.toLowerCase().includes(s) ||
-      p.supplier.name.toLowerCase().includes(s);
+      (p.supplier.mailTo || p.supplier.name).toLowerCase().includes(s);
   });
 
   const activePurchases = purchases.filter(p => p.status !== 'CANCELLED');
@@ -362,10 +363,13 @@ export default function Purchases() {
                       {p.invoiceNumber}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{p.supplier.name}</div>
-                      {p.supplier.gstin && (
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>GSTIN: {p.supplier.gstin}</div>
-                      )}
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{p.supplier.mailTo || p.supplier.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {p.supplier.mailTo && p.supplier.name && p.supplier.mailTo !== p.supplier.name && (
+                          <span>Legal: {p.supplier.name} • </span>
+                        )}
+                        {p.supplier.gstin ? `GSTIN: ${p.supplier.gstin}` : ''}
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       {new Date(p.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -507,7 +511,7 @@ export default function Purchases() {
                   Purchase Inward Bill #{viewingPurchase.invoiceNumber}
                 </h3>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Supplier: <strong>{viewingPurchase.supplier?.name}</strong> | Date: {new Date(viewingPurchase.purchaseDate).toLocaleDateString('en-IN')}
+                  Supplier: <strong>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong> | Date: {new Date(viewingPurchase.purchaseDate).toLocaleDateString('en-IN')}
                 </div>
               </div>
               <button
@@ -522,7 +526,10 @@ export default function Purchases() {
               {/* Supplier & Bill Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12px' }}>
                 <div>
-                  <div><strong>Wholesaler:</strong> {viewingPurchase.supplier?.name}</div>
+                  <div><strong>Wholesaler / Firm:</strong> {viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</div>
+                  {viewingPurchase.supplier?.mailTo && viewingPurchase.supplier?.name && viewingPurchase.supplier.mailTo !== viewingPurchase.supplier.name && (
+                    <div style={{ color: 'var(--text-muted)' }}><strong>Legal / Proprietor:</strong> {viewingPurchase.supplier.name}</div>
+                  )}
                   <div><strong>GSTIN:</strong> {viewingPurchase.supplier?.gstin || '—'}</div>
                   <div><strong>Drug License:</strong> {viewingPurchase.supplier?.drugLicenseNo || '—'}</div>
                 </div>
@@ -720,7 +727,7 @@ export default function Purchases() {
 
             <form onSubmit={handleRecordPayment} style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Supplier: <strong>{viewingPurchase.supplier?.name}</strong>
+                Supplier: <strong>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong>
               </div>
               <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
                 Balance Due on Bill #{viewingPurchase.invoiceNumber}: <strong>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</strong>

@@ -38,7 +38,8 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
     if (search) {
       where.OR = [
         { invoiceNumber: { contains: search, mode: 'insensitive' } },
-        { supplier: { name: { contains: search, mode: 'insensitive' } } }
+        { supplier: { name: { contains: search, mode: 'insensitive' } } },
+        { supplier: { mailTo: { contains: search, mode: 'insensitive' } } }
       ];
     }
 
@@ -48,7 +49,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
         where,
         include: {
           supplier: {
-            select: { id: true, name: true, phone: true, gstin: true, drugLicenseNo: true }
+            select: { id: true, name: true, mailTo: true, phone: true, gstin: true, drugLicenseNo: true }
           },
           creator: {
             select: { id: true, username: true }

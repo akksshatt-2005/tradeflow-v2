@@ -24,6 +24,7 @@ import {
 interface Supplier {
   id: string;
   name: string;
+  mailTo?: string | null;
   station?: string | null;
   gstin?: string | null;
   drugLicenseNo?: string | null;
@@ -161,7 +162,8 @@ export default function NewPurchase({
   // Quick Add Supplier Modal State
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [newSupGstin, setNewSupGstin] = useState('');
-  const [newSupName, setNewSupName] = useState('');
+  const [newSupName, setNewSupName] = useState(''); // Trade / Firm Name
+  const [newSupLegalName, setNewSupLegalName] = useState(''); // Legal / Proprietor Name
   const [newSupStation, setNewSupStation] = useState('');
   const [newSupAddress, setNewSupAddress] = useState('');
   const [newSupState, setNewSupState] = useState('');
@@ -188,7 +190,14 @@ export default function NewPurchase({
       });
       const d = (res as any)?.data || res;
       if (d) {
-        if (d.legalName || d.tradeName) setNewSupName(d.legalName || d.tradeName);
+        const firmTradeName = (d.tradeName || d.mailTo || d.legalName || '').trim();
+        const legalName = (d.legalName || d.tradeName || '').trim();
+
+        if (firmTradeName) setNewSupName(firmTradeName);
+        if (legalName) setNewSupLegalName(legalName);
+        if (!firmTradeName && legalName) setNewSupName(legalName);
+        if (!legalName && firmTradeName) setNewSupLegalName(firmTradeName);
+
         if (d.address) setNewSupAddress(d.address);
         if (d.city) setNewSupStation(d.city);
         if (d.state) setNewSupState(d.state);
@@ -205,7 +214,7 @@ export default function NewPurchase({
         if (d.status?.toLowerCase() === 'active') {
           setSupGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${d.legalName || d.tradeName || 'Active Taxpayer'} — ${d.state}`
+            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Taxpayer'}${legalName && legalName !== firmTradeName ? ` (Legal: ${legalName})` : ''} — ${d.state}`
           });
         } else {
           setSupGstLookupMsg({
@@ -227,17 +236,20 @@ export default function NewPurchase({
 
   const handleCreateSupplierQuick = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeCompany || !newSupName.trim()) return;
+    const finalTradeName = newSupName.trim() || newSupLegalName.trim();
+    const finalLegalName = newSupLegalName.trim() || newSupName.trim();
+    if (!activeCompany || !finalTradeName) return;
+
     try {
       setSavingNewSup(true);
       const res = await api.post('/api/parties', {
-        name: newSupName.trim(),
+        name: finalLegalName,
         type: 'supplier',
         accountGroup: 'SUNDRY_CREDITORS',
         balancingMethod: 'BILL_BY_BILL',
         openingBalance: 0,
         openingBalanceType: 'CR',
-        mailTo: newSupName.trim(),
+        mailTo: finalTradeName,
         address: newSupAddress.trim() || null,
         station: newSupStation.trim() || null,
         state: newSupState.trim() || null,
@@ -260,6 +272,7 @@ export default function NewPurchase({
       setShowAddSupplierModal(false);
       setNewSupGstin('');
       setNewSupName('');
+      setNewSupLegalName('');
       setNewSupStation('');
       setNewSupAddress('');
       setNewSupState('');
@@ -836,7 +849,7 @@ export default function NewPurchase({
             >
               {suppliers.map(s => (
                 <option key={s.id} value={s.id}>
-                  {s.name} {s.station ? `(${s.station})` : ''} {s.gstin ? `[GST: ${s.gstin}]` : ''}
+                  {s.mailTo || s.name} {s.station ? `(${s.station})` : ''} {s.gstin ? `[GST: ${s.gstin}]` : ''}
                 </option>
               ))}
             </select>
@@ -1366,7 +1379,7 @@ export default function NewPurchase({
           </div>
 
           <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px dashed var(--border-color)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Supplier: <strong>{selectedSupplier?.name}</strong> | Station: {selectedSupplier?.station || 'Local'}
+            Supplier: <strong>{selectedSupplier?.mailTo || selectedSupplier?.name}</strong> | Station: {selectedSupplier?.station || 'Local'}
           </div>
         </div>
 
@@ -1747,15 +1760,29 @@ export default function NewPurchase({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Supplier / Firm Name *</label>
+                <label className="form-label">Firm / Trade Name * (Mailing Display Name)</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. ADMARIS PHARMACEUTICALS PVT. LTD."
+                  placeholder="e.g. SHREE GANESH MEDICOS / ADMARIS PHARMA"
                   value={newSupName}
-                  onChange={e => setNewSupName(e.target.value)}
+                  onChange={e => {
+                    setNewSupName(e.target.value);
+                    if (!newSupLegalName) setNewSupLegalName(e.target.value);
+                  }}
                   className="form-input"
                   style={{ fontWeight: 600 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Legal / Proprietor Name (As per GST/PAN)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. MANISH KUMAR VERMA"
+                  value={newSupLegalName}
+                  onChange={e => setNewSupLegalName(e.target.value)}
+                  className="form-input"
                 />
               </div>
 
