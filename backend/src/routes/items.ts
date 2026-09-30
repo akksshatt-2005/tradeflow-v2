@@ -411,20 +411,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
 
   try {
     const item = await prisma.item.findFirst({
-      where: { id, companyId },
-      include: {
-        purchaseItems: {
-          include: {
-            purchase: { select: { id: true, invoiceNumber: true, status: true } }
-          }
-        },
-        invoiceItems: {
-          include: {
-            invoice: { select: { id: true, invoiceNumber: true, status: true } }
-          }
-        },
-        batches: true
-      }
+      where: { id, companyId }
     });
 
     if (!item) {
@@ -432,47 +419,18 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
-    // 1. Check if there are active (non-cancelled) purchase bills
-    const activePurchases = item.purchaseItems.filter(pi => pi.purchase && pi.purchase.status !== 'CANCELLED');
-    if (activePurchases.length > 0) {
-      const billNos = activePurchases.map(pi => pi.purchase.invoiceNumber).slice(0, 3).join(', ');
-      res.status(409).json({
-        error: `Cannot delete "${item.name}" — it is in active purchase bill(s) (#${billNos}). Cancel or delete those purchase bills first.`
-      });
-      return;
-    }
-
-    // 2. Check if there are active (non-cancelled) sale invoices
-    const activeInvoices = item.invoiceItems.filter(ii => ii.invoice && ii.invoice.status !== 'CANCELLED');
-    if (activeInvoices.length > 0) {
-      const invNos = activeInvoices.map(ii => ii.invoice.invoiceNumber).slice(0, 3).join(', ');
-      res.status(409).json({
-        error: `Cannot delete "${item.name}" — it is in active sale invoice(s) (#${invNos}). Cancel those invoices first.`
-      });
-      return;
-    }
-
-    // 3. Check active stock across batches
-    const totalStock = item.batches.reduce((sum, b) => sum + (b.currentStock || 0), 0);
-    if (totalStock > 0) {
-      res.status(409).json({
-        error: `Cannot delete "${item.name}" because it still has ${totalStock} units in stock. Cancel the purchases or adjust stock to 0 first.`
-      });
-      return;
-    }
-
-    // 4. Perform clean deletion in atomic transaction
+    // Perform clean cascade deletion in atomic transaction
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
-      // Remove any purchase item references from cancelled purchases
+      // 1. Remove associated purchase items
       await tx.purchaseItem.deleteMany({ where: { itemId: id } });
-      // Remove any invoice item references from cancelled invoices
+      // 2. Remove associated invoice items
       await tx.invoiceItem.deleteMany({ where: { itemId: id } });
-      // Remove associated stock ledger entries
+      // 3. Remove associated stock ledger entries
       await tx.stockLedger.deleteMany({ where: { itemId: id, companyId } });
-      // Remove batches
+      // 4. Remove batches
       await tx.batch.deleteMany({ where: { itemId: id, companyId } });
-      // Remove the medicine item
+      // 5. Remove the medicine item
       await tx.item.delete({ where: { id } });
     });
 

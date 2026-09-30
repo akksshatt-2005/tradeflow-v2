@@ -241,7 +241,7 @@ export default function Medicines() {
   const handleDeleteMedicine = async (item: MedicineItem) => {
     if (!activeCompany) return;
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete "${item.name}" (SKU: ${item.sku})?\n\nNote: You can only delete medicines that do not have existing purchase bills or sale invoices linked to them.`
+      `Are you sure you want to delete medicine "${item.name}" (SKU: ${item.sku})?`
     );
     if (!confirmDelete) return;
 
