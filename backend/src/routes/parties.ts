@@ -454,8 +454,11 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     ]);
 
     if (purchaseCount > 0 || invoiceCount > 0) {
+      const parts = [];
+      if (purchaseCount > 0) parts.push(`${purchaseCount} purchase bill(s)`);
+      if (invoiceCount > 0) parts.push(`${invoiceCount} sales invoice(s)`);
       res.status(400).json({
-        error: `Cannot delete "${party.name}" because it has ${purchaseCount} purchase bills and ${invoiceCount} sales invoices linked.`
+        error: `Cannot delete "${party.mailTo || party.name}" because it is linked to ${parts.join(' and ')}. Please delete or cancel those bills first.`
       });
       return;
     }

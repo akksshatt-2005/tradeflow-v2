@@ -71,6 +71,7 @@ export default function Parties() {
   const [activeTab, setActiveTab] = useState<'all' | 'customer' | 'supplier'>('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [deletingPartyId, setDeletingPartyId] = useState<string | null>(null);
 
   // Modal State for Ledger Modification / Creation (Photo 1)
   const [showModal, setShowModal] = useState(false);
@@ -385,13 +386,14 @@ export default function Parties() {
       return;
     }
 
+    const displayName = p.mailTo || p.name;
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete ledger "${p.name}"?\n\nNote: Ledgers with linked purchase bills or sales invoices cannot be deleted until those bills are deleted.`
+      `Are you sure you want to delete ledger "${displayName}"?\n\nNote: Ledgers with linked purchase bills or sales invoices cannot be deleted until those bills are deleted or cancelled.`
     );
     if (!confirmDelete) return;
 
     try {
-      setLoading(true);
+      setDeletingPartyId(p.id);
       setError(null);
       await api.delete(`/api/parties/${p.id}`, {
         companyId: activeCompany.id
@@ -402,10 +404,12 @@ export default function Parties() {
       }
       await fetchParties();
     } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to delete party ledger';
       console.error('Failed to delete party:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to delete party ledger');
+      setError(errorMsg);
+      alert(`⚠️ Could not delete ledger "${displayName}":\n\n${errorMsg}`);
     } finally {
-      setLoading(false);
+      setDeletingPartyId(null);
     }
   };
 
@@ -692,13 +696,15 @@ export default function Parties() {
                         {!p.isCash && (
                           <button
                             onClick={() => handleDeleteParty(p)}
+                            disabled={deletingPartyId === p.id}
                             style={{
                               padding: '0.4rem 0.6rem',
                               background: 'rgba(239, 68, 68, 0.12)',
                               border: '1px solid rgba(239, 68, 68, 0.3)',
                               borderRadius: '6px',
                               color: '#ef4444',
-                              cursor: 'pointer',
+                              cursor: deletingPartyId === p.id ? 'not-allowed' : 'pointer',
+                              opacity: deletingPartyId === p.id ? 0.6 : 1,
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem',
@@ -706,7 +712,7 @@ export default function Parties() {
                             }}
                             title="Delete Party Ledger"
                           >
-                            <Trash2 size={13} /> Delete
+                            <Trash2 size={13} /> {deletingPartyId === p.id ? 'Deleting...' : 'Delete'}
                           </button>
                         )}
                       </div>
@@ -831,6 +837,13 @@ export default function Parties() {
                 </div>
               )}
             </div>
+
+            {error && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--accent-red)', padding: '0.7rem 1.2rem', borderRadius: '8px', color: 'var(--accent-red)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>⚠️ {error}</span>
+                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>✕</button>
+              </div>
+            )}
 
             {/* Sub-Section Navigation Tabs */}
             <div style={{ display: 'flex', gap: '0.4rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
@@ -1299,6 +1312,7 @@ export default function Parties() {
                   {editingPartyId && (
                     <button
                       type="button"
+                      disabled={deletingPartyId === editingPartyId}
                       onClick={() => {
                         const targetParty = parties.find(p => p.id === editingPartyId);
                         if (targetParty) handleDeleteParty(targetParty);
@@ -1309,7 +1323,8 @@ export default function Parties() {
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '6px',
                         color: '#ef4444',
-                        cursor: 'pointer',
+                        cursor: deletingPartyId === editingPartyId ? 'not-allowed' : 'pointer',
+                        opacity: deletingPartyId === editingPartyId ? 0.6 : 1,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.4rem',
@@ -1317,7 +1332,7 @@ export default function Parties() {
                         fontWeight: '600'
                       }}
                     >
-                      <Trash2 size={15} /> Delete Ledger
+                      <Trash2 size={15} /> {deletingPartyId === editingPartyId ? 'Deleting Ledger...' : 'Delete Ledger'}
                     </button>
                   )}
                 </div>
