@@ -543,9 +543,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
       )}
 
-      {/* Patient & Doctor Header Bar (Photo 3 Top Section) */}
+      {/* Patient & Doctor Header Bar (Responsive Grid) */}
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1.5fr 1fr', gap: '1rem', alignItems: 'end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', alignItems: 'end' }}>
           
           {/* Patient [F2] */}
           <div>
@@ -576,14 +576,14 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 placeholder="Mobile"
                 value={customerPhone}
                 onChange={e => setCustomerPhone(e.target.value)}
-                style={{ width: '110px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                style={{ width: '105px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
               />
               <input
                 type="text"
                 placeholder="Patient Address"
                 value={patientAddress}
                 onChange={e => setPatientAddress(e.target.value)}
-                style={{ flex: 1, padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
               />
             </div>
           </div>
@@ -711,21 +711,21 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           </div>
         </div>
 
-        {/* Sale Entry Grid (Photo 3 Grid) */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+        {/* Sale Entry Grid (Responsive & Horizontal Scroll Protected) */}
+        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '0.75rem 0.8rem', width: '35px' }}>#</th>
-                <th style={{ padding: '0.75rem 0.8rem', minWidth: '220px' }}>PRODUCT</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '90px' }}>PACK</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '120px' }}>BATCH</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '80px', textAlign: 'center' }}>STRI</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '80px', textAlign: 'center' }}>TAB.</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '90px', textAlign: 'right' }}>M.R.P./S</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '70px', textAlign: 'center' }}>DIS%</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '70px', textAlign: 'center' }}>GST%</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '110px', textAlign: 'right' }}>AMOUNT (₹)</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '35px', textAlign: 'center' }}>#</th>
+                <th style={{ padding: '0.75rem 0.8rem', minWidth: '200px' }}>PRODUCT</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }}>PACK</th>
+                <th style={{ padding: '0.75rem 0.8rem', minWidth: '150px' }}>BATCH</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }}>STRI</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }}>TAB.</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '95px', textAlign: 'right' }}>M.R.P./S</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '75px', textAlign: 'center' }}>DIS%</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '70px', textAlign: 'center' }}>GST%</th>
+                <th style={{ padding: '0.75rem 0.8rem', width: '115px', textAlign: 'right' }}>AMOUNT (₹)</th>
                 <th style={{ padding: '0.75rem 0.5rem', width: '35px' }}></th>
               </tr>
             </thead>
@@ -753,7 +753,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         background: isFocused ? 'rgba(20, 184, 166, 0.08)' : 'transparent'
                       }}
                     >
-                      <td style={{ padding: '0.6rem 0.8rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{idx + 1}</td>
+                      <td style={{ padding: '0.6rem 0.6rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{idx + 1}</td>
 
                       {/* Product Name */}
                       <td style={{ padding: '0.6rem 0.8rem' }}>
@@ -764,7 +764,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       </td>
 
                       {/* Pack */}
-                      <td style={{ padding: '0.6rem 0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                      <td style={{ padding: '0.6rem 0.6rem', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '500' }}>
                         {item.pack}
                       </td>
 
@@ -786,7 +786,18 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                                 });
                               }
                             }}
-                            style={{ width: '100%', padding: '0.35rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                            style={{
+                              width: '100%',
+                              padding: '0.4rem 0.5rem',
+                              background: 'var(--bg-secondary)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.82rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              outline: 'none'
+                            }}
                           >
                             {batches.map(b => (
                               <option key={b.id} value={b.id}>
@@ -795,58 +806,95 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             ))}
                           </select>
                         ) : (
-                          <div style={{ fontFamily: 'monospace', fontWeight: '700' }}>{item.batchNumber}</div>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            background: 'rgba(20, 184, 166, 0.08)',
+                            color: 'var(--brand-teal)',
+                            padding: '0.3rem 0.6rem',
+                            borderRadius: '5px',
+                            border: '1px solid rgba(20, 184, 166, 0.2)',
+                            fontFamily: 'monospace',
+                            fontWeight: '700',
+                            fontSize: '0.85rem'
+                          }}>
+                            <span>{item.batchNumber}</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                              ({item.currentStock ?? medicine?.batches?.[0]?.currentStock ?? 0})
+                            </span>
+                          </div>
                         )}
                       </td>
 
                       {/* STRI (Full Strips) */}
-                      <td style={{ padding: '0.6rem 0.8rem' }}>
+                      <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
                           type="number"
                           min="0"
-                          value={item.strips}
-                          onChange={e => updateLineItem(idx, { strips: parseInt(e.target.value) || 0 })}
-                          style={{ width: '100%', padding: '0.35rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
+                          placeholder="0"
+                          value={item.strips === 0 ? '' : item.strips}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateLineItem(idx, { strips: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
+                          }}
+                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                         />
                       </td>
 
                       {/* TAB. (Loose Units) */}
-                      <td style={{ padding: '0.6rem 0.8rem' }}>
+                      <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
                           type="number"
                           min="0"
                           max={item.conversionFactor > 1 ? item.conversionFactor - 1 : 999}
-                          value={item.looseQty}
-                          onChange={e => updateLineItem(idx, { looseQty: parseInt(e.target.value) || 0 })}
-                          style={{ width: '100%', padding: '0.35rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          placeholder="0"
+                          value={item.looseQty === 0 ? '' : item.looseQty}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateLineItem(idx, { looseQty: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
+                          }}
+                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                         />
                       </td>
 
                       {/* MRP / Strip Price */}
-                      <td style={{ padding: '0.6rem 0.8rem' }}>
+                      <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
                           type="number"
                           step="0.01"
-                          value={item.unitPrice}
-                          onChange={e => updateLineItem(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
-                          style={{ width: '100%', padding: '0.35rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
+                          placeholder="0.00"
+                          value={item.unitPrice === 0 ? '' : item.unitPrice}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateLineItem(idx, { unitPrice: val === '' ? 0 : Math.max(0, parseFloat(val) || 0) });
+                          }}
+                          style={{ width: '100%', padding: '0.4rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
                         />
                       </td>
 
                       {/* Discount % */}
-                      <td style={{ padding: '0.6rem 0.8rem' }}>
+                      <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
                           type="number"
                           min="0"
                           max="100"
-                          value={item.discountPercent}
-                          onChange={e => updateLineItem(idx, { discountPercent: parseFloat(e.target.value) || 0 })}
-                          style={{ width: '100%', padding: '0.35rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          placeholder="0"
+                          value={item.discountPercent === 0 ? '' : item.discountPercent}
+                          onFocus={e => e.target.select()}
+                          onChange={e => {
+                            const val = e.target.value;
+                            updateLineItem(idx, { discountPercent: val === '' ? 0 : Math.min(100, Math.max(0, parseFloat(val) || 0)) });
+                          }}
+                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                         />
                       </td>
 
                       {/* GST % */}
-                      <td style={{ padding: '0.6rem 0.8rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '0.6rem 0.6rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '600' }}>
                         {item.gstRate}%
                       </td>
 
@@ -859,9 +907,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>
                         <button
                           onClick={() => removeLineItem(idx)}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px' }}
+                          title="Remove item"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         </button>
                       </td>
                     </tr>
@@ -873,8 +922,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
       </div>
 
-      {/* Split Bottom Multi-Pane HUD (Photo 3 Bottom Section) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.2rem', alignItems: 'stretch' }}>
+      {/* Split Bottom Multi-Pane HUD (Responsive) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.2rem', alignItems: 'stretch' }}>
         
         {/* Left HUD: Active Selected Line Item Details */}
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -994,7 +1043,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 type="number"
                 step="0.01"
                 min="0"
-                value={paidAmount === '' ? (paymentMode === 'CREDIT' ? '0' : String(grandTotal)) : paidAmount}
+                placeholder={paymentMode === 'CREDIT' ? '0' : String(grandTotal.toFixed(0))}
+                value={paidAmount}
+                onFocus={e => e.target.select()}
                 onChange={e => setPaidAmount(e.target.value)}
                 style={{ width: '100%', padding: '0.45rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontSize: '0.9rem', textAlign: 'right' }}
               />
