@@ -77,7 +77,7 @@ export default function Medicines() {
   const [newItemLoose, setNewItemLoose] = useState('');
   const [newItemBatchNumber, setNewItemBatchNumber] = useState('');
   const [newItemMrp, setNewItemMrp] = useState('');
-  const [newItemPts, setNewItemPts] = useState('');
+  const [newItemPtr, setNewItemPtr] = useState('');
   const [submittingItem, setSubmittingItem] = useState(false);
 
   // Form State: Add Batch
@@ -86,7 +86,6 @@ export default function Medicines() {
   const [expiryYear, setExpiryYear] = useState(new Date().getFullYear() + 2 + '');
   const [batchMrp, setBatchMrp] = useState('');
   const [batchPtr, setBatchPtr] = useState('');
-  const [batchPts, setBatchPts] = useState('');
   const [batchOpeningStock, setBatchOpeningStock] = useState('');
   const [batchOpeningStrips, setBatchOpeningStrips] = useState('');
   const [batchOpeningLoose, setBatchOpeningLoose] = useState('');
@@ -347,7 +346,8 @@ export default function Medicines() {
         initialStock: totalUnits,
         initialBatchNumber: newItemBatchNumber.trim() || undefined,
         initialMrp: parseFloat(newItemMrp) || undefined,
-        initialPts: parseFloat(newItemPts) || undefined
+        initialPtr: parseFloat(newItemPtr) || undefined,
+        initialPts: parseFloat(newItemMrp) || undefined
       }, {
         companyId: activeCompany.id
       });
@@ -367,7 +367,7 @@ export default function Medicines() {
       setNewItemLoose('');
       setNewItemBatchNumber('');
       setNewItemMrp('');
-      setNewItemPts('');
+      setNewItemPtr('');
 
       await fetchItems();
     } catch (err: any) {
@@ -406,7 +406,7 @@ export default function Medicines() {
         expiryDate: expiryDateStr,
         mrp: parseFloat(batchMrp) || 0,
         ptr: parseFloat(batchPtr) || 0,
-        pts: parseFloat(batchPts) || parseFloat(batchMrp) || 0,
+        pts: parseFloat(batchMrp) || 0,
         openingStock: totalOpeningUnits
       }, {
         companyId: activeCompany.id
@@ -417,7 +417,6 @@ export default function Medicines() {
       setBatchNumber('');
       setBatchMrp('');
       setBatchPtr('');
-      setBatchPts('');
       setBatchOpeningStock('');
       setBatchOpeningStrips('');
       setBatchOpeningLoose('');
@@ -1046,13 +1045,13 @@ export default function Medicines() {
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="label" style={{ fontSize: '11px' }}>Selling (PTS ₹)</label>
+                    <label className="label" style={{ fontSize: '11px' }}>Purchase Rate (₹)</label>
                     <input
                       type="number"
                       step="0.01"
                       placeholder="0.00"
-                      value={newItemPts}
-                      onChange={(e) => setNewItemPts(e.target.value)}
+                      value={newItemPtr}
+                      onChange={(e) => setNewItemPtr(e.target.value)}
                       className="input"
                     />
                   </div>
@@ -1166,7 +1165,7 @@ export default function Medicines() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label className="label">MRP (₹) *</label>
                   <input
@@ -1180,24 +1179,13 @@ export default function Medicines() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="label">Cost (PTR ₹)</label>
+                  <label className="label">Purchase Rate (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={batchPtr}
                     onChange={(e) => setBatchPtr(e.target.value)}
-                    className="input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Sell Rate (PTS ₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={batchPts}
-                    onChange={(e) => setBatchPts(e.target.value)}
                     className="input"
                   />
                 </div>
@@ -1327,8 +1315,7 @@ export default function Medicines() {
                       <th style={{ padding: '8px 12px', fontWeight: 600 }}>BATCH NO</th>
                       <th style={{ padding: '8px 12px', fontWeight: 600 }}>EXPIRY</th>
                       <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>MRP</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>PTR (COST)</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>PTS (SELL)</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>PURCHASE RATE</th>
                       <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>STOCK</th>
                     </tr>
                   </thead>
@@ -1347,7 +1334,6 @@ export default function Medicines() {
                           </td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{b.mrp.toFixed(2)}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{b.ptr.toFixed(2)}</td>
-                          <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{b.pts.toFixed(2)}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>
                             {viewingItemBatches.conversionFactor > 1 ? (
                               (() => {
