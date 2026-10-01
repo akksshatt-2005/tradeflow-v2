@@ -79,7 +79,7 @@ async function runTest() {
         hsnCode: '3004',
         unit: 'STRIP',
         conversionFactor: 10,
-        gstRate: 12.0,
+        gstRate: 5.0,
         minStockLevel: 20
       })
     });
@@ -113,7 +113,7 @@ async function runTest() {
         mrp: 220.0,
         pts: 195.0,
         discountPercent: 5.0,
-        gstRate: 12.0
+        gstRate: 5.0
       }
     ]
   };

@@ -111,7 +111,7 @@ async function ensureTables() {
       "generic_name" TEXT,
       "manufacturer" TEXT,
       "hsn_code" TEXT NOT NULL DEFAULT '3004',
-      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 5.0,
       "unit" TEXT NOT NULL DEFAULT 'STRIP',
       "conversion_factor" INTEGER NOT NULL DEFAULT 1,
       "min_stock_level" INTEGER NOT NULL DEFAULT 0,
@@ -208,7 +208,7 @@ async function ensureTables() {
       "mrp" DECIMAL(10,2) NOT NULL,
       "discount_percent" DECIMAL(5,2) NOT NULL DEFAULT 0.0,
       "taxable_value" DECIMAL(10,2) NOT NULL,
-      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 5.0,
       "gst_amount" DECIMAL(10,2) NOT NULL,
       "total_amount" DECIMAL(10,2) NOT NULL
     )`,
@@ -264,7 +264,7 @@ async function ensureTables() {
       "mrp" DECIMAL(10,2) NOT NULL,
       "discount_percent" DECIMAL(5,2) NOT NULL DEFAULT 0.0,
       "taxable_amount" DECIMAL(10,2) NOT NULL,
-      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+      "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 5.0,
       "cgst_amount" DECIMAL(10,2) NOT NULL,
       "sgst_amount" DECIMAL(10,2) NOT NULL,
       "igst_amount" DECIMAL(10,2) NOT NULL,
@@ -316,6 +316,12 @@ async function ensureTables() {
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "pack" TEXT DEFAULT '10 TAB'`,
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "strips" INTEGER DEFAULT 0`,
     `ALTER TABLE "invoice_items" ADD COLUMN IF NOT EXISTS "loose_qty" INTEGER DEFAULT 0`,
+
+    // Update Default GST Rate to 5% across catalog and existing items
+    `ALTER TABLE "items" ALTER COLUMN "gst_rate" SET DEFAULT 5.00`,
+    `ALTER TABLE "purchase_items" ALTER COLUMN "gst_rate" SET DEFAULT 5.00`,
+    `ALTER TABLE "invoice_items" ALTER COLUMN "gst_rate" SET DEFAULT 5.00`,
+    `UPDATE "items" SET "gst_rate" = 5.00 WHERE "gst_rate" = 12.00`,
 
     // Append-Only Immutability Trigger for stock_ledger (Bypassable for owner company reset)
     `CREATE OR REPLACE FUNCTION prevent_stock_ledger_mutation()

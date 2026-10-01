@@ -245,7 +245,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       const mrp = parseFloat(rawItem.mrp) || ptr;
       const pts = parseFloat(rawItem.pts) || mrp;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
 
       const lineGross = qty * ptr;
       const lineDisc = (lineGross * discountPct) / 100;
@@ -575,7 +575,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       const purchaseRate = parseFloat(rawItem.purchaseRate) || 0;
       const mrp = parseFloat(rawItem.mrp) || purchaseRate;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
 
       const gross = qty * purchaseRate;
       const discount = (gross * discountPct) / 100;

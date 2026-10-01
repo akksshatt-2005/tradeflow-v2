@@ -132,7 +132,7 @@ model Item {
   genericName      String?  @map("generic_name")
   manufacturer     String?
   hsnCode          String   @default("3004") @map("hsn_code")
-  gstRate          Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  gstRate          Decimal  @default(5.0) @map("gst_rate") @db.Decimal(5, 2)
   unit             String   @default("STRIP") // STRIP, TAB, BOTTLE, VIAL, BOX
   conversionFactor Int      @default(1) @map("conversion_factor")
   minStockLevel    Int      @default(0) @map("min_stock_level")
@@ -303,7 +303,7 @@ model PurchaseItem {
   mrp             Decimal  @map("mrp") @db.Decimal(10, 2)
   discountPercent Decimal  @default(0.0) @map("discount_percent") @db.Decimal(5, 2)
   taxableValue    Decimal  @map("taxable_value") @db.Decimal(10, 2)
-  gstRate         Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  gstRate         Decimal  @default(5.0) @map("gst_rate") @db.Decimal(5, 2)
   gstAmount       Decimal  @map("gst_amount") @db.Decimal(10, 2)
   totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
 
@@ -385,7 +385,7 @@ model InvoiceItem {
   mrp             Decimal  @map("mrp") @db.Decimal(10, 2)
   discountPercent Decimal  @default(0.0) @map("discount_percent") @db.Decimal(5, 2)
   taxableAmount   Decimal  @map("taxable_amount") @db.Decimal(10, 2)
-  gstRate         Decimal  @default(12.0) @map("gst_rate") @db.Decimal(5, 2)
+  gstRate         Decimal  @default(5.0) @map("gst_rate") @db.Decimal(5, 2)
   cgstAmount      Decimal  @map("cgst_amount") @db.Decimal(10, 2)
   sgstAmount      Decimal  @map("sgst_amount") @db.Decimal(10, 2)
   igstAmount      Decimal  @map("igst_amount") @db.Decimal(10, 2)

@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS medicines (
   manufacturer VARCHAR(255) NOT NULL,
   rack_location VARCHAR(50) DEFAULT 'R1-S1',
   hsn_code VARCHAR(20) DEFAULT '3004',
-  gst_rate NUMERIC(5,2) DEFAULT 12.00,
+  gst_rate NUMERIC(5,2) DEFAULT 5.00,
   reorder_level INT DEFAULT 20,
   is_prescription_required BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   quantity INT NOT NULL,
   unit_mrp NUMERIC(10,2) NOT NULL,
   unit_price NUMERIC(10,2) NOT NULL,
-  gst_rate NUMERIC(5,2) DEFAULT 12.00,
+  gst_rate NUMERIC(5,2) DEFAULT 5.00,
   gst_amount NUMERIC(10,2) DEFAULT 0.00,
   total_price NUMERIC(10,2) NOT NULL
 );

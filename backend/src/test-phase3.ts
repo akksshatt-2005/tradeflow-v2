@@ -111,7 +111,7 @@ async function runPhase3Test() {
         unitPrice: targetBatch.pts || targetBatch.mrp || 150.0,
         mrp: targetBatch.mrp || 150.0,
         discountPercent: 5.0,
-        gstRate: 12.0
+        gstRate: 5.0
       }
     ]
   };

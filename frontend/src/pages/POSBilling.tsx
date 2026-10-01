@@ -245,7 +245,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
     const fefoBatch = availableBatches[0];
     const unitPrice = Number(fefoBatch.pts) || Number(fefoBatch.mrp);
-    const gstRate = Number(item.gstRate) || 12.0;
+    const gstRate = Number(item.gstRate) !== undefined && !isNaN(Number(item.gstRate)) ? Number(item.gstRate) : 5.0;
     const factor = item.conversionFactor || 1;
 
     // Default 1 Strip
@@ -342,7 +342,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
   const avgGstRate = invoiceItems.length > 0
     ? invoiceItems.reduce((sum, i) => sum + i.gstRate, 0) / invoiceItems.length
-    : 12;
+    : 5;
 
   const totalGstAmount = (netTaxable * avgGstRate) / 100;
   const cgstAmount = isInterState ? 0 : totalGstAmount / 2;

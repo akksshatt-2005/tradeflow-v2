@@ -152,7 +152,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         genericName: genericName ? String(genericName).trim() : null,
         manufacturer: manufacturer ? String(manufacturer).trim() : null,
         hsnCode: hsnCode ? String(hsnCode).trim() : '3004',
-        gstRate: gstRate !== undefined ? Number(gstRate) : 12.0,
+        gstRate: gstRate !== undefined ? Number(gstRate) : 5.0,
         unit: unit ? String(unit).trim().toUpperCase() : 'STRIP',
         conversionFactor: conversionFactor ? Math.max(1, parseInt(conversionFactor)) : 1,
         minStockLevel: minStockLevel ? Math.max(0, parseInt(minStockLevel)) : 0
@@ -243,7 +243,7 @@ router.post('/bulk-import', async (req: CompanyScopedRequest, res: Response) => 
         genericName: raw.genericName ? String(raw.genericName).trim() : null,
         manufacturer: raw.manufacturer ? String(raw.manufacturer).trim() : null,
         hsnCode: raw.hsnCode ? String(raw.hsnCode).trim() : '3004',
-        gstRate: raw.gstRate !== undefined ? Number(raw.gstRate) : 12.0,
+        gstRate: raw.gstRate !== undefined ? Number(raw.gstRate) : 5.0,
         unit,
         conversionFactor: factor > 0 ? factor : 1,
         minStockLevel: raw.minStockLevel ? Math.max(0, parseInt(raw.minStockLevel)) : 0

@@ -152,7 +152,7 @@ export default function NewPurchase({
     unit: 'STRIP',
     conversionFactor: 10,
     hsnCode: '3004',
-    gstRate: 12,
+    gstRate: 5,
     defaultPtr: 100,
     defaultMrp: 140,
     defaultPts: 120

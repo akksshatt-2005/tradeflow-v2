@@ -69,7 +69,7 @@ export default function Medicines() {
   const [newItemGeneric, setNewItemGeneric] = useState('');
   const [newItemManufacturer, setNewItemManufacturer] = useState('');
   const [newItemHsn, setNewItemHsn] = useState('3004');
-  const [newItemGst, setNewItemGst] = useState('12');
+  const [newItemGst, setNewItemGst] = useState('5');
   const [newItemUnit, setNewItemUnit] = useState('STRIP');
   const [newItemConversion, setNewItemConversion] = useState('10');
   const [newItemMinStock, setNewItemMinStock] = useState('10');
@@ -92,7 +92,7 @@ export default function Medicines() {
   const [editGeneric, setEditGeneric] = useState('');
   const [editManufacturer, setEditManufacturer] = useState('');
   const [editHsn, setEditHsn] = useState('3004');
-  const [editGst, setEditGst] = useState('12');
+  const [editGst, setEditGst] = useState('5');
   const [editUnit, setEditUnit] = useState('STRIP');
   const [editConversion, setEditConversion] = useState('10');
   const [editMinStock, setEditMinStock] = useState('10');
@@ -141,21 +141,21 @@ export default function Medicines() {
         'Description': '1*10 TAB',
         'Company': 'GSK PHARMA',
         'HSN': '3004',
-        'GST': 12
+        'GST': 5
       },
       {
         'Item Name': 'AMOXICILLIN 500MG CAP',
         'Description': '1*10',
         'Company': 'CIPLA',
         'HSN': '3004',
-        'GST': 12
+        'GST': 5
       },
       {
         'Item Name': 'COUGH SYRUP 100ML',
         'Description': '1*1 BOTTLE',
         'Company': 'DABUR',
         'HSN': '3004',
-        'GST': 12
+        'GST': 5
       }
     ];
     const worksheet = XLSX.utils.json_to_sheet(templateData);
@@ -275,7 +275,7 @@ export default function Medicines() {
             unit,
             conversionFactor: factor,
             hsnCode: '3004',
-            gstRate: 12.0
+            gstRate: 5.0
           });
         }
 
@@ -343,7 +343,7 @@ export default function Medicines() {
       setNewItemGeneric('');
       setNewItemManufacturer('');
       setNewItemHsn('3004');
-      setNewItemGst('12');
+      setNewItemGst('5');
       setNewItemUnit('STRIP');
       setNewItemConversion('10');
       setNewItemMinStock('10');
@@ -403,7 +403,7 @@ export default function Medicines() {
     setEditGeneric(item.genericName || '');
     setEditManufacturer(item.manufacturer || '');
     setEditHsn(item.hsnCode || '3004');
-    setEditGst(String(item.gstRate ?? 12));
+    setEditGst(String(item.gstRate ?? 5));
     setEditUnit(item.unit || 'STRIP');
     setEditConversion(String(item.conversionFactor || 10));
     setEditMinStock(String(item.minStockLevel || 10));
@@ -838,9 +838,9 @@ export default function Medicines() {
                     onChange={(e) => setNewItemGst(e.target.value)}
                     className="input"
                   >
+                    <option value="5">5% GST (Default Standard)</option>
                     <option value="0">0% (Exempt)</option>
-                    <option value="5">5% GST</option>
-                    <option value="12">12% GST (Standard)</option>
+                    <option value="12">12% GST</option>
                     <option value="18">18% GST</option>
                     <option value="28">28% GST</option>
                   </select>
@@ -1324,10 +1324,11 @@ export default function Medicines() {
                     onChange={(e) => setEditGst(e.target.value)}
                     className="form-select"
                   >
+                    <option value="5">5% (Standard Default)</option>
                     <option value="0">0% (Exempted)</option>
-                    <option value="5">5% (Life saving/vaccines)</option>
-                    <option value="12">12% (Standard medicines)</option>
+                    <option value="12">12% (Specified medicines)</option>
                     <option value="18">18% (Cosmetics/supplements)</option>
+                    <option value="28">28% (Special)</option>
                   </select>
                 </div>
               </div>

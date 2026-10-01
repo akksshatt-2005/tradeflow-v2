@@ -73,7 +73,7 @@ async function runAutoCatalogTest() {
           mrp: 135.00,
           pts: 110.00,
           discountPercent: 5.0,
-          gstRate: 12.0
+          gstRate: 5.0
         }
       ]
     })

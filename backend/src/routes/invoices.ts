@@ -419,7 +419,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
@@ -522,11 +522,11 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     // Recalculate tax on final taxable
     if (numBillDiscountPct > 0) {
       if (isInterState) {
-        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 12)) / 100;
+        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 5)) / 100;
         totalCgst = 0;
         totalSgst = 0;
       } else {
-        const halfRate = (validatedItems[0]?.gstRate || 12) / 2;
+        const halfRate = (validatedItems[0]?.gstRate || 5) / 2;
         totalCgst = (finalTaxable * halfRate) / 100;
         totalSgst = (finalTaxable * halfRate) / 100;
         totalIgst = 0;
@@ -764,7 +764,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 12.0;
+      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
@@ -850,11 +850,11 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
     if (numBillDiscountPct > 0) {
       if (isInterState) {
-        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 12)) / 100;
+        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 5)) / 100;
         totalCgst = 0;
         totalSgst = 0;
       } else {
-        const halfRate = (validatedItems[0]?.gstRate || 12) / 2;
+        const halfRate = (validatedItems[0]?.gstRate || 5) / 2;
         totalCgst = (finalTaxable * halfRate) / 100;
         totalSgst = (finalTaxable * halfRate) / 100;
         totalIgst = 0;

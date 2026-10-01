@@ -15,18 +15,18 @@ INSERT INTO customers (name, phone, email, doctor_name, doctor_reg_no) VALUES
 
 -- Medicines
 INSERT INTO medicines (id, name, generic_name, category, dosage_form, manufacturer, rack_location, hsn_code, gst_rate, reorder_level, is_prescription_required) VALUES
-(1, 'Dolo 650 Tablet', 'Paracetamol (650mg)', 'Analgesic & Antipyretic', 'Tablet', 'Micro Labs Ltd', 'R1-A1', '30049060', 12.00, 50, false),
-(2, 'Augmentin 625 Duo Tablet', 'Amoxicillin (500mg) + Clavulanic Acid (125mg)', 'Antibiotic', 'Tablet', 'GlaxoSmithKline', 'R1-A2', '30041010', 12.00, 30, true),
-(3, 'Pan 40 Tablet', 'Pantoprazole (40mg)', 'Gastrointestinal / Antacid', 'Tablet', 'Alkem Laboratories', 'R2-B1', '30049099', 12.00, 40, false),
-(4, 'Azithral 500 Tablet', 'Azithromycin (500mg)', 'Antibiotic', 'Tablet', 'Alembic Pharmaceuticals', 'R1-A3', '30042099', 12.00, 25, true),
-(5, 'Glycomet-GP 1 Tablet', 'Glimepiride (1mg) + Metformin (500mg)', 'Anti-Diabetic', 'Tablet', 'USV Pvt Ltd', 'R3-C1', '30049099', 12.00, 35, true),
-(6, 'Telma 40 Tablet', 'Telmisartan (40mg)', 'Cardiovascular / Hypertension', 'Tablet', 'Glenmark Pharmaceuticals', 'R3-C2', '30049099', 12.00, 30, true),
-(7, 'Montair-LC Tablet', 'Montelukast (10mg) + Levocetirizine (5mg)', 'Respiratory / Antiallergic', 'Tablet', 'Cipla Ltd', 'R2-B2', '30049099', 12.00, 40, false),
-(8, 'Allegra 120mg Tablet', 'Fexofenadine (120mg)', 'Antiallergic', 'Tablet', 'Sanofi India Ltd', 'R2-B3', '30049099', 12.00, 20, false),
+(1, 'Dolo 650 Tablet', 'Paracetamol (650mg)', 'Analgesic & Antipyretic', 'Tablet', 'Micro Labs Ltd', 'R1-A1', '30049060', 5.00, 50, false),
+(2, 'Augmentin 625 Duo Tablet', 'Amoxicillin (500mg) + Clavulanic Acid (125mg)', 'Antibiotic', 'Tablet', 'GlaxoSmithKline', 'R1-A2', '30041010', 5.00, 30, true),
+(3, 'Pan 40 Tablet', 'Pantoprazole (40mg)', 'Gastrointestinal / Antacid', 'Tablet', 'Alkem Laboratories', 'R2-B1', '30049099', 5.00, 40, false),
+(4, 'Azithral 500 Tablet', 'Azithromycin (500mg)', 'Antibiotic', 'Tablet', 'Alembic Pharmaceuticals', 'R1-A3', '30042099', 5.00, 25, true),
+(5, 'Glycomet-GP 1 Tablet', 'Glimepiride (1mg) + Metformin (500mg)', 'Anti-Diabetic', 'Tablet', 'USV Pvt Ltd', 'R3-C1', '30049099', 5.00, 35, true),
+(6, 'Telma 40 Tablet', 'Telmisartan (40mg)', 'Cardiovascular / Hypertension', 'Tablet', 'Glenmark Pharmaceuticals', 'R3-C2', '30049099', 5.00, 30, true),
+(7, 'Montair-LC Tablet', 'Montelukast (10mg) + Levocetirizine (5mg)', 'Respiratory / Antiallergic', 'Tablet', 'Cipla Ltd', 'R2-B2', '30049099', 5.00, 40, false),
+(8, 'Allegra 120mg Tablet', 'Fexofenadine (120mg)', 'Antiallergic', 'Tablet', 'Sanofi India Ltd', 'R2-B3', '30049099', 5.00, 20, false),
 (9, 'Becosules Z Capsules', 'Vitamin B-Complex with Vitamin C & Zinc', 'Vitamins & Supplements', 'Capsule', 'Pfizer Ltd', 'R4-D1', '30045020', 18.00, 50, false),
-(10, 'Ascoril D Plus Syrup 100ml', 'Dextromethorphan + Phenylephrine + Chlorpheniramine', 'Cough & Cold', 'Syrup', 'Glenmark Pharmaceuticals', 'R5-E1', '30049099', 12.00, 20, false),
+(10, 'Ascoril D Plus Syrup 100ml', 'Dextromethorphan + Phenylephrine + Chlorpheniramine', 'Cough & Cold', 'Syrup', 'Glenmark Pharmaceuticals', 'R5-E1', '30049099', 5.00, 20, false),
 (11, 'Shelcal 500 Tablet', 'Calcium (500mg) + Vitamin D3 (250 IU)', 'Vitamins & Supplements', 'Tablet', 'Torrent Pharmaceuticals', 'R4-D2', '30045020', 18.00, 40, false),
-(12, 'Combiflam Tablet', 'Ibuprofen (400mg) + Paracetamol (325mg)', 'Analgesic & Anti-inflammatory', 'Tablet', 'Sanofi India Ltd', 'R1-A4', '30049060', 12.00, 60, false);
+(12, 'Combiflam Tablet', 'Ibuprofen (400mg) + Paracetamol (325mg)', 'Analgesic & Anti-inflammatory', 'Tablet', 'Sanofi India Ltd', 'R1-A4', '30049060', 5.00, 60, false);
 
 -- Adjust sequence for medicines
 SELECT setval(pg_get_serial_sequence('medicines', 'id'), (SELECT MAX(id) FROM medicines));

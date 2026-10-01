@@ -7,7 +7,7 @@ CREATE TABLE "items" (
     "generic_name" TEXT,
     "manufacturer" TEXT,
     "hsn_code" TEXT NOT NULL DEFAULT '3004',
-    "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+    "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 5.0,
     "unit" TEXT NOT NULL DEFAULT 'STRIP',
     "conversion_factor" INTEGER NOT NULL DEFAULT 1,
     "min_stock_level" INTEGER NOT NULL DEFAULT 0,

@@ -39,7 +39,7 @@ CREATE TABLE "purchase_items" (
     "mrp" DECIMAL(10,2) NOT NULL,
     "discount_percent" DECIMAL(5,2) NOT NULL DEFAULT 0.0,
     "taxable_value" DECIMAL(10,2) NOT NULL,
-    "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 12.0,
+    "gst_rate" DECIMAL(5,2) NOT NULL DEFAULT 5.0,
     "gst_amount" DECIMAL(10,2) NOT NULL,
     "total_amount" DECIMAL(10,2) NOT NULL,
 
