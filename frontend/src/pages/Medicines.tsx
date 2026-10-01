@@ -91,6 +91,17 @@ export default function Medicines() {
   const [batchOpeningLoose, setBatchOpeningLoose] = useState('');
   const [submittingBatch, setSubmittingBatch] = useState(false);
 
+  // Edit Batch State
+  const [editingBatchInfo, setEditingBatchInfo] = useState<{ item: MedicineItem; batch: BatchInfo } | null>(null);
+  const [editBatchNumber, setEditBatchNumber] = useState('');
+  const [editBatchExpiryMonth, setEditBatchExpiryMonth] = useState('12');
+  const [editBatchExpiryYear, setEditBatchExpiryYear] = useState(new Date().getFullYear() + 2 + '');
+  const [editBatchMrp, setEditBatchMrp] = useState('');
+  const [editBatchPtr, setEditBatchPtr] = useState('');
+  const [editBatchStrips, setEditBatchStrips] = useState('');
+  const [editBatchLoose, setEditBatchLoose] = useState('');
+  const [submittingBatchEdit, setSubmittingBatchEdit] = useState(false);
+
   // Edit Medicine State
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<MedicineItem | null>(null);
@@ -426,6 +437,97 @@ export default function Medicines() {
       setError(err.message || 'Failed to add batch');
     } finally {
       setSubmittingBatch(false);
+    }
+  };
+
+  const handleOpenEditBatch = (item: MedicineItem, batch: BatchInfo) => {
+    setEditingBatchInfo({ item, batch });
+    setEditBatchNumber(batch.batchNumber);
+    const exp = new Date(batch.expiryDate);
+    if (!isNaN(exp.getTime())) {
+      setEditBatchExpiryMonth(String(exp.getMonth() + 1));
+      setEditBatchExpiryYear(String(exp.getFullYear()));
+    } else {
+      setEditBatchExpiryMonth('12');
+      setEditBatchExpiryYear(String(new Date().getFullYear() + 2));
+    }
+    setEditBatchMrp(String(batch.mrp || ''));
+    setEditBatchPtr(String(batch.ptr || ''));
+    const factor = item.conversionFactor || 1;
+    setEditBatchStrips(String(Math.floor(batch.currentStock / factor)));
+    setEditBatchLoose(String(batch.currentStock % factor));
+  };
+
+  const handleUpdateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCompany || !editingBatchInfo) return;
+
+    try {
+      setSubmittingBatchEdit(true);
+      setError(null);
+
+      const year = parseInt(editBatchExpiryYear);
+      const month = parseInt(editBatchExpiryMonth);
+      const lastDay = new Date(year, month, 0).getDate();
+      const expiryDateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+      const factor = editingBatchInfo.item.conversionFactor || 1;
+      const totalUnits = (parseInt(editBatchStrips) || 0) * factor + (parseInt(editBatchLoose) || 0);
+
+      await api.put(`/api/items/${editingBatchInfo.item.id}/batches/${editingBatchInfo.batch.id}`, {
+        batchNumber: editBatchNumber.trim(),
+        expiryDate: expiryDateStr,
+        mrp: parseFloat(editBatchMrp) || 0,
+        ptr: parseFloat(editBatchPtr) || 0,
+        pts: parseFloat(editBatchMrp) || 0,
+        currentStock: totalUnits
+      }, {
+        companyId: activeCompany.id
+      });
+
+      setEditingBatchInfo(null);
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
+        companyId: activeCompany.id
+      });
+      const freshItems = res.items || [];
+      setItems(freshItems);
+      if (viewingItemBatches) {
+        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
+        if (updatedViewing) setViewingItemBatches(updatedViewing);
+      }
+    } catch (err: any) {
+      console.error('Failed to update batch:', err);
+      setError(err.message || 'Failed to update batch');
+    } finally {
+      setSubmittingBatchEdit(false);
+    }
+  };
+
+  const handleDeleteBatch = async (item: MedicineItem, batch: BatchInfo) => {
+    if (!activeCompany) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete batch "${batch.batchNumber}" for ${item.name}?`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setError(null);
+      await api.delete(`/api/items/${item.id}/batches/${batch.id}`, {
+        companyId: activeCompany.id
+      });
+
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
+        companyId: activeCompany.id
+      });
+      const freshItems = res.items || [];
+      setItems(freshItems);
+      if (viewingItemBatches) {
+        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
+        if (updatedViewing) setViewingItemBatches(updatedViewing);
+      }
+    } catch (err: any) {
+      console.error('Failed to delete batch:', err);
+      setError(err.message || 'Failed to delete batch. It might be used in existing invoices.');
     }
   };
 
@@ -1317,6 +1419,7 @@ export default function Medicines() {
                       <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>MRP</th>
                       <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>PURCHASE RATE</th>
                       <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>STOCK</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center' }}>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1347,6 +1450,50 @@ export default function Medicines() {
                               `${b.currentStock} ${viewingItemBatches.unit}s`
                             )}
                           </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditBatch(viewingItemBatches, b)}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#eff6ff',
+                                  border: '1px solid #bfdbfe',
+                                  borderRadius: '4px',
+                                  color: '#1d4ed8',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: 600
+                                }}
+                                title="Edit batch details & stock"
+                              >
+                                <Edit2 size={12} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBatch(viewingItemBatches, b)}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#fef2f2',
+                                  border: '1px solid #fecaca',
+                                  borderRadius: '4px',
+                                  color: '#dc2626',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: 600
+                                }}
+                                title="Delete batch"
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -1363,6 +1510,189 @@ export default function Medicines() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Batch */}
+      {editingBatchInfo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
+                  Edit Batch & Stock
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  {editingBatchInfo.item.name} ({editingBatchInfo.item.sku})
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingBatchInfo(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBatch} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="label">Batch Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editBatchNumber}
+                    onChange={(e) => setEditBatchNumber(e.target.value.toUpperCase())}
+                    className="input"
+                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Expiry (MM / YYYY) *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '6px' }}>
+                    <select
+                      value={editBatchExpiryMonth}
+                      onChange={(e) => setEditBatchExpiryMonth(e.target.value)}
+                      className="select"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                        <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={editBatchExpiryYear}
+                      onChange={(e) => setEditBatchExpiryYear(e.target.value)}
+                      className="select"
+                    >
+                      {Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() + i)).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="label">MRP (₹) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    value={editBatchMrp}
+                    onChange={(e) => setEditBatchMrp(e.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Purchase Rate (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={editBatchPtr}
+                    onChange={(e) => setEditBatchPtr(e.target.value)}
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              {editingBatchInfo.item.conversionFactor > 1 ? (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                  <label className="label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px', display: 'block' }}>
+                    Batch Stock (Strips + Loose Tablets)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="label" style={{ fontSize: '11.5px' }}>Full Strips ({editingBatchInfo.item.unit}s)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10"
+                        value={editBatchStrips}
+                        onChange={(e) => setEditBatchStrips(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="label" style={{ fontSize: '11.5px' }}>Loose Tablets (TABs)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 2"
+                        value={editBatchLoose}
+                        onChange={(e) => setEditBatchLoose(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#0284c7', fontWeight: 600, marginTop: '8px' }}>
+                    Total Units: {((parseInt(editBatchStrips) || 0) * (editingBatchInfo.item.conversionFactor || 1)) + (parseInt(editBatchLoose) || 0)} Tablets
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="label">Batch Stock ({editingBatchInfo.item.unit}s)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={editBatchStrips}
+                    onChange={(e) => setEditBatchStrips(e.target.value)}
+                    className="input"
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingBatchInfo(null)}
+                  className="btn btn-secondary"
+                  disabled={submittingBatchEdit}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submittingBatchEdit}
+                >
+                  {submittingBatchEdit ? 'Saving...' : 'Save Batch Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

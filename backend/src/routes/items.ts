@@ -450,25 +450,51 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       });
 
       if (batches.length > 0) {
-        const targetBatch = batchId ? batches.find(b => b.id === batchId) || batches[0] : batches[0];
-        const diff = newStock - targetBatch.currentStock;
+        const currentTotalStock = batches.reduce((sum, b) => sum + b.currentStock, 0);
+        const diff = newStock - currentTotalStock;
+
         if (diff !== 0) {
-          await prisma.batch.update({
-            where: { id: targetBatch.id },
-            data: { currentStock: newStock }
-          });
-          await prisma.stockLedger.create({
-            data: {
-              companyId,
-              itemId: id,
-              batchId: targetBatch.id,
-              entryType: 'ADJUSTMENT',
-              quantity: diff,
-              unitPrice: targetBatch.ptr,
-              createdBy: req.user!.userId,
-              notes: `Manual stock adjustment from catalog edit (${diff > 0 ? '+' : ''}${diff} units)`
+          if (batches.length === 1) {
+            await prisma.batch.update({
+              where: { id: batches[0].id },
+              data: { currentStock: newStock }
+            });
+            await prisma.stockLedger.create({
+              data: {
+                companyId,
+                itemId: id,
+                batchId: batches[0].id,
+                entryType: 'ADJUSTMENT',
+                quantity: diff,
+                unitPrice: batches[0].ptr,
+                createdBy: req.user!.userId,
+                notes: `Manual stock adjustment from catalog edit (${diff > 0 ? '+' : ''}${diff} units)`
+              }
+            });
+          } else {
+            const targetBatch = batchId ? batches.find(b => b.id === batchId) || batches[0] : batches[0];
+            const updatedBatchStock = Math.max(0, targetBatch.currentStock + diff);
+            const actualBatchDiff = updatedBatchStock - targetBatch.currentStock;
+
+            if (actualBatchDiff !== 0) {
+              await prisma.batch.update({
+                where: { id: targetBatch.id },
+                data: { currentStock: updatedBatchStock }
+              });
+              await prisma.stockLedger.create({
+                data: {
+                  companyId,
+                  itemId: id,
+                  batchId: targetBatch.id,
+                  entryType: 'ADJUSTMENT',
+                  quantity: actualBatchDiff,
+                  unitPrice: targetBatch.ptr,
+                  createdBy: req.user!.userId,
+                  notes: `Stock adjustment for batch ${targetBatch.batchNumber} (${actualBatchDiff > 0 ? '+' : ''}${actualBatchDiff} units)`
+                }
+              });
             }
-          });
+          }
         }
       } else if (newStock > 0) {
         // Create initial batch if none existed
@@ -668,4 +694,135 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
   }
 });
 
+/**
+ * PUT /items/:itemId/batches/:batchId
+ * Update an existing batch (Batch number, expiry, MRP, Purchase Rate/PTR, PTS, Stock)
+ */
+router.put('/:itemId/batches/:batchId', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const userId = req.user!.userId;
+  const { itemId, batchId } = req.params;
+  const {
+    batchNumber,
+    expiryDate,
+    mrp,
+    ptr,
+    pts,
+    currentStock
+  } = req.body;
+
+  try {
+    const existingBatch = await prisma.batch.findFirst({
+      where: { id: batchId, itemId, companyId }
+    });
+
+    if (!existingBatch) {
+      res.status(404).json({ error: 'Batch not found' });
+      return;
+    }
+
+    const cleanBatchNum = (batchNumber && String(batchNumber).trim().length > 0)
+      ? String(batchNumber).trim().toUpperCase()
+      : existingBatch.batchNumber;
+    const parsedExpiry = expiryDate ? new Date(expiryDate) : existingBatch.expiryDate;
+    const numMrp = mrp !== undefined ? Number(mrp) : Number(existingBatch.mrp);
+    const numPtr = ptr !== undefined ? Number(ptr) : Number(existingBatch.ptr);
+    const numPts = pts !== undefined ? Number(pts) : (mrp !== undefined ? Number(mrp) : Number(existingBatch.pts));
+
+    let updatedStock = existingBatch.currentStock;
+    if (currentStock !== undefined) {
+      updatedStock = Math.max(0, parseInt(currentStock) || 0);
+    }
+
+    const diff = updatedStock - existingBatch.currentStock;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.batch.update({
+        where: { id: batchId },
+        data: {
+          batchNumber: cleanBatchNum,
+          expiryDate: parsedExpiry,
+          mrp: numMrp,
+          ptr: numPtr,
+          pts: numPts,
+          currentStock: updatedStock
+        }
+      });
+
+      if (diff !== 0) {
+        await tx.stockLedger.create({
+          data: {
+            companyId,
+            itemId,
+            batchId,
+            entryType: 'ADJUSTMENT',
+            quantity: diff,
+            unitPrice: numPtr > 0 ? numPtr : numPts,
+            notes: `Manual batch stock adjustment (${diff > 0 ? '+' : ''}${diff} units)`,
+            createdBy: userId
+          }
+        });
+      }
+
+      return updated;
+    });
+
+    res.status(200).json({
+      batch: {
+        id: result.id,
+        batchNumber: result.batchNumber,
+        expiryDate: result.expiryDate.toISOString(),
+        mrp: Number(result.mrp),
+        ptr: Number(result.ptr),
+        pts: Number(result.pts),
+        currentStock: result.currentStock
+      },
+      message: 'Batch updated successfully'
+    });
+  } catch (error: any) {
+    console.error('Error updating batch:', error);
+    res.status(500).json({ error: error.message || 'Failed to update batch' });
+  }
+});
+
+/**
+ * DELETE /items/:itemId/batches/:batchId
+ * Safely delete a batch
+ */
+router.delete('/:itemId/batches/:batchId', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { itemId, batchId } = req.params;
+
+  try {
+    const existingBatch = await prisma.batch.findFirst({
+      where: { id: batchId, itemId, companyId }
+    });
+
+    if (!existingBatch) {
+      res.status(404).json({ error: 'Batch not found' });
+      return;
+    }
+
+    // Check if any invoice items reference this batch
+    const invoiceCount = await prisma.invoiceItem.count({ where: { batchId } });
+    if (invoiceCount > 0) {
+      res.status(400).json({ error: `Cannot delete batch "${existingBatch.batchNumber}" because it is referenced in ${invoiceCount} sales invoice(s).` });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
+      await tx.stockLedger.deleteMany({ where: { batchId, companyId } });
+      await tx.purchaseItem.deleteMany({ where: { batchId } });
+      await tx.batch.delete({ where: { id: batchId } });
+    });
+
+    res.status(200).json({ message: `Batch "${existingBatch.batchNumber}" deleted successfully` });
+  } catch (error: any) {
+    console.error('Error deleting batch:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete batch' });
+  }
+});
+
 export default router;
+
