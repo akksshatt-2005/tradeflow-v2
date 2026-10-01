@@ -721,8 +721,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 <th style={{ padding: '0.75rem 0.8rem', minWidth: '200px' }}>PRODUCT</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }}>PACK</th>
                 <th style={{ padding: '0.75rem 0.8rem', minWidth: '150px' }}>BATCH</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }}>STRI</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }}>TAB.</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }} title="Full Strips / Packs">STRIPS</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }} title="Loose Tablets (e.g. 2 tabs or 12 tabs)">LOOSE TABS</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '95px', textAlign: 'right' }}>M.R.P./S</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '75px', textAlign: 'center' }}>DIS%</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '70px', textAlign: 'center' }}>GST%</th>
@@ -844,13 +844,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         />
                       </td>
 
-                      {/* TAB. (Loose Units) */}
+                      {/* LOOSE TABS (Loose Units) */}
                       <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
                           type="number"
                           min="0"
-                          max={item.conversionFactor > 1 ? item.conversionFactor - 1 : 999}
                           placeholder="0"
+                          title="Loose Tablets (e.g. 2 tabs)"
                           value={item.looseQty === 0 ? '' : item.looseQty}
                           onFocus={e => e.target.select()}
                           onChange={e => {

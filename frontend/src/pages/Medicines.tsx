@@ -83,6 +83,8 @@ export default function Medicines() {
   const [batchPtr, setBatchPtr] = useState('');
   const [batchPts, setBatchPts] = useState('');
   const [batchOpeningStock, setBatchOpeningStock] = useState('');
+  const [batchOpeningStrips, setBatchOpeningStrips] = useState('');
+  const [batchOpeningLoose, setBatchOpeningLoose] = useState('');
   const [submittingBatch, setSubmittingBatch] = useState(false);
 
   // Edit Medicine State
@@ -370,13 +372,23 @@ export default function Medicines() {
       const lastDay = new Date(year, month, 0).getDate();
       const expiryDateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
+      const factor = selectedItemForBatch.conversionFactor || 1;
+      let totalOpeningUnits = 0;
+      if (factor > 1) {
+        const strips = parseInt(batchOpeningStrips) || 0;
+        const loose = parseInt(batchOpeningLoose) || 0;
+        totalOpeningUnits = (strips * factor) + loose;
+      } else {
+        totalOpeningUnits = parseInt(batchOpeningStock) || 0;
+      }
+
       await api.post(`/api/items/${selectedItemForBatch.id}/batches`, {
         batchNumber,
         expiryDate: expiryDateStr,
         mrp: parseFloat(batchMrp) || 0,
         ptr: parseFloat(batchPtr) || 0,
         pts: parseFloat(batchPts) || parseFloat(batchMrp) || 0,
-        openingStock: parseInt(batchOpeningStock) || 0
+        openingStock: totalOpeningUnits
       }, {
         companyId: activeCompany.id
       });
@@ -388,6 +400,8 @@ export default function Medicines() {
       setBatchPtr('');
       setBatchPts('');
       setBatchOpeningStock('');
+      setBatchOpeningStrips('');
+      setBatchOpeningLoose('');
 
       await fetchItems();
     } catch (err: any) {
@@ -670,12 +684,24 @@ export default function Medicines() {
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <div style={{
                       fontWeight: 700,
-                      color: item.totalStock <= item.minStockLevel ? 'var(--status-danger)' : 'var(--status-success)'
+                      color: item.totalStock <= item.minStockLevel ? 'var(--status-danger)' : 'var(--status-success)',
+                      fontSize: '13px'
                     }}>
-                      {item.totalStock} {item.unit}s
+                      {item.conversionFactor > 1 ? (
+                        (() => {
+                          const str = Math.floor(item.totalStock / item.conversionFactor);
+                          const tab = item.totalStock % item.conversionFactor;
+                          if (str > 0 && tab > 0) return `${str} STRIPS + ${tab} TABS`;
+                          if (str > 0) return `${str} STRIPS`;
+                          return `${tab} TABS`;
+                        })()
+                      ) : (
+                        `${item.totalStock} ${item.unit}s`
+                      )}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {item.activeBatchesCount} active batch{item.activeBatchesCount !== 1 ? 'es' : ''}
+                      {item.conversionFactor > 1 && ` • (${item.totalStock} Total Tabs)`}
                     </div>
                   </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -1079,20 +1105,52 @@ export default function Medicines() {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="label">Opening Stock ({selectedItemForBatch.unit}s)</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={batchOpeningStock}
-                  onChange={(e) => setBatchOpeningStock(e.target.value)}
-                  className="input"
-                />
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  This will record an atomic opening stock ledger transaction for auditing.
+              {selectedItemForBatch.conversionFactor > 1 ? (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                  <label className="label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px', display: 'block' }}>
+                    Opening Stock (Strips + Loose Tablets)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="label" style={{ fontSize: '11.5px' }}>Full Strips ({selectedItemForBatch.unit}s)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10"
+                        value={batchOpeningStrips}
+                        onChange={(e) => setBatchOpeningStrips(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="label" style={{ fontSize: '11.5px' }}>Loose Tablets (TABs)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 2"
+                        value={batchOpeningLoose}
+                        onChange={(e) => setBatchOpeningLoose(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#0284c7', fontWeight: 600, marginTop: '8px' }}>
+                    Total Units to Inward: {((parseInt(batchOpeningStrips) || 0) * selectedItemForBatch.conversionFactor) + (parseInt(batchOpeningLoose) || 0)} Tablets ({parseInt(batchOpeningStrips) || 0} Strips + {parseInt(batchOpeningLoose) || 0} Tabs)
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="form-group">
+                  <label className="label">Opening Stock ({selectedItemForBatch.unit}s)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={batchOpeningStock}
+                    onChange={(e) => setBatchOpeningStock(e.target.value)}
+                    className="input"
+                  />
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
                 <button
@@ -1193,7 +1251,17 @@ export default function Medicines() {
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{b.ptr.toFixed(2)}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>₹{b.pts.toFixed(2)}</td>
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>
-                            {b.currentStock} {viewingItemBatches.unit}s
+                            {viewingItemBatches.conversionFactor > 1 ? (
+                              (() => {
+                                const str = Math.floor(b.currentStock / viewingItemBatches.conversionFactor);
+                                const tab = b.currentStock % viewingItemBatches.conversionFactor;
+                                if (str > 0 && tab > 0) return `${str} Str + ${tab} Tab (${b.currentStock})`;
+                                if (str > 0) return `${str} Str (${b.currentStock})`;
+                                return `${tab} Tab`;
+                              })()
+                            ) : (
+                              `${b.currentStock} ${viewingItemBatches.unit}s`
+                            )}
                           </td>
                         </tr>
                       );
