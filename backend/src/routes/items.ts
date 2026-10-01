@@ -126,7 +126,13 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     gstRate,
     unit,
     conversionFactor,
-    minStockLevel
+    minStockLevel,
+    initialBatchNumber,
+    initialExpiryDate,
+    initialMrp,
+    initialPtr,
+    initialPts,
+    initialStock
   } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length < 2) {
@@ -143,29 +149,86 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     // Auto-generate or validate unique SKU
     const finalSku = await generateUniqueItemSku(prisma, companyId, preferredSku);
 
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await tx.item.create({
+        data: {
+          companyId,
+          sku: finalSku,
+          name: trimmedName,
+          genericName: genericName ? String(genericName).trim() : null,
+          manufacturer: manufacturer ? String(manufacturer).trim() : null,
+          hsnCode: hsnCode ? String(hsnCode).trim() : '3004',
+          gstRate: gstRate !== undefined ? Number(gstRate) : 5.0,
+          unit: unit ? String(unit).trim().toUpperCase() : 'STRIP',
+          conversionFactor: conversionFactor ? Math.max(1, parseInt(conversionFactor)) : 1,
+          minStockLevel: minStockLevel ? Math.max(0, parseInt(minStockLevel)) : 0
+        }
+      });
 
-    const item = await prisma.item.create({
-      data: {
-        companyId,
-        sku: finalSku,
-        name: trimmedName,
-        genericName: genericName ? String(genericName).trim() : null,
-        manufacturer: manufacturer ? String(manufacturer).trim() : null,
-        hsnCode: hsnCode ? String(hsnCode).trim() : '3004',
-        gstRate: gstRate !== undefined ? Number(gstRate) : 5.0,
-        unit: unit ? String(unit).trim().toUpperCase() : 'STRIP',
-        conversionFactor: conversionFactor ? Math.max(1, parseInt(conversionFactor)) : 1,
-        minStockLevel: minStockLevel ? Math.max(0, parseInt(minStockLevel)) : 0
+      const totalInitialStock = Math.max(0, parseInt(initialStock) || 0);
+      let createdBatch: any = null;
+
+      if (totalInitialStock > 0 || initialBatchNumber) {
+        const batchNum = (initialBatchNumber && String(initialBatchNumber).trim().length > 0)
+          ? String(initialBatchNumber).trim().toUpperCase()
+          : `BATCH-01`;
+
+        const expDate = initialExpiryDate ? new Date(initialExpiryDate) : new Date(Date.now() + 2 * 365 * 86400000);
+        const mrpVal = Number(initialMrp) || 0;
+        const ptrVal = Number(initialPtr) || (mrpVal > 0 ? mrpVal * 0.7 : 0);
+        const ptsVal = Number(initialPts) || mrpVal;
+
+        createdBatch = await tx.batch.create({
+          data: {
+            companyId,
+            itemId: item.id,
+            batchNumber: batchNum,
+            expiryDate: isNaN(expDate.getTime()) ? new Date(Date.now() + 2 * 365 * 86400000) : expDate,
+            mrp: mrpVal,
+            ptr: ptrVal,
+            pts: ptsVal,
+            currentStock: totalInitialStock
+          }
+        });
+
+        if (totalInitialStock > 0) {
+          await tx.stockLedger.create({
+            data: {
+              companyId,
+              itemId: item.id,
+              batchId: createdBatch.id,
+              entryType: 'OPENING_BALANCE',
+              quantity: totalInitialStock,
+              unitPrice: ptrVal,
+              createdBy: req.user!.userId,
+              notes: 'Initial catalog creation opening stock'
+            }
+          });
+        }
       }
+
+      return {
+        item,
+        createdBatch,
+        totalInitialStock
+      };
     });
 
     res.status(201).json({
       item: {
-        ...item,
-        gstRate: Number(item.gstRate),
-        totalStock: 0,
-        activeBatchesCount: 0,
-        batches: []
+        ...result.item,
+        gstRate: Number(result.item.gstRate),
+        totalStock: result.totalInitialStock,
+        activeBatchesCount: result.createdBatch ? 1 : 0,
+        batches: result.createdBatch ? [{
+          id: result.createdBatch.id,
+          batchNumber: result.createdBatch.batchNumber,
+          expiryDate: result.createdBatch.expiryDate.toISOString(),
+          mrp: Number(result.createdBatch.mrp),
+          ptr: Number(result.createdBatch.ptr),
+          pts: Number(result.createdBatch.pts),
+          currentStock: result.createdBatch.currentStock
+        }] : []
       },
       message: 'Item created successfully'
     });
@@ -349,7 +412,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     gstRate,
     unit,
     conversionFactor,
-    minStockLevel
+    minStockLevel,
+    adjustedStock,
+    batchId
   } = req.body;
 
   try {
@@ -375,6 +440,64 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         minStockLevel: minStockLevel !== undefined ? Math.max(0, parseInt(minStockLevel)) : existing.minStockLevel
       }
     });
+
+    // If stock adjustment was requested
+    if (adjustedStock !== undefined) {
+      const newStock = Math.max(0, parseInt(adjustedStock) || 0);
+      const batches = await prisma.batch.findMany({
+        where: { itemId: id, companyId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (batches.length > 0) {
+        const targetBatch = batchId ? batches.find(b => b.id === batchId) || batches[0] : batches[0];
+        const diff = newStock - targetBatch.currentStock;
+        if (diff !== 0) {
+          await prisma.batch.update({
+            where: { id: targetBatch.id },
+            data: { currentStock: newStock }
+          });
+          await prisma.stockLedger.create({
+            data: {
+              companyId,
+              itemId: id,
+              batchId: targetBatch.id,
+              entryType: 'ADJUSTMENT',
+              quantity: diff,
+              unitPrice: targetBatch.ptr,
+              createdBy: req.user!.userId,
+              notes: `Manual stock adjustment from catalog edit (${diff > 0 ? '+' : ''}${diff} units)`
+            }
+          });
+        }
+      } else if (newStock > 0) {
+        // Create initial batch if none existed
+        const createdBatch = await prisma.batch.create({
+          data: {
+            companyId,
+            itemId: id,
+            batchNumber: 'BATCH-01',
+            expiryDate: new Date(Date.now() + 2 * 365 * 86400000),
+            mrp: 100,
+            ptr: 70,
+            pts: 100,
+            currentStock: newStock
+          }
+        });
+        await prisma.stockLedger.create({
+          data: {
+            companyId,
+            itemId: id,
+            batchId: createdBatch.id,
+            entryType: 'OPENING_BALANCE',
+            quantity: newStock,
+            unitPrice: 70,
+            createdBy: req.user!.userId,
+            notes: 'Initial stock added from catalog edit'
+          }
+        });
+      }
+    }
 
     res.status(200).json({
       item: {

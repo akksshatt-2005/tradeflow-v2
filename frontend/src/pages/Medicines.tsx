@@ -73,6 +73,11 @@ export default function Medicines() {
   const [newItemUnit, setNewItemUnit] = useState('STRIP');
   const [newItemConversion, setNewItemConversion] = useState('10');
   const [newItemMinStock, setNewItemMinStock] = useState('10');
+  const [newItemStrips, setNewItemStrips] = useState('');
+  const [newItemLoose, setNewItemLoose] = useState('');
+  const [newItemBatchNumber, setNewItemBatchNumber] = useState('');
+  const [newItemMrp, setNewItemMrp] = useState('');
+  const [newItemPts, setNewItemPts] = useState('');
   const [submittingItem, setSubmittingItem] = useState(false);
 
   // Form State: Add Batch
@@ -98,6 +103,8 @@ export default function Medicines() {
   const [editUnit, setEditUnit] = useState('STRIP');
   const [editConversion, setEditConversion] = useState('10');
   const [editMinStock, setEditMinStock] = useState('10');
+  const [editStockStrips, setEditStockStrips] = useState('');
+  const [editStockLoose, setEditStockLoose] = useState('');
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   // Bulk Import State
@@ -324,6 +331,9 @@ export default function Medicines() {
       setSubmittingItem(true);
       setError(null);
 
+      const factor = parseInt(newItemConversion) || 1;
+      const totalUnits = (parseInt(newItemStrips) || 0) * factor + (parseInt(newItemLoose) || 0);
+
       await api.post('/api/items', {
         name: newItemName,
         sku: newItemSku,
@@ -332,8 +342,12 @@ export default function Medicines() {
         hsnCode: newItemHsn,
         gstRate: parseFloat(newItemGst),
         unit: newItemUnit,
-        conversionFactor: parseInt(newItemConversion) || 1,
-        minStockLevel: parseInt(newItemMinStock) || 0
+        conversionFactor: factor,
+        minStockLevel: parseInt(newItemMinStock) || 0,
+        initialStock: totalUnits,
+        initialBatchNumber: newItemBatchNumber.trim() || undefined,
+        initialMrp: parseFloat(newItemMrp) || undefined,
+        initialPts: parseFloat(newItemPts) || undefined
       }, {
         companyId: activeCompany.id
       });
@@ -349,6 +363,11 @@ export default function Medicines() {
       setNewItemUnit('STRIP');
       setNewItemConversion('10');
       setNewItemMinStock('10');
+      setNewItemStrips('');
+      setNewItemLoose('');
+      setNewItemBatchNumber('');
+      setNewItemMrp('');
+      setNewItemPts('');
 
       await fetchItems();
     } catch (err: any) {
@@ -419,8 +438,11 @@ export default function Medicines() {
     setEditHsn(item.hsnCode || '3004');
     setEditGst(String(item.gstRate ?? 5));
     setEditUnit(item.unit || 'STRIP');
-    setEditConversion(String(item.conversionFactor || 10));
+    const factor = item.conversionFactor || 1;
+    setEditConversion(String(factor));
     setEditMinStock(String(item.minStockLevel || 10));
+    setEditStockStrips(String(Math.floor(item.totalStock / factor)));
+    setEditStockLoose(String(item.totalStock % factor));
     setShowEditModal(true);
   };
 
@@ -431,6 +453,9 @@ export default function Medicines() {
     try {
       setSubmittingEdit(true);
       setError(null);
+      const factor = parseInt(editConversion) || 1;
+      const adjustedUnits = (parseInt(editStockStrips) || 0) * factor + (parseInt(editStockLoose) || 0);
+
       await api.put(`/api/items/${editingItem.id}`, {
         name: editName.trim(),
         genericName: editGeneric.trim() || null,
@@ -438,8 +463,9 @@ export default function Medicines() {
         hsnCode: editHsn.trim(),
         gstRate: parseFloat(editGst),
         unit: editUnit.trim().toUpperCase(),
-        conversionFactor: parseInt(editConversion) || 1,
-        minStockLevel: parseInt(editMinStock) || 0
+        conversionFactor: factor,
+        minStockLevel: parseInt(editMinStock) || 0,
+        adjustedStock: adjustedUnits
       }, {
         companyId: activeCompany.id
       });
@@ -958,6 +984,78 @@ export default function Medicines() {
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
                   💡 <em>e.g. <strong>1*10</strong> means 1 strip contains 10 tablets. For bottles/syrups, select <strong>1*1</strong>.</em>
+                </div>
+              </div>
+
+              {/* Optional Initial Opening Stock */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="label" style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                    Initial Stock (Optional - Strips + Loose Tablets)
+                  </label>
+                  <span style={{ fontSize: '11.5px', color: '#0284c7', fontWeight: 600 }}>
+                    Total: {((parseInt(newItemStrips) || 0) * (parseInt(newItemConversion) || 1)) + (parseInt(newItemLoose) || 0)} Tablets
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Full Strips ({newItemUnit}s)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 10"
+                      value={newItemStrips}
+                      onChange={(e) => setNewItemStrips(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Loose Tablets (TABs)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 2"
+                      value={newItemLoose}
+                      onChange={(e) => setNewItemLoose(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '10px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Batch No</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. BATCH-01"
+                      value={newItemBatchNumber}
+                      onChange={(e) => setNewItemBatchNumber(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>MRP (₹ / Strip)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newItemMrp}
+                      onChange={(e) => setNewItemMrp(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="label" style={{ fontSize: '11px' }}>Selling (PTS ₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newItemPts}
+                      onChange={(e) => setNewItemPts(e.target.value)}
+                      className="input"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1489,6 +1587,48 @@ export default function Medicines() {
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
                   💡 <em>e.g. <strong>1*10</strong> means 1 strip contains 10 tablets.</em>
+                </div>
+              </div>
+
+              {/* Current Stock & Direct Adjustment in Edit Modal */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                    Current Stock in Inventory (Strips + Loose Tablets)
+                  </label>
+                  <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: 700 }}>
+                    Total: {((parseInt(editStockStrips) || 0) * (parseInt(editConversion) || 1)) + (parseInt(editStockLoose) || 0)} Tablets ({parseInt(editStockStrips) || 0} Strips + {parseInt(editStockLoose) || 0} Tabs)
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11.5px' }}>Full Strips ({editUnit}s)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={editStockStrips}
+                      onChange={(e) => setEditStockStrips(e.target.value)}
+                      className="form-input"
+                      style={{ fontWeight: 700 }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '11.5px' }}>Loose Tablets (TABs)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={editStockLoose}
+                      onChange={(e) => setEditStockLoose(e.target.value)}
+                      className="form-input"
+                      style={{ fontWeight: 700 }}
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+                  💡 <em>Directly update your strips and loose tablets. Saving will automatically recalculate total base units and log an audit adjustment.</em>
                 </div>
               </div>
 
