@@ -1,4 +1,4 @@
-const BASE_URL = process.env.BACKEND_URL || 'https://tradeflow-v2-96zx.onrender.com';
+const BASE_URL = process.env.BACKEND_URL || 'https://tradeflow-v2-1.onrender.com';
 
 async function runTest() {
   console.log('Testing against:', BASE_URL);

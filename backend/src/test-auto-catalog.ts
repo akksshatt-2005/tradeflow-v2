@@ -1,4 +1,4 @@
-const API_BASE = process.env.BACKEND_URL || 'https://tradeflow-v2-96zx.onrender.com';
+const API_BASE = process.env.BACKEND_URL || 'https://tradeflow-v2-1.onrender.com';
 
 async function runAutoCatalogTest() {
   console.log('Testing Auto-Cataloging on Purchase Entry against:', API_BASE);
