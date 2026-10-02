@@ -401,6 +401,7 @@ export default function NewPurchase({
                 itemId: pi.item?.id || pi.itemId || '',
                 medicineName: pi.medicineName || pi.item?.name || '',
                 genericName: pi.genericName || pi.item?.genericName || '',
+                manufacturer: pi.manufacturer || pi.item?.manufacturer || '',
                 sku: pi.sku || pi.item?.sku || '',
                 pack: pi.pack || '10 TAB',
                 oldMrp: String(pi.mrp || 0),

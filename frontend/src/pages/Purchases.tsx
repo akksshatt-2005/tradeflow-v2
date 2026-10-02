@@ -620,7 +620,11 @@ export default function Purchases() {
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '8px' }}>
                         <strong>{item.medicineName}</strong>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{item.sku}</div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                          {item.manufacturer ? `${item.manufacturer} • ` : ''}
+                          {item.genericName ? `${item.genericName} • ` : ''}
+                          {item.sku}
+                        </div>
                       </td>
                       <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: 600 }}>{item.batchNumber}</td>
                       <td style={{ padding: '8px' }}>{new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</td>
