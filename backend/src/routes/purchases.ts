@@ -336,6 +336,21 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           });
           if (!verifiedItem) {
             targetItemId = null;
+          } else {
+            // Update manufacturer and genericName on the item if provided
+            const updateData: any = {};
+            if (item.genericName !== undefined && item.genericName !== null && item.genericName.trim() !== '') {
+              updateData.genericName = item.genericName.trim();
+            }
+            if (item.manufacturer !== undefined && item.manufacturer !== null && item.manufacturer.trim() !== '') {
+              updateData.manufacturer = item.manufacturer.trim();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await tx.item.update({
+                where: { id: targetItemId },
+                data: updateData
+              });
+            }
           }
         }
 
@@ -372,6 +387,21 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
                 minStockLevel: 0
               }
             });
+          } else {
+            // Update existing item with manufacturer and genericName if provided
+            const updateData: any = {};
+            if (item.genericName !== undefined && item.genericName !== null && item.genericName.trim() !== '') {
+              updateData.genericName = item.genericName.trim();
+            }
+            if (item.manufacturer !== undefined && item.manufacturer !== null && item.manufacturer.trim() !== '') {
+              updateData.manufacturer = item.manufacturer.trim();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await tx.item.update({
+                where: { id: existingItem.id },
+                data: updateData
+              });
+            }
           }
 
           targetItemId = existingItem.id;
@@ -712,6 +742,21 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           });
           if (!verifiedItem) {
             targetItemId = null;
+          } else {
+            // Update manufacturer and genericName on the item if provided
+            const updateData: any = {};
+            if (item.genericName !== undefined && item.genericName !== null && item.genericName.trim() !== '') {
+              updateData.genericName = item.genericName.trim();
+            }
+            if (item.manufacturer !== undefined && item.manufacturer !== null && item.manufacturer.trim() !== '') {
+              updateData.manufacturer = item.manufacturer.trim();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await tx.item.update({
+                where: { id: targetItemId },
+                data: updateData
+              });
+            }
           }
         }
 
@@ -747,6 +792,21 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
                 minStockLevel: 0
               }
             });
+          } else {
+            // Update existing item with manufacturer and genericName if provided
+            const updateData: any = {};
+            if (item.genericName !== undefined && item.genericName !== null && item.genericName.trim() !== '') {
+              updateData.genericName = item.genericName.trim();
+            }
+            if (item.manufacturer !== undefined && item.manufacturer !== null && item.manufacturer.trim() !== '') {
+              updateData.manufacturer = item.manufacturer.trim();
+            }
+            if (Object.keys(updateData).length > 0) {
+              await tx.item.update({
+                where: { id: existingItem.id },
+                data: updateData
+              });
+            }
           }
 
           targetItemId = existingItem.id;
@@ -912,7 +972,7 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
         creator: { select: { username: true } },
         items: {
           include: {
-            item: { select: { id: true, name: true, sku: true, unit: true, genericName: true } }
+            item: { select: { id: true, name: true, sku: true, unit: true, conversionFactor: true, genericName: true, manufacturer: true } }
           }
         }
       }
@@ -951,8 +1011,10 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           id: i.id,
           medicineName: i.item.name,
           genericName: i.item.genericName,
+          manufacturer: i.item.manufacturer,
           sku: i.item.sku,
           unit: i.item.unit,
+          conversionFactor: i.item.conversionFactor,
           batchNumber: i.batchNumber,
           expiryDate: i.expiryDate.toISOString(),
           quantity: i.quantity,
