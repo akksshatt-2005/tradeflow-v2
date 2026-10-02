@@ -29,7 +29,7 @@ router.get('/summary', async (req: CompanyScopedRequest, res: Response) => {
         },
         include: {
           item: {
-            select: { name: true, sku: true, unit: true, minStockLevel: true }
+            select: { name: true, sku: true, unit: true, conversionFactor: true, minStockLevel: true }
           }
         }
       })
@@ -42,9 +42,10 @@ router.get('/summary', async (req: CompanyScopedRequest, res: Response) => {
     let expiredCount = 0;
 
     batches.forEach(b => {
+      const factor = Math.max(1, b.item.conversionFactor || 1);
       totalStockUnits += b.currentStock;
-      totalStockValueCost += b.currentStock * Number(b.ptr);
-      totalStockValueRetail += b.currentStock * Number(b.mrp);
+      totalStockValueCost += (b.currentStock / factor) * Number(b.ptr);
+      totalStockValueRetail += (b.currentStock / factor) * Number(b.mrp);
 
       const exp = new Date(b.expiryDate);
       if (exp < now) {
