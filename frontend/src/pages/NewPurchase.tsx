@@ -18,7 +18,8 @@ import {
   Building2,
   Sparkles,
   PlusCircle,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 
 interface Supplier {
@@ -92,6 +93,9 @@ export default function NewPurchase({
 
   // Form Header State (Photo 2)
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [supplierSearchText, setSupplierSearchText] = useState('');
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const [entryNo, setEntryNo] = useState(`PUR-${Date.now().toString().slice(-4)}`);
   const [partyBillNo, setPartyBillNo] = useState(''); // Party No. (Supplier Bill No)
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]); // Dt:
@@ -141,6 +145,17 @@ export default function NewPurchase({
   const [activeSearchRowIndex, setActiveSearchRowIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close supplier dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(e.target as Node)) {
+        setShowSupplierDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Quick Add Medicine Modal State
   const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
@@ -268,6 +283,7 @@ export default function NewPurchase({
       if (newParty) {
         setSuppliers(prev => [...prev, newParty]);
         setSelectedSupplierId(newParty.id);
+        setSupplierSearchText(newParty.mailTo || newParty.name);
       }
       setShowAddSupplierModal(false);
       setNewSupGstin('');
@@ -366,6 +382,7 @@ export default function NewPurchase({
         const pur = pRes.purchase;
         if (pur) {
           setSelectedSupplierId(pur.supplier?.id || '');
+          setSupplierSearchText(pur.supplier?.mailTo || pur.supplier?.name || '');
           setPartyBillNo(pur.invoiceNumber || '');
           setBillDate(pur.purchaseDate ? pur.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
           setDueDate(pur.dueDate ? pur.dueDate.split('T')[0] : '');
@@ -404,8 +421,6 @@ export default function NewPurchase({
             setRows(mappedRows);
           }
         }
-      } else if (supRes.parties && supRes.parties.length > 0) {
-        setSelectedSupplierId(supRes.parties[0].id);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load initial data');
@@ -594,6 +609,17 @@ export default function NewPurchase({
   const grandTotal = Math.round(rawTotal);
   const roundOff = Math.round((grandTotal - rawTotal) * 100) / 100;
 
+  const filteredSuppliers = suppliers.filter(s => {
+    if (!supplierSearchText.trim()) return true;
+    const q = supplierSearchText.toLowerCase();
+    return (
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.mailTo && s.mailTo.toLowerCase().includes(q)) ||
+      (s.station && s.station.toLowerCase().includes(q)) ||
+      (s.gstin && s.gstin.toLowerCase().includes(q))
+    );
+  });
+
   const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
   const activeRow = rows[activeRowIndex] || rows[0];
   const activeMedicine = medicines.find(m => m.id === activeRow?.itemId);
@@ -601,7 +627,7 @@ export default function NewPurchase({
   const handleSubmit = async () => {
     if (!activeCompany) return;
     if (!selectedSupplierId) {
-      setError('Please select a Supplier Ledger');
+      setError('Please select a Party Name');
       return;
     }
     if (!partyBillNo.trim()) {
@@ -817,10 +843,10 @@ export default function NewPurchase({
       {/* Marg-Style Purchase Header Form (Photo 2 Top Section) */}
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.2rem', marginBottom: '1.2rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '1rem', alignItems: 'end' }}>
-          <div>
+          <div style={{ position: 'relative' }} ref={supplierDropdownRef}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                NAME : (SUPPLIER LEDGER) *
+                PARTY NAME *
               </label>
               <button
                 type="button"
@@ -842,17 +868,132 @@ export default function NewPurchase({
                 + Quick Add (GSTIN)
               </button>
             </div>
-            <select
-              value={selectedSupplierId}
-              onChange={e => setSelectedSupplierId(e.target.value)}
-              style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
-            >
-              {suppliers.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.mailTo || s.name} {s.station ? `(${s.station})` : ''} {s.gstin ? `[GST: ${s.gstin}]` : ''}
-                </option>
-              ))}
-            </select>
+            
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={supplierSearchText}
+                onChange={e => {
+                  setSupplierSearchText(e.target.value);
+                  setSelectedSupplierId('');
+                  setShowSupplierDropdown(true);
+                }}
+                onFocus={() => setShowSupplierDropdown(true)}
+                placeholder="Type party name or GSTIN to search..."
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 4.5rem 0.6rem 0.75rem',
+                  background: 'var(--bg-secondary)',
+                  border: selectedSupplierId ? '1.5px solid var(--brand-teal)' : '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontWeight: '700',
+                  fontSize: '0.85rem'
+                }}
+              />
+              <div style={{ position: 'absolute', right: '6px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                {supplierSearchText && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSupplierSearchText('');
+                      setSelectedSupplierId('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Clear"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowSupplierDropdown(prev => !prev)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Toggle party suggestions"
+                >
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+            </div>
+
+            {showSupplierDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                zIndex: 100,
+                marginTop: '4px',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                maxHeight: '260px',
+                overflowY: 'auto'
+              }}>
+                {filteredSuppliers.length === 0 ? (
+                  <div style={{ padding: '12px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    No matching party found. Click <strong>+ Quick Add (GSTIN)</strong> above to create.
+                  </div>
+                ) : (
+                  filteredSuppliers.map(s => (
+                    <div
+                      key={s.id}
+                      onClick={() => {
+                        setSelectedSupplierId(s.id);
+                        setSupplierSearchText(s.mailTo || s.name);
+                        setShowSupplierDropdown(false);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        background: selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(20, 184, 166, 0.15)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent')}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                          {s.mailTo || s.name}
+                        </span>
+                        {s.station && (
+                          <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '1px 6px', borderRadius: '4px' }}>
+                            {s.station}
+                          </span>
+                        )}
+                      </div>
+                      {s.gstin && (
+                        <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: '600' }}>
+                          GSTIN: {s.gstin}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <div>

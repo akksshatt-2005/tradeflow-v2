@@ -296,7 +296,7 @@ export default function Sales() {
               boxShadow: '0 4px 14px rgba(20, 184, 166, 0.3)'
             }}
           >
-            <Plus size={18} /> Open POS Terminal (New Bill)
+            <Plus size={18} /> New Sale
           </button>
         </div>
       </div>
@@ -403,7 +403,7 @@ export default function Sales() {
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <FileText size={40} style={{ opacity: 0.3, marginBottom: '0.8rem' }} />
             <p style={{ margin: 0, fontWeight: '500' }}>No sales invoices found.</p>
-            <p style={{ fontSize: '0.85rem', marginTop: '0.3rem', color: 'var(--text-muted)' }}>Click "Open POS Terminal" to create your first bill.</p>
+            <p style={{ fontSize: '0.85rem', marginTop: '0.3rem', color: 'var(--text-muted)' }}>Click "New Sale" to create your first bill.</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
