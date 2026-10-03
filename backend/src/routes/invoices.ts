@@ -422,7 +422,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
       const gstRate = (rawItem.gstRate !== undefined && rawItem.gstRate !== null && !isNaN(parseFloat(rawItem.gstRate)))
         ? Math.max(0, parseFloat(rawItem.gstRate))
-        : (batch.item?.gstRate !== undefined ? Number(batch.item.gstRate) : 0);
+        : 0;
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
       const rawLoose = rawItem.looseQty !== undefined ? parseInt(rawItem.looseQty) : undefined;
@@ -778,7 +778,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = (rawItem.gstRate !== undefined && rawItem.gstRate !== null && !isNaN(parseFloat(rawItem.gstRate)))
         ? Math.max(0, parseFloat(rawItem.gstRate))
-        : (batch.item?.gstRate !== undefined ? Number(batch.item.gstRate) : 0);
+        : 0;
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;

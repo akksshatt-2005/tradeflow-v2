@@ -114,7 +114,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [billDiscountPct, setBillDiscountPct] = useState<number>(0);
   const [paidAmount, setPaidAmount] = useState<string>('');
   const [isInterState, setIsInterState] = useState(false);
-  const [isGstBill, setIsGstBill] = useState(true);
+  const [isGstBill, setIsGstBill] = useState(false);
   const [notes, setNotes] = useState('');
 
   // Invoice Items
@@ -179,10 +179,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           setBillDiscountPct(Number(inv.billDiscountPct) || 0);
           setPaidAmount(String(inv.paidAmount ?? ''));
           setNotes(inv.notes || '');
-
-          if (Number(inv.totalTax || 0) === 0) {
-            setIsGstBill(false);
-          }
+          setIsGstBill(Number(inv.totalTax || 0) > 0);
 
           if (inv.partyId && partiesRes.parties) {
             const found = partiesRes.parties.find((p: CustomerParty) => p.id === inv.partyId);
