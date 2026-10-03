@@ -609,9 +609,20 @@ export default function Sales() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  Invoice #{viewingInvoice.invoiceNumber}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                    Invoice #{viewingInvoice.invoiceNumber}
+                  </h2>
+                  {Number(viewingInvoice.totalTax || 0) === 0 ? (
+                    <span style={{ fontSize: '0.72rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: '700' }}>
+                      Non-GST Bill
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', color: '#0f766e', background: 'rgba(15, 118, 110, 0.12)', border: '1px solid rgba(15, 118, 110, 0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: '700' }}>
+                      GST Tax Invoice
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   Billed on {new Date(viewingInvoice.invoiceDate).toLocaleDateString('en-IN')} by {viewingInvoice.createdByUser || 'Staff'}
                 </span>
@@ -757,8 +768,8 @@ export default function Sales() {
                   <span>₹{Number(viewingInvoice.taxableAmount).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span>Total Tax:</span>
-                  <span>₹{Number(viewingInvoice.totalTax).toFixed(2)}</span>
+                  <span>{Number(viewingInvoice.totalTax || 0) > 0 ? 'Total Tax (GST):' : 'GST (0% / Exempt):'}</span>
+                  <span>₹{Number(viewingInvoice.totalTax || 0).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '1.1rem', color: 'var(--brand-teal)', borderTop: '1px solid var(--border-color)', paddingTop: '0.4rem' }}>
                   <span>Grand Total:</span>

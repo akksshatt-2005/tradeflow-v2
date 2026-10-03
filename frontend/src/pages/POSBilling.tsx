@@ -114,6 +114,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [billDiscountPct, setBillDiscountPct] = useState<number>(0);
   const [paidAmount, setPaidAmount] = useState<string>('');
   const [isInterState, setIsInterState] = useState(false);
+  const [isGstBill, setIsGstBill] = useState(true);
   const [notes, setNotes] = useState('');
 
   // Invoice Items
@@ -179,6 +180,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           setPaidAmount(String(inv.paidAmount ?? ''));
           setNotes(inv.notes || '');
 
+          if (Number(inv.totalTax || 0) === 0) {
+            setIsGstBill(false);
+          }
+
           if (inv.partyId && partiesRes.parties) {
             const found = partiesRes.parties.find((p: CustomerParty) => p.id === inv.partyId);
             if (found) setSelectedCustomer(found);
@@ -232,6 +237,37 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }
   };
 
+  // Switch whole bill between GST (Tax Invoice) and Non-GST (Retail Bill)
+  const handleToggleGstBill = (enable: boolean) => {
+    setIsGstBill(enable);
+    setInvoiceItems(prev => prev.map(item => {
+      const origMed = items.find(m => m.id === item.itemId);
+      const newGstRate = enable
+        ? (origMed?.gstRate !== undefined && !isNaN(Number(origMed.gstRate)) ? Number(origMed.gstRate) : 5.0)
+        : 0;
+
+      const strips = item.strips || 0;
+      const loose = item.looseQty || 0;
+      const factor = item.conversionFactor || 1;
+      const pricePerStrip = item.unitPrice || 0;
+      const discPct = item.discountPercent || 0;
+
+      const lineGross = (strips * pricePerStrip) + (loose * (pricePerStrip / factor));
+      const lineDisc = (lineGross * discPct) / 100;
+      const lineTaxable = Math.max(0, lineGross - lineDisc);
+      const lineGst = (lineTaxable * newGstRate) / 100;
+      const lineTotal = lineTaxable + lineGst;
+
+      return {
+        ...item,
+        gstRate: newGstRate,
+        taxableAmount: Math.round(lineTaxable * 100) / 100,
+        gstAmount: Math.round(lineGst * 100) / 100,
+        totalAmount: Math.round(lineTotal * 100) / 100
+      };
+    }));
+  };
+
   // Select Item & Auto-Pick FEFO Batch
   const handleSelectItem = (item: MedicineItem) => {
     const availableBatches = (item.batches || [])
@@ -245,7 +281,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
     const fefoBatch = availableBatches[0];
     const unitPrice = Number(fefoBatch.pts) || Number(fefoBatch.mrp);
-    const gstRate = Number(item.gstRate) !== undefined && !isNaN(Number(item.gstRate)) ? Number(item.gstRate) : 5.0;
+    const catalogGst = Number(item.gstRate) !== undefined && !isNaN(Number(item.gstRate)) ? Number(item.gstRate) : 5.0;
+    const gstRate = isGstBill ? catalogGst : 0;
     const factor = item.conversionFactor || 1;
 
     // Default 1 Strip
@@ -302,7 +339,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
       const pricePerStrip = Math.max(0, item.unitPrice);
       const discPct = Math.max(0, Math.min(100, item.discountPercent));
-      const gstRate = item.gstRate;
+      const gstRate = Math.max(0, item.gstRate ?? 0);
 
       // Price calculation: full strips * strip price + loose tablets * per tablet price
       const lineGross = (strips * pricePerStrip) + (loose * (pricePerStrip / factor));
@@ -316,6 +353,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       item.quantity = Math.max(1, totalUnits);
       item.unitPrice = pricePerStrip;
       item.discountPercent = discPct;
+      item.gstRate = gstRate;
       item.taxableAmount = Math.round(lineTaxable * 100) / 100;
       item.gstAmount = Math.round(lineGst * 100) / 100;
       item.totalAmount = Math.round(lineTotal * 100) / 100;
@@ -334,17 +372,22 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
   // Financial Calculations
   const valueOfGoods = invoiceItems.reduce((sum, item) => sum + (item.strips * item.unitPrice + item.looseQty * (item.unitPrice / (item.conversionFactor || 1))), 0);
-  const totalItemDiscount = invoiceItems.reduce((sum, item) => sum + ((item.taxableAmount * item.discountPercent) / 100), 0);
+  const totalItemDiscount = invoiceItems.reduce((sum, item) => {
+    const factor = item.conversionFactor || 1;
+    const lineGross = (item.strips * item.unitPrice) + (item.looseQty * (item.unitPrice / factor));
+    return sum + ((lineGross * item.discountPercent) / 100);
+  }, 0);
   const grossTaxable = Math.max(0, valueOfGoods - totalItemDiscount);
 
   const billDiscountAmt = (grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100;
   const netTaxable = Math.max(0, grossTaxable - billDiscountAmt);
 
-  const avgGstRate = invoiceItems.length > 0
-    ? invoiceItems.reduce((sum, i) => sum + i.gstRate, 0) / invoiceItems.length
-    : 5;
+  const discountMultiplier = 1 - (Math.max(0, Math.min(100, billDiscountPct)) / 100);
+  const totalGstAmount = invoiceItems.reduce((sum, item) => {
+    const effectiveTaxable = item.taxableAmount * discountMultiplier;
+    return sum + ((effectiveTaxable * (item.gstRate || 0)) / 100);
+  }, 0);
 
-  const totalGstAmount = (netTaxable * avgGstRate) / 100;
   const cgstAmount = isInterState ? 0 : totalGstAmount / 2;
   const sgstAmount = isInterState ? 0 : totalGstAmount / 2;
   const igstAmount = isInterState ? totalGstAmount : 0;
@@ -623,6 +666,116 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       {/* Main Medicine Search & Bill Grid (Photo 3 Middle Table) */}
       <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', marginBottom: '1rem' }}>
         
+        {/* Bill Options & Tax Mode Bar */}
+        <div style={{
+          padding: '0.65rem 1rem',
+          borderBottom: '1px solid var(--border-color)',
+          background: 'var(--bg-secondary)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.8rem'
+        }}>
+          {/* Tax Mode Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
+              BILL TAX TYPE :
+            </span>
+            <div style={{ display: 'inline-flex', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '7px', padding: '2px' }}>
+              <button
+                type="button"
+                onClick={() => handleToggleGstBill(true)}
+                style={{
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: isGstBill ? '#0f766e' : 'transparent',
+                  color: isGstBill ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: isGstBill ? '700' : '600',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>🧾</span> Tax Invoice (GST)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleGstBill(false)}
+                style={{
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: !isGstBill ? '#0284c7' : 'transparent',
+                  color: !isGstBill ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: !isGstBill ? '700' : '600',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>📄</span> Non-GST / Retail Bill (0% Tax)
+              </button>
+            </div>
+            {!isGstBill ? (
+              <span style={{ fontSize: '0.72rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.25)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: '700' }}>
+                ✓ GST Optional (0% Tax Applied)
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.72rem', color: '#0f766e', background: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.2)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: '700' }}>
+                ✓ GST Active (Editable per item)
+              </span>
+            )}
+          </div>
+
+          {/* Inter-state & Bill Discount */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', flexWrap: 'wrap' }}>
+            {isGstBill && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}>
+                <input
+                  type="checkbox"
+                  checked={isInterState}
+                  onChange={e => setIsInterState(e.target.checked)}
+                  style={{ cursor: 'pointer', accentColor: '#0f766e' }}
+                />
+                <span>Inter-State (IGST)</span>
+              </label>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Bill Disc:</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="0"
+                value={billDiscountPct === 0 ? '' : billDiscountPct}
+                onChange={e => setBillDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                style={{
+                  width: '50px',
+                  padding: '0.3rem 0.4rem',
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '5px',
+                  color: 'var(--text-primary)',
+                  textAlign: 'center',
+                  fontWeight: '700',
+                  fontSize: '0.82rem'
+                }}
+              />
+              <span style={{ color: 'var(--text-muted)' }}>%</span>
+            </div>
+          </div>
+        </div>
+
         {/* Medicine Search Bar */}
         <div style={{ padding: '0.8rem 1rem', borderBottom: '1px solid var(--border-color)', position: 'relative', background: 'var(--bg-secondary)' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -691,7 +844,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         <div>
                           <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            {med.genericName ? `${med.genericName} • ` : ''}Pack: {med.conversionFactor > 1 ? `${med.conversionFactor}T` : med.unit}
+                            {med.genericName ? `${med.genericName} • ` : ''}Pack: {med.conversionFactor > 1 ? `${med.conversionFactor}T` : med.unit} {med.gstRate !== undefined ? `• GST: ${med.gstRate}%` : ''}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -714,7 +867,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
         {/* Sale Entry Grid (Responsive & Horizontal Scroll Protected) */}
         <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <table style={{ width: '100%', minWidth: '920px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <table style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
                 <th style={{ padding: '0.75rem 0.6rem', width: '35px', textAlign: 'center' }}>#</th>
@@ -725,7 +878,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }} title="Loose Tablets (e.g. 2 tabs or 12 tabs)">LOOSE TABS</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '95px', textAlign: 'right' }}>M.R.P./S</th>
                 <th style={{ padding: '0.75rem 0.6rem', width: '75px', textAlign: 'center' }}>DIS%</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '70px', textAlign: 'center' }}>GST%</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }} title="GST rate percentage (Editable per item)">GST% ✎</th>
                 <th style={{ padding: '0.75rem 0.8rem', width: '115px', textAlign: 'right' }}>AMOUNT (₹)</th>
                 <th style={{ padding: '0.75rem 0.5rem', width: '35px' }}></th>
               </tr>
@@ -894,9 +1047,37 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         />
                       </td>
 
-                      {/* GST % */}
-                      <td style={{ padding: '0.6rem 0.6rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                        {item.gstRate}%
+                      {/* GST % (Directly Editable per row) */}
+                      <td style={{ padding: '0.6rem 0.4rem', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            placeholder="0"
+                            value={item.gstRate === 0 ? '0' : item.gstRate}
+                            onFocus={e => e.target.select()}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const newGst = val === '' ? 0 : Math.max(0, parseFloat(val) || 0);
+                              updateLineItem(idx, { gstRate: newGst });
+                            }}
+                            style={{
+                              width: '56px',
+                              padding: '0.35rem 0.2rem',
+                              background: item.gstRate === 0 ? 'rgba(148, 163, 184, 0.12)' : 'rgba(20, 184, 166, 0.1)',
+                              border: item.gstRate === 0 ? '1px dashed var(--border-color)' : '1px solid var(--brand-teal)',
+                              borderRadius: '5px',
+                              color: item.gstRate === 0 ? 'var(--text-secondary)' : 'var(--brand-teal)',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                              fontSize: '0.85rem'
+                            }}
+                            title="Edit GST % for this line item (Enter 0 for Non-GST/Exempt)"
+                          />
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>%</span>
+                        </div>
                       </td>
 
                       {/* Line Amount */}
@@ -956,8 +1137,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 <strong>₹{Number(activeRow?.mrp || 0).toFixed(2)}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-secondary)' }}>Total Qty Units : </span>
-                <strong style={{ color: 'var(--brand-teal)' }}>{activeRow?.quantity ?? 0} tabs</strong>
+                <span style={{ color: 'var(--text-secondary)' }}>Line GST : </span>
+                <strong style={{ color: (activeRow?.gstRate || 0) > 0 ? 'var(--brand-teal)' : 'var(--text-muted)' }}>
+                  {activeRow?.gstRate ?? 0}% {activeRow?.gstRate === 0 ? '(Non-GST)' : ''}
+                </strong>
               </div>
             </div>
           </div>
@@ -1010,8 +1193,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-              <span>GST (CGST/SGST/IGST) :</span>
-              <span>₹{totalGstAmount.toFixed(2)}</span>
+              <span>{totalGstAmount > 0 ? (isInterState ? 'IGST TAX :' : 'GST (CGST+SGST) :') : 'GST (0% / NON-GST) :'}</span>
+              <span style={{ fontWeight: totalGstAmount > 0 ? '700' : 'normal', color: totalGstAmount > 0 ? 'var(--brand-teal)' : 'var(--text-muted)' }}>
+                ₹{totalGstAmount.toFixed(2)}
+              </span>
             </div>
 
             {roundOff !== 0 && (
@@ -1090,7 +1275,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
       </div>
 
-      {/* Printable GST Tax Invoice Modal */}
+      {/* Printable Tax / Retail Invoice Modal */}
       {showPrintModal && createdInvoice && (
         <div style={{
           position: 'fixed',
@@ -1132,7 +1317,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   gap: '0.4rem'
                 }}
               >
-                <Printer size={16} /> Print Tax Invoice
+                <Printer size={16} /> {Number(createdInvoice.totalTax || 0) > 0 ? 'Print Tax Invoice' : 'Print Retail Bill'}
               </button>
               <button
                 onClick={() => {
@@ -1156,8 +1341,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
             <div id="printable-tax-invoice" style={{ fontFamily: 'monospace, sans-serif' }}>
               <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '0.8rem', marginBottom: '1rem' }}>
                 <h2 style={{ margin: '0 0 0.2rem 0', fontSize: '1.4rem', fontWeight: 'bold' }}>{createdInvoice.company?.name || activeCompany?.name}</h2>
-                <div style={{ fontSize: '0.85rem' }}>TAX INVOICE (PHARMA RETAIL / B2B)</div>
-                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>Drug License 20B/21B Compliant</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                  {Number(createdInvoice.totalTax || 0) > 0 ? 'TAX INVOICE (PHARMA RETAIL / B2B)' : 'RETAIL BILL / CASH MEMO (NON-GST)'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>
+                  {Number(createdInvoice.totalTax || 0) > 0 ? 'Drug License 20B/21B Compliant' : 'Retail Pharma Cash Memo / Non-GST Supply'}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.8rem' }}>
@@ -1182,8 +1371,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                     <th style={{ padding: '0.4rem 0' }}>Batch</th>
                     <th style={{ padding: '0.4rem 0' }}>Exp</th>
                     <th style={{ padding: '0.4rem 0', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '0.4rem 0', textAlign: 'right' }}>MRP</th>
                     <th style={{ padding: '0.4rem 0', textAlign: 'right' }}>Rate</th>
+                    <th style={{ padding: '0.4rem 0', textAlign: 'center' }}>GST%</th>
                     <th style={{ padding: '0.4rem 0', textAlign: 'right' }}>Total</th>
                   </tr>
                 </thead>
@@ -1203,8 +1392,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           ? `${item.looseQty} Tab`
                           : item.quantity}
                       </td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.mrp).toFixed(2)}</td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.unitPrice).toFixed(2)}</td>
+                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>{Number(item.gstRate || 0)}%</td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'right', fontWeight: 'bold' }}>₹{Number(item.totalAmount).toFixed(2)}</td>
                     </tr>
                   ))}
@@ -1212,14 +1401,14 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </table>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #000', paddingTop: '0.6rem', fontSize: '0.85rem' }}>
-                <div style={{ width: '250px' }}>
+                <div style={{ width: '260px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                     <span>Taxable Amount:</span>
                     <span>₹{Number(createdInvoice.taxableAmount).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                    <span>GST:</span>
-                    <span>₹{Number(createdInvoice.totalTax).toFixed(2)}</span>
+                    <span>{Number(createdInvoice.totalTax || 0) > 0 ? 'Total GST:' : 'GST (0% / Exempt):'}</span>
+                    <span>₹{Number(createdInvoice.totalTax || 0).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1rem', borderTop: '1px solid #000', paddingTop: '0.4rem' }}>
                     <span>Grand Total:</span>

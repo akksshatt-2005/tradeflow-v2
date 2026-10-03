@@ -407,7 +407,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       // Fetch batch from DB with lock / check stock
       const batch = await prisma.batch.findFirst({
         where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
-        include: { item: { select: { name: true, conversionFactor: true, unit: true } } }
+        include: { item: { select: { name: true, conversionFactor: true, unit: true, gstRate: true } } }
       });
 
       if (!batch) {
@@ -419,8 +419,10 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
+      const gstRate = (rawItem.gstRate !== undefined && rawItem.gstRate !== null && !isNaN(parseFloat(rawItem.gstRate)))
+        ? Math.max(0, parseFloat(rawItem.gstRate))
+        : (batch.item?.gstRate !== undefined ? Number(batch.item.gstRate) : 0);
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
       const rawLoose = rawItem.looseQty !== undefined ? parseInt(rawItem.looseQty) : undefined;
@@ -519,17 +521,27 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const billDiscountAmt = (taxableAmount * numBillDiscountPct) / 100;
     const finalTaxable = Math.max(0, taxableAmount - billDiscountAmt);
 
-    // Recalculate tax on final taxable
+    // Recalculate tax on final taxable if bill discount is applied
     if (numBillDiscountPct > 0) {
-      if (isInterState) {
-        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 5)) / 100;
-        totalCgst = 0;
-        totalSgst = 0;
-      } else {
-        const halfRate = (validatedItems[0]?.gstRate || 5) / 2;
-        totalCgst = (finalTaxable * halfRate) / 100;
-        totalSgst = (finalTaxable * halfRate) / 100;
-        totalIgst = 0;
+      totalCgst = 0;
+      totalSgst = 0;
+      totalIgst = 0;
+      const discountMultiplier = 1 - (numBillDiscountPct / 100);
+      for (const item of validatedItems) {
+        const effTaxable = item.taxableAmount * discountMultiplier;
+        if (isInterState) {
+          item.igstAmount = Math.round((effTaxable * item.gstRate / 100) * 100) / 100;
+          item.cgstAmount = 0;
+          item.sgstAmount = 0;
+        } else {
+          item.igstAmount = 0;
+          item.cgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
+          item.sgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
+        }
+        item.totalAmount = Math.round((effTaxable + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
+        totalCgst += item.cgstAmount;
+        totalSgst += item.sgstAmount;
+        totalIgst += item.igstAmount;
       }
     }
 
@@ -752,7 +764,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
       const batch = await prisma.batch.findFirst({
         where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
-        include: { item: { select: { name: true, conversionFactor: true, unit: true } } }
+        include: { item: { select: { name: true, conversionFactor: true, unit: true, gstRate: true } } }
       });
 
       if (!batch) {
@@ -764,7 +776,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
-      const gstRate = parseFloat(rawItem.gstRate) || 5.0;
+      const gstRate = (rawItem.gstRate !== undefined && rawItem.gstRate !== null && !isNaN(parseFloat(rawItem.gstRate)))
+        ? Math.max(0, parseFloat(rawItem.gstRate))
+        : (batch.item?.gstRate !== undefined ? Number(batch.item.gstRate) : 0);
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
 
       const rawStrips = rawItem.strips !== undefined ? parseInt(rawItem.strips) : undefined;
@@ -849,15 +863,25 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     const finalTaxable = Math.max(0, taxableAmount - billDiscountAmt);
 
     if (numBillDiscountPct > 0) {
-      if (isInterState) {
-        totalIgst = (finalTaxable * (validatedItems[0]?.gstRate || 5)) / 100;
-        totalCgst = 0;
-        totalSgst = 0;
-      } else {
-        const halfRate = (validatedItems[0]?.gstRate || 5) / 2;
-        totalCgst = (finalTaxable * halfRate) / 100;
-        totalSgst = (finalTaxable * halfRate) / 100;
-        totalIgst = 0;
+      totalCgst = 0;
+      totalSgst = 0;
+      totalIgst = 0;
+      const discountMultiplier = 1 - (numBillDiscountPct / 100);
+      for (const item of validatedItems) {
+        const effTaxable = item.taxableAmount * discountMultiplier;
+        if (isInterState) {
+          item.igstAmount = Math.round((effTaxable * item.gstRate / 100) * 100) / 100;
+          item.cgstAmount = 0;
+          item.sgstAmount = 0;
+        } else {
+          item.igstAmount = 0;
+          item.cgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
+          item.sgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
+        }
+        item.totalAmount = Math.round((effTaxable + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
+        totalCgst += item.cgstAmount;
+        totalSgst += item.sgstAmount;
+        totalIgst += item.igstAmount;
       }
     }
 
