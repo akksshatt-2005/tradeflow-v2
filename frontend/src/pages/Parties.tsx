@@ -2295,99 +2295,44 @@ export default function Parties() {
                           <th style={{ padding: '0.65rem 0.8rem' }}>Date</th>
                           <th style={{ padding: '0.65rem 0.8rem' }}>Voucher Type</th>
                           <th style={{ padding: '0.65rem 0.8rem' }}>Voucher / Bill #</th>
-                          <th style={{ padding: '0.65rem 0.8rem' }}>Particulars / Items</th>
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Debit (₹)</th>
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Credit (₹)</th>
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Balance (₹)</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {displayTransactions.map((t, idx) => {
-                          const isExpanded = !!expandedRows[t.voucherNo || String(idx)];
-                          return (
-                            <React.Fragment key={idx}>
-                              <tr style={{ borderBottom: '1px solid #e2e8f0', background: t.type === 'PURCHASE_RETURN' ? 'rgba(16, 185, 129, 0.04)' : (t.type === 'OPENING_BALANCE' ? 'rgba(254, 243, 199, 0.2)' : 'transparent') }}>
-                                <td style={{ padding: '0.65rem 0.8rem', whiteSpace: 'nowrap', color: '#64748b' }}>
-                                  {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem' }}>
-                                  <span style={{
-                                    display: 'inline-block',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    background: t.type === 'OPENING_BALANCE' ? '#fef3c7' : t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : t.type === 'SALE' ? '#e0f2fe' : '#f1f5f9',
-                                    color: t.type === 'OPENING_BALANCE' ? '#b45309' : t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : t.type === 'SALE' ? '#0284c7' : '#475569'
-                                  }}>
-                                    {t.typeLabel}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
-                                  {t.voucherNo}
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem' }}>
-                                  <div style={{ color: '#0f172a', fontWeight: 600 }}>{t.particulars}</div>
-                                  {t.itemDetails && t.itemDetails.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedRows(prev => ({ ...prev, [t.voucherNo || String(idx)]: !isExpanded }))}
-                                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 0 0 0' }}
-                                    >
-                                      {isExpanded ? '▲ Hide Items' : `▼ View ${t.itemDetails.length} items`}
-                                    </button>
-                                  )}
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.debit > 0 ? '#1d4ed8' : '#cbd5e1' }}>
-                                  {t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '—'}
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.credit > 0 ? '#16a34a' : '#cbd5e1' }}>
-                                  {t.credit > 0 ? `-₹${t.credit.toFixed(2)}` : '—'}
-                                </td>
-                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
-                                  ₹{t.runningBalance.toFixed(2)}
-                                </td>
-                              </tr>
-
-                              {/* Expandable Item Detail Rows */}
-                              {isExpanded && t.itemDetails && (
-                                <tr style={{ background: '#f8fafc' }}>
-                                  <td colSpan={7} style={{ padding: '0.6rem 1.2rem', borderBottom: '1px solid #cbd5e1' }}>
-                                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.6rem' }}>
-                                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                        Line-Item Breakdown:
-                                      </div>
-                                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
-                                        <thead>
-                                          <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', textAlign: 'left' }}>
-                                            <th style={{ padding: '4px 6px' }}>Medicine</th>
-                                            <th style={{ padding: '4px 6px' }}>Batch</th>
-                                            <th style={{ padding: '4px 6px', textAlign: 'center' }}>Qty</th>
-                                            <th style={{ padding: '4px 6px', textAlign: 'right' }}>Rate (₹)</th>
-                                            <th style={{ padding: '4px 6px', textAlign: 'right' }}>Total (₹)</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {t.itemDetails.map((it: any, iIdx: number) => (
-                                            <tr key={iIdx} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                              <td style={{ padding: '4px 6px', fontWeight: 600 }}>{it.medicineName}</td>
-                                              <td style={{ padding: '4px 6px', fontFamily: 'monospace' }}>{it.batchNumber}</td>
-                                              <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                                                {it.strips !== undefined ? `${it.strips} Str ${it.looseQty > 0 ? `+ ${it.looseQty} Tab` : ''}` : it.quantity}
-                                              </td>
-                                              <td style={{ padding: '4px 6px', textAlign: 'right' }}>₹{Number(it.rate).toFixed(2)}</td>
-                                              <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.total).toFixed(2)}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </React.Fragment>
-                          );
-                        })}
+                        {displayTransactions.map((t, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: t.type === 'PURCHASE_RETURN' ? 'rgba(16, 185, 129, 0.04)' : (t.type === 'OPENING_BALANCE' ? 'rgba(254, 243, 199, 0.2)' : 'transparent') }}>
+                            <td style={{ padding: '0.65rem 0.8rem', whiteSpace: 'nowrap', color: '#64748b' }}>
+                              {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: t.type === 'OPENING_BALANCE' ? '#fef3c7' : t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : t.type === 'SALE' ? '#e0f2fe' : '#f1f5f9',
+                                color: t.type === 'OPENING_BALANCE' ? '#b45309' : t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : t.type === 'SALE' ? '#0284c7' : '#475569'
+                              }}>
+                                {t.typeLabel}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                              {t.voucherNo}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.debit > 0 ? '#1d4ed8' : '#cbd5e1' }}>
+                              {t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '—'}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.credit > 0 ? '#16a34a' : '#cbd5e1' }}>
+                              {t.credit > 0 ? `-₹${t.credit.toFixed(2)}` : '—'}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                              ₹{t.runningBalance.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   )}
