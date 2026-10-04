@@ -125,7 +125,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     setCustomRefund('');
     setPatientName('');
 
-    if (catalogItems.length === 0 && activeCompany) {
+    if (activeCompany) {
       try {
         setLoadingItems(true);
         const res = await api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', {
@@ -140,9 +140,26 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     }
   };
 
-  const handleSelectReturnMed = (med: MedicineItem) => {
-    setSelectedMed(med);
+  const handleSelectReturnMed = async (initialMed: MedicineItem) => {
+    setSelectedMed(initialMed);
     setReturnSearch('');
+    
+    let med = initialMed;
+    // Fetch live batch stocks directly from backend to avoid any stale cached stock
+    try {
+      if (activeCompany) {
+        const detailRes = await api.get<{ item: MedicineItem }>(`/api/items/${initialMed.id}`, {
+          companyId: activeCompany.id
+        });
+        if (detailRes.item) {
+          med = detailRes.item;
+          setSelectedMed(detailRes.item);
+        }
+      }
+    } catch (e) {
+      console.warn('Using cached med batches:', e);
+    }
+
     if (med.batches && med.batches.length > 0) {
       setSelectedBatchId(med.batches[0].id);
       const batch = med.batches[0];
@@ -900,7 +917,9 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                           </div>
 
                           <div style={{ textAlign: 'right' }}>
-                            <span style={{ color: '#10b981', fontWeight: 700 }}>{b.currentStock} units in stock</span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>
+                              {b.currentStock} units ({Math.floor(b.currentStock / (selectedMed.conversionFactor || 1))} Strips{b.currentStock % (selectedMed.conversionFactor || 1) > 0 ? ` + ${b.currentStock % (selectedMed.conversionFactor || 1)} tabs` : ''})
+                            </span>
                             <span style={{ color: '#64748b', marginLeft: '10px', fontSize: '0.78rem' }}>MRP: ₹{Number(b.mrp).toFixed(2)}</span>
                           </div>
                         </div>
@@ -970,12 +989,18 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                 <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', fontSize: '0.85rem' }}>
                   <div>
                     <span style={{ color: '#166534', fontWeight: 600 }}>Stock Credit: </span>
-                    <strong style={{ color: '#15803d' }}>+{returnUnitsTotal} units</strong>
+                    <strong style={{ color: '#15803d' }}>
+                      +{returnUnitsTotal} units ({returnStrips > 0 ? `${returnStrips} Strip${returnStrips > 1 ? 's' : ''}` : ''}{returnStrips > 0 && returnLoose > 0 ? ' + ' : ''}{returnLoose > 0 ? `${returnLoose} tabs` : ''})
+                    </strong>
                   </div>
                   <div>
                     <span style={{ color: '#64748b' }}>Batch Stock: </span>
-                    <span style={{ textDecoration: 'line-through', color: '#94a3b8' }}>{activeReturnBatch.currentStock}</span>
-                    <span style={{ fontWeight: 800, color: '#15803d', marginLeft: '6px' }}>➔ {projectedStock} units</span>
+                    <span style={{ textDecoration: 'line-through', color: '#94a3b8' }}>
+                      {activeReturnBatch.currentStock} ({Math.floor(activeReturnBatch.currentStock / factor)} Strips)
+                    </span>
+                    <span style={{ fontWeight: 800, color: '#15803d', marginLeft: '6px' }}>
+                      ➔ {projectedStock} ({Math.floor(projectedStock / factor)} Strips)
+                    </span>
                   </div>
                 </div>
 
