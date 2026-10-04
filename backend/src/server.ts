@@ -11,6 +11,7 @@ import itemRoutes from './routes/items.js';
 import partyRoutes from './routes/parties.js';
 import inventoryRoutes from './routes/inventory.js';
 import purchaseRoutes from './routes/purchases.js';
+import purchaseReturnRoutes from './routes/purchaseReturns.js';
 import invoiceRoutes from './routes/invoices.js';
 import gstRoutes from './routes/gst.js';
 import prisma from './prisma.js';
@@ -72,6 +73,7 @@ app.use('/items', itemRoutes);
 app.use('/parties', partyRoutes);
 app.use('/inventory', inventoryRoutes);
 app.use('/purchases', purchaseRoutes);
+app.use('/purchase-returns', purchaseReturnRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/gst', gstRoutes);
 
@@ -82,6 +84,7 @@ app.use('/api/items', itemRoutes);
 app.use('/api/parties', partyRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/purchase-returns', purchaseReturnRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/gst', gstRoutes);
 

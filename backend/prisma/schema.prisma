@@ -23,6 +23,7 @@ model User {
   stockLedgerEntries StockLedger[]
   createdPurchases   Purchase[]
   createdInvoices    Invoice[]
+  createdReturns     PurchaseReturn[]
 
   @@map("users")
 }
@@ -42,13 +43,14 @@ model Company {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
-  userCompanies UserCompany[]
-  items         Item[]
-  batches       Batch[]
-  parties       Party[]
-  stockLedger   StockLedger[]
-  purchases     Purchase[]
-  invoices      Invoice[]
+  userCompanies   UserCompany[]
+  items           Item[]
+  batches         Batch[]
+  parties         Party[]
+  stockLedger     StockLedger[]
+  purchases       Purchase[]
+  purchaseReturns PurchaseReturn[]
+  invoices        Invoice[]
 
   @@map("companies")
 }
@@ -139,11 +141,12 @@ model Item {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  batches       Batch[]
-  stockLedger   StockLedger[]
-  purchaseItems PurchaseItem[]
-  invoiceItems  InvoiceItem[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batches             Batch[]
+  stockLedger         StockLedger[]
+  purchaseItems       PurchaseItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  invoiceItems        InvoiceItem[]
 
   @@unique([companyId, sku])
   @@index([companyId, name])
@@ -164,11 +167,12 @@ model Batch {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  item          Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  stockLedger   StockLedger[]
-  purchaseItems PurchaseItem[]
-  invoiceItems  InvoiceItem[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item                Item                 @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  stockLedger         StockLedger[]
+  purchaseItems       PurchaseItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  invoiceItems        InvoiceItem[]
 
   @@unique([companyId, itemId, batchNumber])
   @@index([companyId, expiryDate])
@@ -216,9 +220,10 @@ model Party {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  purchases Purchase[]
-  invoices  Invoice[]
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchases       Purchase[]
+  purchaseReturns PurchaseReturn[]
+  invoices        Invoice[]
 
   @@unique([companyId, name, type])
   @@index([companyId, type])
@@ -399,4 +404,64 @@ model InvoiceItem {
   @@index([itemId])
   @@index([batchId])
   @@map("invoice_items")
+}
+
+// 16. Purchase Returns / Supplier Debit Notes (CN)
+model PurchaseReturn {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  supplierId    String   @map("supplier_id")
+  returnNumber  String   @map("return_number") // e.g. "CN-2026-0001" or "PR-2026-0001"
+  returnDate    DateTime @map("return_date")
+  subtotal      Decimal  @default(0.0) @map("subtotal") @db.Decimal(12, 2)
+  taxableAmount Decimal  @default(0.0) @map("taxable_amount") @db.Decimal(12, 2)
+  cgstAmount    Decimal  @default(0.0) @map("cgst_amount") @db.Decimal(12, 2)
+  sgstAmount    Decimal  @default(0.0) @map("sgst_amount") @db.Decimal(12, 2)
+  igstAmount    Decimal  @default(0.0) @map("igst_amount") @db.Decimal(12, 2)
+  roundOff      Decimal  @default(0.0) @map("round_off") @db.Decimal(5, 2)
+  totalAmount   Decimal  @default(0.0) @map("total_amount") @db.Decimal(12, 2)
+  reason        String?  // "EXPIRED_STOCK", "SLOW_MOVING", "DAMAGED", "OVERSTOCK"
+  notes         String?
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company  Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Party                @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  creator  User                 @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  items    PurchaseReturnItem[]
+
+  @@unique([companyId, returnNumber])
+  @@index([companyId, returnDate])
+  @@index([companyId, supplierId])
+  @@map("purchase_returns")
+}
+
+// 17. Purchase Return Itemized Rows
+model PurchaseReturnItem {
+  id               String   @id @default(uuid())
+  purchaseReturnId String   @map("purchase_return_id")
+  itemId           String   @map("item_id")
+  batchId          String   @map("batch_id")
+  pack             String?  @default("10 TAB")
+  batchNumber      String   @map("batch_number")
+  expiryDate       DateTime @map("expiry_date")
+  strips           Int      @default(0)
+  looseQty         Int      @default(0) @map("loose_qty")
+  quantity         Int      // Total base units returned
+  returnRate       Decimal  @map("return_rate") @db.Decimal(10, 2) // PTR/Cost
+  mrp              Decimal  @map("mrp") @db.Decimal(10, 2)
+  taxableValue     Decimal  @map("taxable_value") @db.Decimal(10, 2)
+  gstRate          Decimal  @default(0.0) @map("gst_rate") @db.Decimal(5, 2)
+  gstAmount        Decimal  @map("gst_amount") @db.Decimal(10, 2)
+  totalAmount      Decimal  @map("total_amount") @db.Decimal(10, 2)
+
+  purchaseReturn PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  item           Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch          Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseReturnId])
+  @@index([itemId])
+  @@index([batchId])
+  @@map("purchase_return_items")
 }

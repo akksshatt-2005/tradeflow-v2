@@ -86,6 +86,100 @@ export default function Parties() {
   const [previewParties, setPreviewParties] = useState<any[]>([]);
   const [importSearch, setImportSearch] = useState('');
 
+  // Party Statement / Ledger View State
+  const [showStatementModal, setShowStatementModal] = useState(false);
+  const [statementParty, setStatementParty] = useState<PartyLedger | null>(null);
+  const [statementData, setStatementData] = useState<{
+    party: any;
+    summary: {
+      openingBalance: number;
+      openingBalanceType: string;
+      totalPurchases: number;
+      totalReturns: number;
+      totalPayments: number;
+      netOutstanding: number;
+    };
+    transactions: Array<{
+      date: string;
+      type: string;
+      typeLabel: string;
+      voucherNo: string;
+      referenceId: string;
+      particulars: string;
+      itemDetails?: any[];
+      debit: number;
+      credit: number;
+      runningBalance: number;
+    }>;
+  } | null>(null);
+  const [loadingStatement, setLoadingStatement] = useState(false);
+  const [statementStartDate, setStatementStartDate] = useState('');
+  const [statementEndDate, setStatementEndDate] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const handleOpenStatement = async (party: PartyLedger, start?: string, end?: string) => {
+    setStatementParty(party);
+    setShowStatementModal(true);
+    setLoadingStatement(true);
+    setExpandedRows({});
+    try {
+      let url = `/api/parties/${party.id}/statement`;
+      const queryParams: string[] = [];
+      const s = start !== undefined ? start : statementStartDate;
+      const e = end !== undefined ? end : statementEndDate;
+      if (s) queryParams.push(`startDate=${s}`);
+      if (e) queryParams.push(`endDate=${e}`);
+      if (queryParams.length > 0) url += `?${queryParams.join('&')}`;
+
+      const res = await api.get<any>(url, {
+        companyId: activeCompany?.id
+      });
+      setStatementData(res);
+    } catch (err) {
+      console.error('Failed to load party statement:', err);
+    } finally {
+      setLoadingStatement(false);
+    }
+  };
+
+  const handleExportStatementExcel = () => {
+    if (!statementData || !statementParty) return;
+
+    const metadataRows = [
+      ['PARTY LEDGER STATEMENT'],
+      ['Company:', activeCompany?.name || ''],
+      ['Party Name:', statementParty.name],
+      ['Type:', statementParty.type.toUpperCase()],
+      ['GSTIN:', statementParty.gstin || 'N/A'],
+      ['Drug License:', statementParty.drugLicenseNo || 'N/A'],
+      ['Date Range:', statementStartDate && statementEndDate ? `${statementStartDate} to ${statementEndDate}` : 'All Time'],
+      ['Opening Balance:', `₹${statementData.summary.openingBalance.toFixed(2)} (${statementData.summary.openingBalanceType})`],
+      ['Total Purchases (Debit):', `₹${statementData.summary.totalPurchases.toFixed(2)}`],
+      ['Total Returns/CN (Credit):', `₹${statementData.summary.totalReturns.toFixed(2)}`],
+      ['Total Paid (Credit):', `₹${statementData.summary.totalPayments.toFixed(2)}`],
+      ['Net Outstanding Balance:', `₹${statementData.summary.netOutstanding.toFixed(2)}`],
+      []
+    ];
+
+    const tableRows = statementData.transactions.map((t, idx) => ({
+      '#': idx + 1,
+      'Date': t.date.split('T')[0],
+      'Voucher Type': t.typeLabel,
+      'Voucher #': t.voucherNo,
+      'Particulars': t.particulars,
+      'Debit (₹)': t.debit > 0 ? t.debit : '',
+      'Credit (₹)': t.credit > 0 ? t.credit : '',
+      'Running Balance (₹)': t.runningBalance
+    }));
+
+    const worksheet = XLSX.utils.aoa_to_sheet(metadataRows);
+    XLSX.utils.sheet_add_json(worksheet, tableRows, { origin: 'A14' });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ledger Statement');
+    const filename = `Ledger_Statement_${statementParty.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
   const handleExportParties = () => {
     if (parties.length === 0) {
       alert('No ledger records available to export.');
@@ -898,11 +992,30 @@ export default function Parties() {
                       ₹{p.outstandingBalance.toFixed(2)}
                     </td>
                     <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => handleOpenStatement(p)}
+                          style={{
+                            padding: '0.4rem 0.65rem',
+                            background: 'rgba(2, 132, 199, 0.12)',
+                            border: '1px solid rgba(2, 132, 199, 0.3)',
+                            borderRadius: '6px',
+                            color: '#0284c7',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700
+                          }}
+                          title="View complete Ledger Statement (Purchases, Returns & Payments)"
+                        >
+                          <FileText size={13} /> Statement
+                        </button>
                         <button
                           onClick={() => handleOpenEditModal(p)}
                           style={{
-                            padding: '0.4rem 0.7rem',
+                            padding: '0.4rem 0.65rem',
                             background: 'var(--bg-secondary)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '6px',
@@ -1824,6 +1937,321 @@ export default function Parties() {
                   {importing ? `Importing (${importProgress}%)...` : `Confirm & Import (${previewParties.length})`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          PARTY LEDGER STATEMENT MODAL (Purchases, Returns & Payments)
+          ======================================================== */}
+      {showStatementModal && statementParty && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 150,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--card-bg, #ffffff)',
+            color: 'var(--text-primary, #0f172a)',
+            width: '100%',
+            maxWidth: '1050px',
+            maxHeight: '92vh',
+            borderRadius: '14px',
+            overflowY: 'auto',
+            padding: '1.8rem',
+            position: 'relative',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.2rem', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ background: '#0284c7', color: '#fff', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+                    {statementParty.type.toUpperCase()} LEDGER
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>•</span>
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Station: {statementParty.station || 'LOCAL'}</span>
+                </div>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>
+                  {statementParty.name}
+                </h2>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', marginTop: '4px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                  {statementParty.gstin && <span>GSTIN: <strong style={{ color: '#0f172a' }}>{statementParty.gstin}</strong></span>}
+                  {statementParty.drugLicenseNo && <span>DL No: <strong style={{ color: '#0f172a' }}>{statementParty.drugLicenseNo}</strong></span>}
+                  {statementParty.phone && <span>Phone: <strong style={{ color: '#0f172a' }}>{statementParty.phone}</strong></span>}
+                  {statementParty.address && <span>Address: {statementParty.address}</span>}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleExportStatementExcel}
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700 }}
+                  title="Export full ledger statement to Excel"
+                >
+                  <Download size={14} /> Export Excel
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700 }}
+                >
+                  <FileText size={14} /> Print
+                </button>
+                <button
+                  onClick={() => setShowStatementModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', marginLeft: '6px' }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+            </div>
+
+            {/* Date Range Filter Bar */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.8rem 1rem', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>PERIOD:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatementStartDate('');
+                    setStatementEndDate('');
+                    handleOpenStatement(statementParty, '', '');
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: !statementStartDate && !statementEndDate ? '#0284c7' : '#ffffff',
+                    color: !statementStartDate && !statementEndDate ? '#ffffff' : '#0f172a',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  All Time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                    const today = now.toISOString().split('T')[0];
+                    setStatementStartDate(firstDay);
+                    setStatementEndDate(today);
+                    handleOpenStatement(statementParty, firstDay, today);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  This Month
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="date"
+                  value={statementStartDate}
+                  onChange={e => setStatementStartDate(e.target.value)}
+                  style={{ padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                />
+                <span style={{ color: '#64748b', fontSize: '12px' }}>to</span>
+                <input
+                  type="date"
+                  value={statementEndDate}
+                  onChange={e => setStatementEndDate(e.target.value)}
+                  style={{ padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleOpenStatement(statementParty)}
+                  className="btn btn-primary"
+                  style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 700 }}
+                >
+                  Filter
+                </button>
+              </div>
+            </div>
+
+            {/* Financial Summary Metric Cards */}
+            {statementData && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '1.4rem' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Opening Balance</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                    ₹{statementData.summary.openingBalance.toFixed(2)} <span style={{ fontSize: '12px', color: '#64748b' }}>({statementData.summary.openingBalanceType})</span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase' }}>Total Inward (Debit)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#1d4ed8', marginTop: '2px' }}>
+                    +₹{statementData.summary.totalPurchases.toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase' }}>Returns / CN (Credit)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>
+                    -₹{statementData.summary.totalReturns.toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ background: statementData.summary.netOutstanding > 0 ? '#fef2f2' : '#f0fdf4', border: '1.5px solid ' + (statementData.summary.netOutstanding > 0 ? '#fca5a5' : '#86efac'), borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: statementData.summary.netOutstanding > 0 ? '#b91c1c' : '#15803d', textTransform: 'uppercase' }}>Net Outstanding Payable</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: statementData.summary.netOutstanding > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
+                    ₹{statementData.summary.netOutstanding.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Statement Transactions Table */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loadingStatement ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                  Loading ledger transactions...
+                </div>
+              ) : !statementData || statementData.transactions.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#475569' }}>No purchase bills or return vouchers found in this period.</p>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: 700 }}>
+                      <th style={{ padding: '0.65rem 0.8rem' }}>Date</th>
+                      <th style={{ padding: '0.65rem 0.8rem' }}>Voucher Type</th>
+                      <th style={{ padding: '0.65rem 0.8rem' }}>Voucher / Bill #</th>
+                      <th style={{ padding: '0.65rem 0.8rem' }}>Particulars / Items</th>
+                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Debit (₹)</th>
+                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Credit (₹)</th>
+                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Balance (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statementData.transactions.map((t, idx) => {
+                      const isExpanded = !!expandedRows[t.voucherNo || String(idx)];
+                      return (
+                        <React.Fragment key={idx}>
+                          <tr style={{ borderBottom: '1px solid #e2e8f0', background: t.type === 'PURCHASE_RETURN' ? 'rgba(16, 185, 129, 0.04)' : 'transparent' }}>
+                            <td style={{ padding: '0.65rem 0.8rem', whiteSpace: 'nowrap', color: '#64748b' }}>
+                              {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : '#f1f5f9',
+                                color: t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : '#475569'
+                              }}>
+                                {t.typeLabel}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                              {t.voucherNo}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem' }}>
+                              <div style={{ color: '#0f172a', fontWeight: 600 }}>{t.particulars}</div>
+                              {t.itemDetails && t.itemDetails.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedRows(prev => ({ ...prev, [t.voucherNo || String(idx)]: !isExpanded }))}
+                                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 0 0 0' }}
+                                >
+                                  {isExpanded ? '▲ Hide Items' : `▼ View ${t.itemDetails.length} items`}
+                                </button>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.debit > 0 ? '#1d4ed8' : '#cbd5e1' }}>
+                              {t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '—'}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.credit > 0 ? '#16a34a' : '#cbd5e1' }}>
+                              {t.credit > 0 ? `-₹${t.credit.toFixed(2)}` : '—'}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                              ₹{t.runningBalance.toFixed(2)}
+                            </td>
+                          </tr>
+
+                          {/* Expandable Item Detail Rows */}
+                          {isExpanded && t.itemDetails && (
+                            <tr style={{ background: '#f8fafc' }}>
+                              <td colSpan={7} style={{ padding: '0.6rem 1.2rem', borderBottom: '1px solid #cbd5e1' }}>
+                                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.6rem' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                    Line-Item Breakdown:
+                                  </div>
+                                  <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                      <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', textAlign: 'left' }}>
+                                        <th style={{ padding: '4px 6px' }}>Medicine</th>
+                                        <th style={{ padding: '4px 6px' }}>Batch</th>
+                                        <th style={{ padding: '4px 6px', textAlign: 'center' }}>Qty</th>
+                                        <th style={{ padding: '4px 6px', textAlign: 'right' }}>Rate (₹)</th>
+                                        <th style={{ padding: '4px 6px', textAlign: 'right' }}>Total (₹)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {t.itemDetails.map((it, iIdx) => (
+                                        <tr key={iIdx} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                          <td style={{ padding: '4px 6px', fontWeight: 600 }}>{it.medicineName}</td>
+                                          <td style={{ padding: '4px 6px', fontFamily: 'monospace' }}>{it.batchNumber}</td>
+                                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                            {it.strips !== undefined ? `${it.strips} Str ${it.looseQty > 0 ? `+ ${it.looseQty} Tab` : ''}` : it.quantity}
+                                          </td>
+                                          <td style={{ padding: '4px 6px', textAlign: 'right' }}>₹{Number(it.rate).toFixed(2)}</td>
+                                          <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.total).toFixed(2)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowStatementModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '0.6rem 1.4rem', fontWeight: 700 }}
+              >
+                Close Statement
+              </button>
             </div>
           </div>
         </div>

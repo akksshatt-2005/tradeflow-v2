@@ -520,11 +520,14 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 });
 
 /**
- * DELETE /parties/:id
+ * GET /parties/:id/statement
+ * Comprehensive Ledger Statement of all Purchases, Returns/CNs, and Payments
  */
-router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
+router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const { id } = req.params;
+  const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
+  const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
 
   try {
     const party = await prisma.party.findFirst({
@@ -532,38 +535,202 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     });
 
     if (!party) {
-      res.status(404).json({ error: 'Party not found' });
+      res.status(404).json({ error: 'Party ledger not found' });
       return;
     }
 
-    if (party.isCash) {
-      res.status(400).json({ error: 'Default Cash party cannot be deleted' });
-      return;
+    // Date filters
+    const dateFilter: any = {};
+    if (startDate) dateFilter.gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
     }
 
-    // Check if transactions exist
-    const [purchaseCount, invoiceCount] = await Promise.all([
-      prisma.purchase.count({ where: { supplierId: id } }),
-      prisma.invoice.count({ where: { partyId: id } })
+    const purchaseWhere: any = { companyId, supplierId: id };
+    const returnWhere: any = { companyId, supplierId: id };
+    const invoiceWhere: any = { companyId, partyId: id };
+
+    if (startDate || endDate) {
+      purchaseWhere.purchaseDate = dateFilter;
+      returnWhere.returnDate = dateFilter;
+      invoiceWhere.invoiceDate = dateFilter;
+    }
+
+    // Fetch Purchases, Returns & Invoices
+    const [purchases, returns, invoices] = await Promise.all([
+      prisma.purchase.findMany({
+        where: purchaseWhere,
+        include: {
+          items: {
+            include: { item: { select: { name: true, sku: true } } }
+          }
+        },
+        orderBy: { purchaseDate: 'asc' }
+      }),
+      prisma.purchaseReturn.findMany({
+        where: returnWhere,
+        include: {
+          items: {
+            include: { item: { select: { name: true, sku: true } } }
+          }
+        },
+        orderBy: { returnDate: 'asc' }
+      }),
+      prisma.invoice.findMany({
+        where: invoiceWhere,
+        include: {
+          items: {
+            include: { item: { select: { name: true, sku: true } } }
+          }
+        },
+        orderBy: { invoiceDate: 'asc' }
+      })
     ]);
 
-    if (purchaseCount > 0 || invoiceCount > 0) {
-      const parts = [];
-      if (purchaseCount > 0) parts.push(`${purchaseCount} purchase bill(s)`);
-      if (invoiceCount > 0) parts.push(`${invoiceCount} sales invoice(s)`);
-      res.status(400).json({
-        error: `Cannot delete "${party.mailTo || party.name}" because it is linked to ${parts.join(' and ')}. Please delete or cancel those bills first.`
+    const openingBalance = Number(party.openingBalance || 0);
+    const openingType = party.openingBalanceType || 'CR';
+
+    // Build unified chronological ledger stream
+    const rawTransactions: Array<{
+      date: Date;
+      type: 'PURCHASE' | 'PURCHASE_RETURN' | 'PAYMENT' | 'SALE';
+      typeLabel: string;
+      voucherNo: string;
+      referenceId: string;
+      particulars: string;
+      itemDetails?: any[];
+      debit: number;
+      credit: number;
+    }> = [];
+
+    // 1. Inward Purchases
+    for (const p of purchases) {
+      const tot = Number(p.totalAmount);
+      const paid = Number(p.paidAmount || 0);
+      const itemSummary = p.items.map(i => `${i.item.name} (${i.batchNumber}) x ${i.quantity}`).join(', ');
+
+      rawTransactions.push({
+        date: p.purchaseDate,
+        type: 'PURCHASE',
+        typeLabel: 'Purchase Bill Inward',
+        voucherNo: p.invoiceNumber,
+        referenceId: p.id,
+        particulars: itemSummary || `Purchase Invoice #${p.invoiceNumber}`,
+        itemDetails: p.items.map(i => ({
+          medicineName: i.item.name,
+          sku: i.item.sku,
+          batchNumber: i.batchNumber,
+          quantity: i.quantity,
+          rate: Number(i.purchaseRate),
+          total: Number(i.totalAmount)
+        })),
+        debit: tot, // Debit increases supplier payable balance in pharma ledger
+        credit: 0
       });
-      return;
+
+      // If purchase had immediate partial or full payment
+      if (paid > 0) {
+        rawTransactions.push({
+          date: p.purchaseDate,
+          type: 'PAYMENT',
+          typeLabel: 'Payment Made',
+          voucherNo: `PAY-${p.invoiceNumber}`,
+          referenceId: p.id,
+          particulars: `Payment for Bill #${p.invoiceNumber} (${p.paymentMode})`,
+          debit: 0,
+          credit: paid
+        });
+      }
     }
 
-    await prisma.party.delete({ where: { id } });
+    // 2. Supplier Returns / Credit Notes (CN)
+    for (const r of returns) {
+      const tot = Number(r.totalAmount);
+      const itemSummary = r.items.map(i => `${i.item.name} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
 
-    res.status(200).json({ message: 'Party deleted successfully' });
+      rawTransactions.push({
+        date: r.returnDate,
+        type: 'PURCHASE_RETURN',
+        typeLabel: 'Supplier Return (CN / Debit Note)',
+        voucherNo: r.returnNumber,
+        referenceId: r.id,
+        particulars: `Returned: ${itemSummary || r.reason || 'Expired/Slow-moving'}`,
+        itemDetails: r.items.map(i => ({
+          medicineName: i.item.name,
+          sku: i.item.sku,
+          batchNumber: i.batchNumber,
+          strips: i.strips,
+          looseQty: i.looseQty,
+          quantity: i.quantity,
+          rate: Number(i.returnRate),
+          total: Number(i.totalAmount)
+        })),
+        debit: 0,
+        credit: tot // Credit Note decreases supplier payable balance
+      });
+    }
+
+    // 3. Sort chronologically
+    rawTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    // 4. Calculate running balance
+    let runningBalance = openingType === 'CR' ? openingBalance : -openingBalance;
+    let totalPurchases = 0;
+    let totalReturns = 0;
+    let totalPayments = 0;
+
+    const ledgerTransactions = rawTransactions.map(t => {
+      if (t.type === 'PURCHASE') {
+        totalPurchases += t.debit;
+        runningBalance += t.debit;
+      } else if (t.type === 'PURCHASE_RETURN') {
+        totalReturns += t.credit;
+        runningBalance -= t.credit;
+      } else if (t.type === 'PAYMENT') {
+        totalPayments += t.credit;
+        runningBalance -= t.credit;
+      }
+
+      return {
+        ...t,
+        date: t.date.toISOString(),
+        runningBalance: Math.round(runningBalance * 100) / 100
+      };
+    });
+
+    res.status(200).json({
+      party: {
+        id: party.id,
+        name: party.name,
+        type: party.type,
+        station: party.station,
+        phone: party.phone,
+        mobile: party.mobile,
+        gstin: party.gstin,
+        drugLicenseNo: party.drugLicenseNo,
+        address: party.address,
+        openingBalance,
+        openingBalanceType: party.openingBalanceType,
+        outstandingBalance: Number(party.outstandingBalance)
+      },
+      summary: {
+        openingBalance,
+        openingBalanceType: party.openingBalanceType,
+        totalPurchases: Math.round(totalPurchases * 100) / 100,
+        totalReturns: Math.round(totalReturns * 100) / 100,
+        totalPayments: Math.round(totalPayments * 100) / 100,
+        netOutstanding: Math.round(runningBalance * 100) / 100
+      },
+      transactions: ledgerTransactions
+    });
+
   } catch (error: any) {
-    console.error('Error deleting party:', error);
-    res.status(500).json({ error: error.message || 'Failed to delete party' });
+    console.error('Failed to load party statement:', error);
+    res.status(500).json({ error: error.message || 'Failed to retrieve party statement' });
   }
 });
 
 export default router;
+
