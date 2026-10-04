@@ -606,20 +606,36 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     let priorInvoicesPaid = 0;
 
     if (parsedStart) {
-      const [priorP, priorR, priorI] = await Promise.all([
-        prisma.purchase.findMany({
+      let priorP: any[] = [];
+      let priorR: any[] = [];
+      let priorI: any[] = [];
+
+      try {
+        priorP = await prisma.purchase.findMany({
           where: { ...basePurchaseWhere, purchaseDate: { lt: parsedStart } },
           select: { totalAmount: true, paidAmount: true }
-        }),
-        prisma.purchaseReturn.findMany({
+        });
+      } catch (e: any) {
+        console.warn('Prior purchases query error:', e.message);
+      }
+
+      try {
+        priorR = await prisma.purchaseReturn.findMany({
           where: { ...baseReturnWhere, returnDate: { lt: parsedStart } },
           select: { totalAmount: true }
-        }),
-        prisma.invoice.findMany({
+        });
+      } catch (e: any) {
+        console.warn('Prior purchaseReturn query skipped (table may not exist yet):', e.message);
+      }
+
+      try {
+        priorI = await prisma.invoice.findMany({
           where: { ...baseInvoiceWhere, invoiceDate: { lt: parsedStart } },
           select: { grandTotal: true, paidAmount: true }
-        })
-      ]);
+        });
+      } catch (e: any) {
+        console.warn('Prior invoice query error:', e.message);
+      }
 
       priorPurchasesTotal = priorP.reduce((sum, p) => sum + Number(p.totalAmount), 0);
       priorPurchasesPaid = priorP.reduce((sum, p) => sum + Number(p.paidAmount || 0), 0);
@@ -643,8 +659,12 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       inPeriodInvoiceWhere.invoiceDate = dFilter;
     }
 
-    const [purchases, returns, invoices] = await Promise.all([
-      prisma.purchase.findMany({
+    let purchases: any[] = [];
+    let returns: any[] = [];
+    let invoices: any[] = [];
+
+    try {
+      purchases = await prisma.purchase.findMany({
         where: inPeriodPurchaseWhere,
         include: {
           items: {
@@ -652,8 +672,13 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
           }
         },
         orderBy: { purchaseDate: 'asc' }
-      }),
-      prisma.purchaseReturn.findMany({
+      });
+    } catch (e: any) {
+      console.warn('Purchases query error:', e.message);
+    }
+
+    try {
+      returns = await prisma.purchaseReturn.findMany({
         where: inPeriodReturnWhere,
         include: {
           items: {
@@ -661,8 +686,13 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
           }
         },
         orderBy: { returnDate: 'asc' }
-      }),
-      prisma.invoice.findMany({
+      });
+    } catch (e: any) {
+      console.warn('purchaseReturn query skipped (table may not exist yet):', e.message);
+    }
+
+    try {
+      invoices = await prisma.invoice.findMany({
         where: inPeriodInvoiceWhere,
         include: {
           items: {
@@ -670,8 +700,10 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
           }
         },
         orderBy: { invoiceDate: 'asc' }
-      })
-    ]);
+      });
+    } catch (e: any) {
+      console.warn('Invoices query error:', e.message);
+    }
 
     const rawOpeningBalance = Number(party.openingBalance || 0);
     const outstanding = Number(party.outstandingBalance || 0);
@@ -722,7 +754,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     for (const p of purchases) {
       const tot = Number(p.totalAmount);
       const paid = Number(p.paidAmount || 0);
-      const itemSummary = p.items.map(i => `${i.item?.name || 'Medicine'} (${i.batchNumber}) x ${i.quantity}`).join(', ');
+      const itemSummary = p.items.map((i: any) => `${i.item?.name || 'Medicine'} (${i.batchNumber}) x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
         date: p.purchaseDate,
@@ -731,7 +763,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         voucherNo: p.invoiceNumber,
         referenceId: p.id,
         particulars: itemSummary || `Purchase Invoice #${p.invoiceNumber}`,
-        itemDetails: p.items.map(i => ({
+        itemDetails: p.items.map((i: any) => ({
           medicineName: i.item?.name || 'Medicine',
           sku: i.item?.sku || '',
           batchNumber: i.batchNumber,
@@ -761,7 +793,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     // 2. Supplier Returns / Credit Notes (CN)
     for (const r of returns) {
       const tot = Number(r.totalAmount);
-      const itemSummary = r.items.map(i => `${i.item?.name || 'Medicine'} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
+      const itemSummary = r.items.map((i: any) => `${i.item?.name || 'Medicine'} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
 
       rawTransactions.push({
         date: r.returnDate,
@@ -770,7 +802,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         voucherNo: r.returnNumber,
         referenceId: r.id,
         particulars: `Returned: ${itemSummary || r.reason || 'Expired/Slow-moving'}`,
-        itemDetails: r.items.map(i => ({
+        itemDetails: r.items.map((i: any) => ({
           medicineName: i.item?.name || 'Medicine',
           sku: i.item?.sku || '',
           batchNumber: i.batchNumber,
@@ -789,7 +821,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     for (const inv of invoices) {
       const tot = Number(inv.grandTotal);
       const paid = Number(inv.paidAmount || 0);
-      const itemSummary = inv.items.map(i => `${i.item?.name || 'Medicine'} x ${i.quantity}`).join(', ');
+      const itemSummary = inv.items.map((i: any) => `${i.item?.name || 'Medicine'} x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
         date: inv.invoiceDate,
@@ -798,7 +830,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         voucherNo: inv.invoiceNumber,
         referenceId: inv.id,
         particulars: itemSummary || `Sales Invoice #${inv.invoiceNumber}`,
-        itemDetails: inv.items.map(i => ({
+        itemDetails: inv.items.map((i: any) => ({
           medicineName: i.item?.name || 'Medicine',
           sku: i.item?.sku || '',
           quantity: i.quantity,
