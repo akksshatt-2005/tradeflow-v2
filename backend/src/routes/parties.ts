@@ -539,13 +539,16 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       return;
     }
 
-    // Date filters
-    const dateFilter: any = {};
-    if (startDate) dateFilter.gte = new Date(startDate);
+    // Parse date filters safely
+    let parsedStart: Date | undefined;
+    let parsedEnd: Date | undefined;
+    if (startDate) {
+      const [sY, sM, sD] = startDate.split('-').map(Number);
+      parsedStart = new Date(sY, sM - 1, sD, 0, 0, 0, 0);
+    }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end;
+      const [eY, eM, eD] = endDate.split('-').map(Number);
+      parsedEnd = new Date(eY, eM - 1, eD, 23, 59, 59, 999);
     }
 
     // Find all party IDs in this company that share the same ID, name, mailTo, or GSTIN
@@ -569,21 +572,24 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     });
     const partyIds = Array.from(new Set(relatedParties.map(p => p.id)));
 
-    const purchaseWhere: any = {
+    // Base conditions for this supplier / customer
+    const basePurchaseWhere: any = {
       companyId,
       OR: [
         { supplierId: { in: partyIds } },
-        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : [])
+        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : []),
+        ...(partyName.length >= 3 ? [{ supplier: { name: { contains: partyName, mode: 'insensitive' as const } } }] : [])
       ]
     };
-    const returnWhere: any = {
+    const baseReturnWhere: any = {
       companyId,
       OR: [
         { supplierId: { in: partyIds } },
-        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : [])
+        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : []),
+        ...(partyName.length >= 3 ? [{ supplier: { name: { contains: partyName, mode: 'insensitive' as const } } }] : [])
       ]
     };
-    const invoiceWhere: any = {
+    const baseInvoiceWhere: any = {
       companyId,
       OR: [
         { partyId: { in: partyIds } },
@@ -592,16 +598,54 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       ]
     };
 
-    if (startDate || endDate) {
-      purchaseWhere.purchaseDate = dateFilter;
-      returnWhere.returnDate = dateFilter;
-      invoiceWhere.invoiceDate = dateFilter;
+    // 1. If startDate is set, compute Prior Period Accumulations to arrive at exact Period Opening Balance
+    let priorPurchasesTotal = 0;
+    let priorPurchasesPaid = 0;
+    let priorReturnsTotal = 0;
+    let priorInvoicesTotal = 0;
+    let priorInvoicesPaid = 0;
+
+    if (parsedStart) {
+      const [priorP, priorR, priorI] = await Promise.all([
+        prisma.purchase.findMany({
+          where: { ...basePurchaseWhere, purchaseDate: { lt: parsedStart } },
+          select: { totalAmount: true, paidAmount: true }
+        }),
+        prisma.purchaseReturn.findMany({
+          where: { ...baseReturnWhere, returnDate: { lt: parsedStart } },
+          select: { totalAmount: true }
+        }),
+        prisma.invoice.findMany({
+          where: { ...baseInvoiceWhere, invoiceDate: { lt: parsedStart } },
+          select: { grandTotal: true, paidAmount: true }
+        })
+      ]);
+
+      priorPurchasesTotal = priorP.reduce((sum, p) => sum + Number(p.totalAmount), 0);
+      priorPurchasesPaid = priorP.reduce((sum, p) => sum + Number(p.paidAmount || 0), 0);
+      priorReturnsTotal = priorR.reduce((sum, r) => sum + Number(r.totalAmount), 0);
+      priorInvoicesTotal = priorI.reduce((sum, i) => sum + Number(i.grandTotal), 0);
+      priorInvoicesPaid = priorI.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);
     }
 
-    // Fetch Purchases, Returns & Invoices
+    // 2. Query in-period purchases, returns, and invoices
+    const inPeriodPurchaseWhere = { ...basePurchaseWhere };
+    const inPeriodReturnWhere = { ...baseReturnWhere };
+    const inPeriodInvoiceWhere = { ...baseInvoiceWhere };
+
+    if (parsedStart || parsedEnd) {
+      const dFilter: any = {};
+      if (parsedStart) dFilter.gte = parsedStart;
+      if (parsedEnd) dFilter.lte = parsedEnd;
+
+      inPeriodPurchaseWhere.purchaseDate = dFilter;
+      inPeriodReturnWhere.returnDate = dFilter;
+      inPeriodInvoiceWhere.invoiceDate = dFilter;
+    }
+
     const [purchases, returns, invoices] = await Promise.all([
       prisma.purchase.findMany({
-        where: purchaseWhere,
+        where: inPeriodPurchaseWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -610,7 +654,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         orderBy: { purchaseDate: 'asc' }
       }),
       prisma.purchaseReturn.findMany({
-        where: returnWhere,
+        where: inPeriodReturnWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -619,7 +663,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         orderBy: { returnDate: 'asc' }
       }),
       prisma.invoice.findMany({
-        where: invoiceWhere,
+        where: inPeriodInvoiceWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -631,8 +675,19 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
 
     const rawOpeningBalance = Number(party.openingBalance || 0);
     const outstanding = Number(party.outstandingBalance || 0);
-    const effectiveOpeningBalance = rawOpeningBalance > 0 ? rawOpeningBalance : (purchases.length === 0 && returns.length === 0 && outstanding > 0 ? outstanding : rawOpeningBalance);
+    const initialOpeningBalance = rawOpeningBalance > 0
+      ? rawOpeningBalance
+      : (purchases.length === 0 && returns.length === 0 && outstanding > 0 ? outstanding : rawOpeningBalance);
     const openingType = party.openingBalanceType || (party.type === 'supplier' ? 'CR' : 'DR');
+
+    // Effective Period Opening Balance (Base + Prior Debits - Prior Credits)
+    let periodOpeningBalance = initialOpeningBalance;
+    if (parsedStart) {
+      // Prior debits increase balance, prior credits decrease balance
+      const priorDebit = priorPurchasesTotal + priorInvoicesTotal;
+      const priorCredit = priorReturnsTotal + priorPurchasesPaid + priorInvoicesPaid;
+      periodOpeningBalance = initialOpeningBalance + (priorDebit - priorCredit);
+    }
 
     // Build unified chronological ledger stream
     const rawTransactions: Array<{
@@ -647,17 +702,19 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       credit: number;
     }> = [];
 
-    // 0. Include Opening Balance Row if recorded or present
-    if (effectiveOpeningBalance > 0) {
+    // 0. Include Period Opening Balance Row
+    if (periodOpeningBalance !== 0 || purchases.length > 0 || returns.length > 0) {
       rawTransactions.push({
-        date: party.createdAt || new Date('2026-01-01'),
+        date: parsedStart || party.createdAt || new Date('2026-01-01'),
         type: 'OPENING_BALANCE',
         typeLabel: 'Opening Balance',
         voucherNo: 'OP-BAL',
         referenceId: party.id,
-        particulars: `Opening Balance as per Books (${openingType})`,
-        debit: openingType === 'CR' ? effectiveOpeningBalance : 0,
-        credit: openingType === 'DR' ? effectiveOpeningBalance : 0
+        particulars: parsedStart
+          ? `Opening Balance as on ${parsedStart.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+          : `Opening Balance as per Books (${openingType})`,
+        debit: periodOpeningBalance >= 0 ? periodOpeningBalance : 0,
+        credit: periodOpeningBalance < 0 ? Math.abs(periodOpeningBalance) : 0
       });
     }
 
@@ -665,7 +722,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     for (const p of purchases) {
       const tot = Number(p.totalAmount);
       const paid = Number(p.paidAmount || 0);
-      const itemSummary = p.items.map(i => `${i.item.name} (${i.batchNumber}) x ${i.quantity}`).join(', ');
+      const itemSummary = p.items.map(i => `${i.item?.name || 'Medicine'} (${i.batchNumber}) x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
         date: p.purchaseDate,
@@ -675,14 +732,14 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         referenceId: p.id,
         particulars: itemSummary || `Purchase Invoice #${p.invoiceNumber}`,
         itemDetails: p.items.map(i => ({
-          medicineName: i.item.name,
-          sku: i.item.sku,
+          medicineName: i.item?.name || 'Medicine',
+          sku: i.item?.sku || '',
           batchNumber: i.batchNumber,
           quantity: i.quantity,
           rate: Number(i.purchaseRate),
           total: Number(i.totalAmount)
         })),
-        debit: tot, // Debit increases supplier payable balance in pharma ledger
+        debit: tot,
         credit: 0
       });
 
@@ -704,7 +761,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     // 2. Supplier Returns / Credit Notes (CN)
     for (const r of returns) {
       const tot = Number(r.totalAmount);
-      const itemSummary = r.items.map(i => `${i.item.name} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
+      const itemSummary = r.items.map(i => `${i.item?.name || 'Medicine'} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
 
       rawTransactions.push({
         date: r.returnDate,
@@ -714,8 +771,8 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         referenceId: r.id,
         particulars: `Returned: ${itemSummary || r.reason || 'Expired/Slow-moving'}`,
         itemDetails: r.items.map(i => ({
-          medicineName: i.item.name,
-          sku: i.item.sku,
+          medicineName: i.item?.name || 'Medicine',
+          sku: i.item?.sku || '',
           batchNumber: i.batchNumber,
           strips: i.strips,
           looseQty: i.looseQty,
@@ -724,7 +781,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
           total: Number(i.totalAmount)
         })),
         debit: 0,
-        credit: tot // Credit Note decreases supplier payable balance
+        credit: tot
       });
     }
 
@@ -732,7 +789,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     for (const inv of invoices) {
       const tot = Number(inv.grandTotal);
       const paid = Number(inv.paidAmount || 0);
-      const itemSummary = inv.items.map(i => `${i.item.name} x ${i.quantity}`).join(', ');
+      const itemSummary = inv.items.map(i => `${i.item?.name || 'Medicine'} x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
         date: inv.invoiceDate,
@@ -742,8 +799,8 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         referenceId: inv.id,
         particulars: itemSummary || `Sales Invoice #${inv.invoiceNumber}`,
         itemDetails: inv.items.map(i => ({
-          medicineName: i.item.name,
-          sku: i.item.sku,
+          medicineName: i.item?.name || 'Medicine',
+          sku: i.item?.sku || '',
           quantity: i.quantity,
           rate: Number(i.unitPrice),
           total: Number(i.taxableAmount.add(i.cgstAmount).add(i.sgstAmount))
@@ -798,7 +855,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
 
     const finalOutstanding = ledgerTransactions.length > 0
       ? ledgerTransactions[ledgerTransactions.length - 1].runningBalance
-      : (effectiveOpeningBalance > 0 ? effectiveOpeningBalance : Number(party.outstandingBalance || 0));
+      : (periodOpeningBalance !== 0 ? periodOpeningBalance : Number(party.outstandingBalance || 0));
 
     res.status(200).json({
       party: {
@@ -811,15 +868,18 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         gstin: party.gstin,
         drugLicenseNo: party.drugLicenseNo,
         address: party.address,
-        openingBalance: effectiveOpeningBalance,
+        openingBalance: Math.round(periodOpeningBalance * 100) / 100,
         openingBalanceType: openingType,
         outstandingBalance: Math.round(finalOutstanding * 100) / 100
       },
       summary: {
-        openingBalance: effectiveOpeningBalance,
+        openingBalance: Math.round(periodOpeningBalance * 100) / 100,
         openingBalanceType: openingType,
+        purchaseCount: purchases.length,
         totalPurchases: Math.round(totalPurchases * 100) / 100,
+        returnCount: returns.length,
         totalReturns: Math.round(totalReturns * 100) / 100,
+        paymentCount: rawTransactions.filter(t => t.type === 'PAYMENT').length,
         totalPayments: Math.round(totalPayments * 100) / 100,
         netOutstanding: Math.round(finalOutstanding * 100) / 100
       },

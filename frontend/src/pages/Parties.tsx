@@ -95,8 +95,11 @@ export default function Parties() {
     summary: {
       openingBalance: number;
       openingBalanceType: string;
+      purchaseCount?: number;
       totalPurchases: number;
+      returnCount?: number;
       totalReturns: number;
+      paymentCount?: number;
       totalPayments: number;
       netOutstanding: number;
     };
@@ -2071,8 +2074,8 @@ export default function Parties() {
 
             {/* Date Range Filter Bar */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.8rem 1rem', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>PERIOD:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginRight: '4px' }}>PERIOD:</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -2092,6 +2095,27 @@ export default function Parties() {
                   }}
                 >
                   All Time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setStatementStartDate(today);
+                    setStatementEndDate(today);
+                    handleOpenStatement(statementParty, today, today);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: statementStartDate === new Date().toISOString().split('T')[0] && statementEndDate === new Date().toISOString().split('T')[0] ? '#0284c7' : '#ffffff',
+                    color: statementStartDate === new Date().toISOString().split('T')[0] && statementEndDate === new Date().toISOString().split('T')[0] ? '#ffffff' : '#0f172a',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Today
                 </button>
                 <button
                   type="button"
@@ -2116,6 +2140,29 @@ export default function Parties() {
                 >
                   This Month
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+                    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+                    setStatementStartDate(firstDayLastMonth);
+                    setStatementEndDate(lastDayLastMonth);
+                    handleOpenStatement(statementParty, firstDayLastMonth, lastDayLastMonth);
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Last Month
+                </button>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2134,49 +2181,76 @@ export default function Parties() {
                 />
                 <button
                   type="button"
-                  onClick={() => handleOpenStatement(statementParty)}
+                  onClick={() => handleOpenStatement(statementParty, statementStartDate, statementEndDate)}
                   className="btn btn-primary"
-                  style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 700 }}
+                  style={{ padding: '5px 14px', fontSize: '12px', fontWeight: 700 }}
                 >
                   Filter
                 </button>
               </div>
             </div>
 
-            {/* Financial Summary Metric Cards (Always Rendered Instantly) */}
+            {/* Financial Summary Metric Cards (5 Comprehensive Summary Cards) */}
             {(() => {
               const openBal = statementData?.summary?.openingBalance ?? Number(statementParty.openingBalance || statementParty.outstandingBalance || 0);
               const openType = statementData?.summary?.openingBalanceType ?? (statementParty.openingBalanceType || (statementParty.type === 'supplier' ? 'CR' : 'DR'));
               const totalInw = statementData?.summary?.totalPurchases ?? 0;
+              const purchaseCount = statementData?.summary?.purchaseCount ?? (totalInw > 0 ? 1 : 0);
               const totalRet = statementData?.summary?.totalReturns ?? 0;
+              const returnCount = statementData?.summary?.returnCount ?? (totalRet > 0 ? 1 : 0);
+              const totalPaid = statementData?.summary?.totalPayments ?? 0;
+              const paymentCount = statementData?.summary?.paymentCount ?? (totalPaid > 0 ? 1 : 0);
               const netBal = statementData?.summary?.netOutstanding ?? Number(statementParty.outstandingBalance || openBal);
 
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '1.4rem' }}>
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px', marginBottom: '1.4rem' }}>
+                  {/* Card 1: Opening Balance */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Opening Balance</div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
-                      ₹{openBal.toFixed(2)} <span style={{ fontSize: '12px', color: '#64748b' }}>({openType})</span>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                      ₹{openBal.toFixed(2)} <span style={{ fontSize: '11px', color: '#64748b' }}>({openType})</span>
                     </div>
                   </div>
 
-                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase' }}>Total Inward (Debit)</div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#1d4ed8', marginTop: '2px' }}>
+                  {/* Card 2: Total Inward Purchases */}
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Inward Purchases</span>
+                      {purchaseCount > 0 && <span style={{ fontSize: '10px', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px' }}>{purchaseCount} bills</span>}
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8', marginTop: '2px' }}>
                       +₹{totalInw.toFixed(2)}
                     </div>
                   </div>
 
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase' }}>Returns / CN (Credit)</div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>
+                  {/* Card 3: Supplier Returns / CN */}
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Returns (CN)</span>
+                      {returnCount > 0 && <span style={{ fontSize: '10px', background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>{returnCount} CN</span>}
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>
                       -₹{totalRet.toFixed(2)}
                     </div>
                   </div>
 
-                  <div style={{ background: netBal > 0 ? '#fef2f2' : '#f0fdf4', border: '1.5px solid ' + (netBal > 0 ? '#fca5a5' : '#86efac'), borderRadius: '8px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: netBal > 0 ? '#b91c1c' : '#15803d', textTransform: 'uppercase' }}>Net Outstanding Payable</div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: netBal > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
+                  {/* Card 4: Payments Settled */}
+                  <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#854d0e', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Payments Paid</span>
+                      {paymentCount > 0 && <span style={{ fontSize: '10px', background: '#fef9c3', padding: '1px 5px', borderRadius: '4px' }}>{paymentCount} paid</span>}
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#854d0e', marginTop: '2px' }}>
+                      -₹{totalPaid.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {/* Card 5: Net Outstanding Balance */}
+                  <div style={{ background: netBal > 0 ? '#fef2f2' : '#f0fdf4', border: '1.5px solid ' + (netBal > 0 ? '#fca5a5' : '#86efac'), borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: netBal > 0 ? '#b91c1c' : '#15803d', textTransform: 'uppercase' }}>
+                      {statementParty.type === 'supplier' ? 'Net Payable' : 'Net Receivable'}
+                    </div>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: netBal > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
                       ₹{netBal.toFixed(2)}
                     </div>
                   </div>
