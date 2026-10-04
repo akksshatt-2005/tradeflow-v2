@@ -168,4 +168,88 @@ router.get('/ledger', async (req: CompanyScopedRequest, res: Response) => {
   }
 });
 
+/**
+ * POST /inventory/quick-return
+ * 1-Click Patient Medicine Return / Direct Stock Inward with audit logging
+ */
+router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const userId = req.user!.userId;
+  const { batchId, strips = 0, looseQty = 0, quantity = 0, refundAmount = 0, patientName, reason } = req.body;
+
+  if (!batchId) {
+    res.status(400).json({ error: 'Batch ID is required' });
+    return;
+  }
+
+  try {
+    const batch = await prisma.batch.findFirst({
+      where: { id: batchId, companyId },
+      include: { item: true }
+    });
+
+    if (!batch) {
+      res.status(404).json({ error: 'Batch not found in this company' });
+      return;
+    }
+
+    const factor = batch.item.conversionFactor || 1;
+    const numStrips = Math.max(0, parseInt(strips) || 0);
+    const numLoose = Math.max(0, parseInt(looseQty) || 0);
+    const directQty = Math.max(0, parseInt(quantity) || 0);
+
+    const totalUnitsToAdd = (numStrips > 0 || numLoose > 0)
+      ? (numStrips * factor) + numLoose
+      : directQty;
+
+    if (totalUnitsToAdd <= 0) {
+      res.status(400).json({ error: 'Return quantity must be greater than 0' });
+      return;
+    }
+
+    const calculatedRefund = refundAmount !== undefined && refundAmount !== null && Number(refundAmount) > 0
+      ? Number(refundAmount)
+      : Math.round(((numStrips * Number(batch.pts || batch.mrp)) + (numLoose * (Number(batch.pts || batch.mrp) / factor))) * 100) / 100;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Increment batch stock
+      const updatedBatch = await tx.batch.update({
+        where: { id: batch.id },
+        data: {
+          currentStock: { increment: totalUnitsToAdd }
+        }
+      });
+
+      // 2. Log immutable stock ledger audit entry
+      await tx.stockLedger.create({
+        data: {
+          companyId,
+          itemId: batch.itemId,
+          batchId: batch.id,
+          entryType: 'SALE_RETURN',
+          quantity: totalUnitsToAdd,
+          unitPrice: Number(batch.pts) || Number(batch.mrp),
+          notes: reason || `Patient Return${patientName ? ` (${patientName})` : ''}: +${totalUnitsToAdd} units (Refund ₹${calculatedRefund.toFixed(2)})`,
+          createdBy: userId
+        }
+      });
+
+      return updatedBatch;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully returned ${totalUnitsToAdd} units of ${batch.item.name} into batch ${batch.batchNumber}`,
+      medicineName: batch.item.name,
+      batchNumber: batch.batchNumber,
+      unitsAdded: totalUnitsToAdd,
+      newStock: result.currentStock,
+      refundAmount: calculatedRefund
+    });
+  } catch (error: any) {
+    console.error('Quick medicine return error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process quick medicine return' });
+  }
+});
+
 export default router;
