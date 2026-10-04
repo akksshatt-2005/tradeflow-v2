@@ -112,6 +112,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [billDiscountPct, setBillDiscountPct] = useState<number>(0);
+  const [manualDiscountOverride, setManualDiscountOverride] = useState(false);
   const [paidAmount, setPaidAmount] = useState<string>('');
   const [isInterState, setIsInterState] = useState(false);
   const [isGstBill, setIsGstBill] = useState(false);
@@ -375,6 +376,17 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     return sum + ((lineGross * item.discountPercent) / 100);
   }, 0);
   const grossTaxable = Math.max(0, valueOfGoods - totalItemDiscount);
+
+  // Automatic 10% Scheme on bills exceeding ₹500
+  useEffect(() => {
+    if (!manualDiscountOverride && !editingInvoiceId) {
+      if (grossTaxable > 500) {
+        setBillDiscountPct(10);
+      } else {
+        setBillDiscountPct(0);
+      }
+    }
+  }, [grossTaxable, manualDiscountOverride, editingInvoiceId]);
 
   const billDiscountAmt = (grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100;
   const netTaxable = Math.max(0, grossTaxable - billDiscountAmt);
@@ -733,7 +745,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           </div>
 
           {/* Inter-state & Bill Discount */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
             {isGstBill && (
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}>
                 <input
@@ -746,7 +758,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </label>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
+            {/* Scheme Indicator Badge */}
+            {grossTaxable > 500 && billDiscountPct === 10 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', padding: '0.25rem 0.6rem', borderRadius: '6px', fontWeight: '700' }}>
+                <span>🎁 10% Scheme Applied (Bill &gt; ₹500)</span>
+                <span style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '800' }}>(-₹{billDiscountAmt.toFixed(2)})</span>
+              </div>
+            ) : grossTaxable > 0 && grossTaxable <= 500 ? (
+              <div style={{ fontSize: '0.74rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
+                💡 Add <strong style={{ color: '#0f766e' }}>₹{(500 - grossTaxable + 0.01).toFixed(2)}</strong> more for <strong>10% Scheme OFF</strong>
+              </div>
+            ) : null}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem' }}>
               <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Bill Disc:</span>
               <input
                 type="number"
@@ -755,12 +779,15 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 step="0.5"
                 placeholder="0"
                 value={billDiscountPct === 0 ? '' : billDiscountPct}
-                onChange={e => setBillDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                onChange={e => {
+                  setManualDiscountOverride(true);
+                  setBillDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)));
+                }}
                 style={{
-                  width: '50px',
+                  width: '52px',
                   padding: '0.3rem 0.4rem',
                   background: 'var(--card-bg)',
-                  border: '1px solid var(--border-color)',
+                  border: grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
                   borderRadius: '5px',
                   color: 'var(--text-primary)',
                   textAlign: 'center',
@@ -769,6 +796,20 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 }}
               />
               <span style={{ color: 'var(--text-muted)' }}>%</span>
+              {manualDiscountOverride && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualDiscountOverride(false);
+                    if (grossTaxable > 500) setBillDiscountPct(10);
+                    else setBillDiscountPct(0);
+                  }}
+                  title="Reset to automatic 10% scheme for bills > ₹500"
+                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: '0 2px' }}
+                >
+                  ↺ Auto
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1185,8 +1226,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
-              <span>DISCOUNT :</span>
-              <span>- ₹{(totalItemDiscount + billDiscountAmt).toFixed(2)}</span>
+              <span>
+                DISCOUNT {billDiscountPct > 0 ? `(${billDiscountPct}%${grossTaxable > 500 && billDiscountPct === 10 ? ' Scheme' : ''})` : ''} :
+              </span>
+              <span style={{ fontWeight: '700' }}>- ₹{(totalItemDiscount + billDiscountAmt).toFixed(2)}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
@@ -1399,6 +1442,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #000', paddingTop: '0.6rem', fontSize: '0.85rem' }}>
                 <div style={{ width: '260px' }}>
+                  {Number(createdInvoice.billDiscountAmt || 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', color: '#dc2626' }}>
+                      <span>Discount ({Number(createdInvoice.billDiscountPct || 0)}%{Number(createdInvoice.billDiscountPct || 0) === 10 ? ' Scheme' : ''}):</span>
+                      <span>-₹{Number(createdInvoice.billDiscountAmt).toFixed(2)}</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                     <span>Taxable Amount:</span>
                     <span>₹{Number(createdInvoice.taxableAmount).toFixed(2)}</span>

@@ -764,6 +764,12 @@ export default function Sales() {
             {/* Total Calculations */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', fontSize: '0.9rem' }}>
               <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {Number(viewingInvoice.billDiscountAmt || 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
+                    <span>Discount ({Number(viewingInvoice.billDiscountPct || 0)}%{Number(viewingInvoice.billDiscountPct || 0) === 10 ? ' Scheme' : ''}):</span>
+                    <span style={{ fontWeight: '700' }}>-₹{Number(viewingInvoice.billDiscountAmt).toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                   <span>Taxable Amount:</span>
                   <span>₹{Number(viewingInvoice.taxableAmount).toFixed(2)}</span>
