@@ -2186,8 +2186,8 @@ export default function Parties() {
                                 borderRadius: '4px',
                                 fontSize: '11px',
                                 fontWeight: 700,
-                                background: t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : '#f1f5f9',
-                                color: t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : '#475569'
+                                background: t.type === 'OPENING_BALANCE' ? '#fef3c7' : t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : t.type === 'SALE' ? '#e0f2fe' : '#f1f5f9',
+                                color: t.type === 'OPENING_BALANCE' ? '#b45309' : t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : t.type === 'SALE' ? '#0284c7' : '#475569'
                               }}>
                                 {t.typeLabel}
                               </span>

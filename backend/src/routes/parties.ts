@@ -548,9 +548,34 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       dateFilter.lte = end;
     }
 
-    const purchaseWhere: any = { companyId, supplierId: id };
-    const returnWhere: any = { companyId, supplierId: id };
-    const invoiceWhere: any = { companyId, partyId: id };
+    // Find all party IDs in this company that share the same ID, name, mailTo, or GSTIN
+    const partyName = party.name.trim();
+    const partyMailTo = (party.mailTo || '').trim();
+    const partyGstin = (party.gstin || '').trim();
+
+    const relatedParties = await prisma.party.findMany({
+      where: {
+        companyId,
+        OR: [
+          { id },
+          ...(partyName ? [{ name: { equals: partyName, mode: 'insensitive' as const } }] : []),
+          ...(partyMailTo ? [{ mailTo: { equals: partyMailTo, mode: 'insensitive' as const } }] : []),
+          ...(partyGstin ? [{ gstin: { equals: partyGstin, mode: 'insensitive' as const } }] : [])
+        ]
+      },
+      select: { id: true }
+    });
+    const partyIds = Array.from(new Set(relatedParties.map(p => p.id)));
+
+    const purchaseWhere: any = { companyId, supplierId: { in: partyIds } };
+    const returnWhere: any = { companyId, supplierId: { in: partyIds } };
+    const invoiceWhere: any = {
+      companyId,
+      OR: [
+        { partyId: { in: partyIds } },
+        ...(partyName ? [{ customerName: { equals: partyName, mode: 'insensitive' as const } }] : [])
+      ]
+    };
 
     if (startDate || endDate) {
       purchaseWhere.purchaseDate = dateFilter;
@@ -595,7 +620,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     // Build unified chronological ledger stream
     const rawTransactions: Array<{
       date: Date;
-      type: 'PURCHASE' | 'PURCHASE_RETURN' | 'PAYMENT' | 'SALE';
+      type: 'OPENING_BALANCE' | 'PURCHASE' | 'PURCHASE_RETURN' | 'PAYMENT' | 'SALE';
       typeLabel: string;
       voucherNo: string;
       referenceId: string;
@@ -604,6 +629,20 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       debit: number;
       credit: number;
     }> = [];
+
+    // 0. Include Opening Balance Row if recorded
+    if (openingBalance > 0 && !startDate) {
+      rawTransactions.push({
+        date: party.createdAt,
+        type: 'OPENING_BALANCE',
+        typeLabel: 'Opening Balance',
+        voucherNo: 'OP-BAL',
+        referenceId: party.id,
+        particulars: `Opening Balance as per Books (${openingType})`,
+        debit: openingType === 'CR' ? openingBalance : 0,
+        credit: openingType === 'DR' ? openingBalance : 0
+      });
+    }
 
     // 1. Inward Purchases
     for (const p of purchases) {
@@ -672,17 +711,57 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       });
     }
 
-    // 3. Sort chronologically
+    // 3. Customer Sales Invoices
+    for (const inv of invoices) {
+      const tot = Number(inv.grandTotal);
+      const paid = Number(inv.paidAmount || 0);
+      const itemSummary = inv.items.map(i => `${i.item.name} x ${i.quantity}`).join(', ');
+
+      rawTransactions.push({
+        date: inv.invoiceDate,
+        type: 'SALE',
+        typeLabel: 'Sales Invoice',
+        voucherNo: inv.invoiceNumber,
+        referenceId: inv.id,
+        particulars: itemSummary || `Sales Invoice #${inv.invoiceNumber}`,
+        itemDetails: inv.items.map(i => ({
+          medicineName: i.item.name,
+          sku: i.item.sku,
+          quantity: i.quantity,
+          rate: Number(i.unitPrice),
+          total: Number(i.taxableAmount.add(i.cgstAmount).add(i.sgstAmount))
+        })),
+        debit: tot,
+        credit: 0
+      });
+
+      if (paid > 0) {
+        rawTransactions.push({
+          date: inv.invoiceDate,
+          type: 'PAYMENT',
+          typeLabel: 'Payment Received',
+          voucherNo: `REC-${inv.invoiceNumber}`,
+          referenceId: inv.id,
+          particulars: `Received for Bill #${inv.invoiceNumber} (${inv.paymentMode})`,
+          debit: 0,
+          credit: paid
+        });
+      }
+    }
+
+    // 4. Sort chronologically
     rawTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    // 4. Calculate running balance
-    let runningBalance = openingType === 'CR' ? openingBalance : -openingBalance;
+    // 5. Calculate running balance
+    let runningBalance = (startDate && openingBalance > 0) ? (openingType === 'CR' ? openingBalance : -openingBalance) : 0;
     let totalPurchases = 0;
     let totalReturns = 0;
     let totalPayments = 0;
 
     const ledgerTransactions = rawTransactions.map(t => {
-      if (t.type === 'PURCHASE') {
+      if (t.type === 'OPENING_BALANCE') {
+        runningBalance += (t.debit - t.credit);
+      } else if (t.type === 'PURCHASE' || t.type === 'SALE') {
         totalPurchases += t.debit;
         runningBalance += t.debit;
       } else if (t.type === 'PURCHASE_RETURN') {
@@ -721,7 +800,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         totalPurchases: Math.round(totalPurchases * 100) / 100,
         totalReturns: Math.round(totalReturns * 100) / 100,
         totalPayments: Math.round(totalPayments * 100) / 100,
-        netOutstanding: Math.round(runningBalance * 100) / 100
+        netOutstanding: Math.round((runningBalance || openingBalance) * 100) / 100
       },
       transactions: ledgerTransactions
     });
