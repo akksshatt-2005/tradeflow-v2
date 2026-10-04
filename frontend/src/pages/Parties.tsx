@@ -27,7 +27,8 @@ import {
   Trash2,
   Download,
   UploadCloud,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RotateCcw
 } from 'lucide-react';
 
 interface PartyLedger {
@@ -113,6 +114,7 @@ export default function Parties() {
     }>;
   } | null>(null);
   const [loadingStatement, setLoadingStatement] = useState(false);
+  const [statementError, setStatementError] = useState<string | null>(null);
   const [statementStartDate, setStatementStartDate] = useState('');
   const [statementEndDate, setStatementEndDate] = useState('');
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -121,6 +123,7 @@ export default function Parties() {
     setStatementParty(party);
     setShowStatementModal(true);
     setLoadingStatement(true);
+    setStatementError(null);
     setExpandedRows({});
 
     const s = start !== undefined ? start : '';
@@ -139,8 +142,9 @@ export default function Parties() {
         companyId: activeCompany?.id
       });
       setStatementData(res);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load party statement:', err);
+      setStatementError(err.message || 'Failed to load statement. Backend server may be starting up, please click Retry.');
     } finally {
       setLoadingStatement(false);
     }
@@ -1998,7 +2002,7 @@ export default function Parties() {
             display: 'flex',
             flexDirection: 'column'
           }}>
-            {/* Modal Header */}
+            {/* Top Toolbar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.2rem', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: '1rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -2020,6 +2024,14 @@ export default function Parties() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => handleOpenStatement(statementParty)}
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700 }}
+                  title="Refresh latest statement data"
+                >
+                  <RotateCcw size={14} /> Refresh
+                </button>
                 <button
                   onClick={handleExportStatementExcel}
                   className="btn btn-secondary"
@@ -2043,6 +2055,19 @@ export default function Parties() {
                 </button>
               </div>
             </div>
+
+            {/* Error Notification with Retry */}
+            {statementError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                <span>⚠️ {statementError}</span>
+                <button
+                  onClick={() => handleOpenStatement(statementParty)}
+                  style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  🔄 Retry Now
+                </button>
+              </div>
+            )}
 
             {/* Date Range Filter Bar */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.8rem 1rem', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -2118,153 +2143,183 @@ export default function Parties() {
               </div>
             </div>
 
-            {/* Financial Summary Metric Cards */}
-            {statementData && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '1.4rem' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Opening Balance</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
-                    ₹{statementData.summary.openingBalance.toFixed(2)} <span style={{ fontSize: '12px', color: '#64748b' }}>({statementData.summary.openingBalanceType})</span>
-                  </div>
-                </div>
+            {/* Financial Summary Metric Cards (Always Rendered Instantly) */}
+            {(() => {
+              const openBal = statementData?.summary?.openingBalance ?? Number(statementParty.openingBalance || statementParty.outstandingBalance || 0);
+              const openType = statementData?.summary?.openingBalanceType ?? (statementParty.openingBalanceType || (statementParty.type === 'supplier' ? 'CR' : 'DR'));
+              const totalInw = statementData?.summary?.totalPurchases ?? 0;
+              const totalRet = statementData?.summary?.totalReturns ?? 0;
+              const netBal = statementData?.summary?.netOutstanding ?? Number(statementParty.outstandingBalance || openBal);
 
-                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase' }}>Total Inward (Debit)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#1d4ed8', marginTop: '2px' }}>
-                    +₹{statementData.summary.totalPurchases.toFixed(2)}
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '1.4rem' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Opening Balance</div>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                      ₹{openBal.toFixed(2)} <span style={{ fontSize: '12px', color: '#64748b' }}>({openType})</span>
+                    </div>
                   </div>
-                </div>
 
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase' }}>Returns / CN (Credit)</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>
-                    -₹{statementData.summary.totalReturns.toFixed(2)}
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase' }}>Total Inward (Debit)</div>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#1d4ed8', marginTop: '2px' }}>
+                      +₹{totalInw.toFixed(2)}
+                    </div>
                   </div>
-                </div>
 
-                <div style={{ background: statementData.summary.netOutstanding > 0 ? '#fef2f2' : '#f0fdf4', border: '1.5px solid ' + (statementData.summary.netOutstanding > 0 ? '#fca5a5' : '#86efac'), borderRadius: '8px', padding: '12px 14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: statementData.summary.netOutstanding > 0 ? '#b91c1c' : '#15803d', textTransform: 'uppercase' }}>Net Outstanding Payable</div>
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: statementData.summary.netOutstanding > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
-                    ₹{statementData.summary.netOutstanding.toFixed(2)}
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase' }}>Returns / CN (Credit)</div>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#15803d', marginTop: '2px' }}>
+                      -₹{totalRet.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div style={{ background: netBal > 0 ? '#fef2f2' : '#f0fdf4', border: '1.5px solid ' + (netBal > 0 ? '#fca5a5' : '#86efac'), borderRadius: '8px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: netBal > 0 ? '#b91c1c' : '#15803d', textTransform: 'uppercase' }}>Net Outstanding Payable</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: netBal > 0 ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
+                      ₹{netBal.toFixed(2)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Statement Transactions Table */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {loadingStatement ? (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                  Loading ledger transactions...
-                </div>
-              ) : !statementData || statementData.transactions.length === 0 ? (
-                <div style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                  <p style={{ margin: 0, fontWeight: 700, color: '#475569' }}>No purchase bills or return vouchers found in this period.</p>
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: 700 }}>
-                      <th style={{ padding: '0.65rem 0.8rem' }}>Date</th>
-                      <th style={{ padding: '0.65rem 0.8rem' }}>Voucher Type</th>
-                      <th style={{ padding: '0.65rem 0.8rem' }}>Voucher / Bill #</th>
-                      <th style={{ padding: '0.65rem 0.8rem' }}>Particulars / Items</th>
-                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Debit (₹)</th>
-                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Credit (₹)</th>
-                      <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Balance (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statementData.transactions.map((t, idx) => {
-                      const isExpanded = !!expandedRows[t.voucherNo || String(idx)];
-                      return (
-                        <React.Fragment key={idx}>
-                          <tr style={{ borderBottom: '1px solid #e2e8f0', background: t.type === 'PURCHASE_RETURN' ? 'rgba(16, 185, 129, 0.04)' : 'transparent' }}>
-                            <td style={{ padding: '0.65rem 0.8rem', whiteSpace: 'nowrap', color: '#64748b' }}>
-                              {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem' }}>
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                background: t.type === 'OPENING_BALANCE' ? '#fef3c7' : t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : t.type === 'SALE' ? '#e0f2fe' : '#f1f5f9',
-                                color: t.type === 'OPENING_BALANCE' ? '#b45309' : t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : t.type === 'SALE' ? '#0284c7' : '#475569'
-                              }}>
-                                {t.typeLabel}
-                              </span>
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
-                              {t.voucherNo}
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem' }}>
-                              <div style={{ color: '#0f172a', fontWeight: 600 }}>{t.particulars}</div>
-                              {t.itemDetails && t.itemDetails.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedRows(prev => ({ ...prev, [t.voucherNo || String(idx)]: !isExpanded }))}
-                                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 0 0 0' }}
-                                >
-                                  {isExpanded ? '▲ Hide Items' : `▼ View ${t.itemDetails.length} items`}
-                                </button>
-                              )}
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.debit > 0 ? '#1d4ed8' : '#cbd5e1' }}>
-                              {t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '—'}
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.credit > 0 ? '#16a34a' : '#cbd5e1' }}>
-                              {t.credit > 0 ? `-₹${t.credit.toFixed(2)}` : '—'}
-                            </td>
-                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
-                              ₹{t.runningBalance.toFixed(2)}
-                            </td>
-                          </tr>
+            {(() => {
+              const openBal = statementData?.summary?.openingBalance ?? Number(statementParty.openingBalance || statementParty.outstandingBalance || 0);
+              const openType = statementData?.summary?.openingBalanceType ?? (statementParty.openingBalanceType || (statementParty.type === 'supplier' ? 'CR' : 'DR'));
 
-                          {/* Expandable Item Detail Rows */}
-                          {isExpanded && t.itemDetails && (
-                            <tr style={{ background: '#f8fafc' }}>
-                              <td colSpan={7} style={{ padding: '0.6rem 1.2rem', borderBottom: '1px solid #cbd5e1' }}>
-                                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.6rem' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
-                                    Line-Item Breakdown:
-                                  </div>
-                                  <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                      <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', textAlign: 'left' }}>
-                                        <th style={{ padding: '4px 6px' }}>Medicine</th>
-                                        <th style={{ padding: '4px 6px' }}>Batch</th>
-                                        <th style={{ padding: '4px 6px', textAlign: 'center' }}>Qty</th>
-                                        <th style={{ padding: '4px 6px', textAlign: 'right' }}>Rate (₹)</th>
-                                        <th style={{ padding: '4px 6px', textAlign: 'right' }}>Total (₹)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {t.itemDetails.map((it, iIdx) => (
-                                        <tr key={iIdx} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                          <td style={{ padding: '4px 6px', fontWeight: 600 }}>{it.medicineName}</td>
-                                          <td style={{ padding: '4px 6px', fontFamily: 'monospace' }}>{it.batchNumber}</td>
-                                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                                            {it.strips !== undefined ? `${it.strips} Str ${it.looseQty > 0 ? `+ ${it.looseQty} Tab` : ''}` : it.quantity}
-                                          </td>
-                                          <td style={{ padding: '4px 6px', textAlign: 'right' }}>₹{Number(it.rate).toFixed(2)}</td>
-                                          <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.total).toFixed(2)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+              const displayTransactions = (statementData?.transactions && statementData.transactions.length > 0)
+                ? statementData.transactions
+                : (openBal > 0 ? [{
+                    date: statementParty.createdAt || new Date().toISOString(),
+                    type: 'OPENING_BALANCE',
+                    typeLabel: 'Opening Balance',
+                    voucherNo: 'OP-BAL',
+                    referenceId: statementParty.id,
+                    particulars: `Opening Balance as per Books (${openType})`,
+                    debit: openType === 'CR' ? openBal : 0,
+                    credit: openType === 'DR' ? openBal : 0,
+                    runningBalance: openBal,
+                    itemDetails: undefined
+                  }] : []);
+
+              return (
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  {loadingStatement ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                      Loading ledger transactions...
+                    </div>
+                  ) : displayTransactions.length === 0 ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#475569' }}>No purchase bills or return vouchers found in this period.</p>
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#475569', textAlign: 'left', fontWeight: 700 }}>
+                          <th style={{ padding: '0.65rem 0.8rem' }}>Date</th>
+                          <th style={{ padding: '0.65rem 0.8rem' }}>Voucher Type</th>
+                          <th style={{ padding: '0.65rem 0.8rem' }}>Voucher / Bill #</th>
+                          <th style={{ padding: '0.65rem 0.8rem' }}>Particulars / Items</th>
+                          <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Debit (₹)</th>
+                          <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Credit (₹)</th>
+                          <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Balance (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayTransactions.map((t, idx) => {
+                          const isExpanded = !!expandedRows[t.voucherNo || String(idx)];
+                          return (
+                            <React.Fragment key={idx}>
+                              <tr style={{ borderBottom: '1px solid #e2e8f0', background: t.type === 'PURCHASE_RETURN' ? 'rgba(16, 185, 129, 0.04)' : (t.type === 'OPENING_BALANCE' ? 'rgba(254, 243, 199, 0.2)' : 'transparent') }}>
+                                <td style={{ padding: '0.65rem 0.8rem', whiteSpace: 'nowrap', color: '#64748b' }}>
+                                  {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem' }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    background: t.type === 'OPENING_BALANCE' ? '#fef3c7' : t.type === 'PURCHASE_RETURN' ? '#dcfce7' : t.type === 'PURCHASE' ? '#eff6ff' : t.type === 'SALE' ? '#e0f2fe' : '#f1f5f9',
+                                    color: t.type === 'OPENING_BALANCE' ? '#b45309' : t.type === 'PURCHASE_RETURN' ? '#166534' : t.type === 'PURCHASE' ? '#1d4ed8' : t.type === 'SALE' ? '#0284c7' : '#475569'
+                                  }}>
+                                    {t.typeLabel}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                                  {t.voucherNo}
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem' }}>
+                                  <div style={{ color: '#0f172a', fontWeight: 600 }}>{t.particulars}</div>
+                                  {t.itemDetails && t.itemDetails.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedRows(prev => ({ ...prev, [t.voucherNo || String(idx)]: !isExpanded }))}
+                                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: '2px 0 0 0' }}
+                                    >
+                                      {isExpanded ? '▲ Hide Items' : `▼ View ${t.itemDetails.length} items`}
+                                    </button>
+                                  )}
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.debit > 0 ? '#1d4ed8' : '#cbd5e1' }}>
+                                  {t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '—'}
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 700, color: t.credit > 0 ? '#16a34a' : '#cbd5e1' }}>
+                                  {t.credit > 0 ? `-₹${t.credit.toFixed(2)}` : '—'}
+                                </td>
+                                <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                                  ₹{t.runningBalance.toFixed(2)}
+                                </td>
+                              </tr>
+
+                              {/* Expandable Item Detail Rows */}
+                              {isExpanded && t.itemDetails && (
+                                <tr style={{ background: '#f8fafc' }}>
+                                  <td colSpan={7} style={{ padding: '0.6rem 1.2rem', borderBottom: '1px solid #cbd5e1' }}>
+                                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.6rem' }}>
+                                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                        Line-Item Breakdown:
+                                      </div>
+                                      <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                          <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', textAlign: 'left' }}>
+                                            <th style={{ padding: '4px 6px' }}>Medicine</th>
+                                            <th style={{ padding: '4px 6px' }}>Batch</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'center' }}>Qty</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'right' }}>Rate (₹)</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'right' }}>Total (₹)</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {t.itemDetails.map((it: any, iIdx: number) => (
+                                            <tr key={iIdx} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                              <td style={{ padding: '4px 6px', fontWeight: 600 }}>{it.medicineName}</td>
+                                              <td style={{ padding: '4px 6px', fontFamily: 'monospace' }}>{it.batchNumber}</td>
+                                              <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                                                {it.strips !== undefined ? `${it.strips} Str ${it.looseQty > 0 ? `+ ${it.looseQty} Tab` : ''}` : it.quantity}
+                                              </td>
+                                              <td style={{ padding: '4px 6px', textAlign: 'right' }}>₹{Number(it.rate).toFixed(2)}</td>
+                                              <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.total).toFixed(2)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Modal Footer */}
             <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)', display: 'flex', justifyContent: 'flex-end' }}>
