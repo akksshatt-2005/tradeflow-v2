@@ -449,7 +449,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Quick Patient Return Shortcut Button */}
             <button
               onClick={handleOpenReturnModal}
@@ -474,225 +474,487 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               <span>↩️ Quick Return</span>
             </button>
 
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              User: <strong style={{ color: '#0f172a' }}>{user?.username}</strong>
-            </span>
+            {/* User Pill */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 10px',
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '7px',
+              fontSize: '12px'
+            }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0284c7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800 }}>
+                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <span style={{ fontWeight: 700, color: '#0f172a' }}>{user?.username}</span>
+            </div>
+
+            {/* Prominent Top-Right Logout Button */}
+            <button
+              onClick={logout}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 12px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: '1px solid #fca5a5',
+                borderRadius: '7px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#fecaca'}
+              onMouseLeave={e => e.currentTarget.style.background = '#fee2e2'}
+              title="Log out of system"
+            >
+              <LogOut size={13} />
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
         {/* Page Body */}
         <main className="page-content">
           {activeTab === 'dashboard' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              
+              {/* Premium Welcome Hero Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f766e 100%)',
+                color: '#ffffff',
+                borderRadius: '14px',
+                padding: '24px 28px',
+                boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ zIndex: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      🏥 Pharmacy Command Center
+                    </span>
+                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>•</span>
+                    <span style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 500 }}>
+                      {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                    {activeCompany?.name}
+                  </h1>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+                    Logged in as <strong style={{ color: '#38bdf8' }}>{user?.username}</strong> ({activeCompany?.role.toUpperCase()}) • Fast POS, Smart FEFO Inventory & Returns
+                  </p>
+
+                  {/* Active Store Ticker Chips */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#86efac', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      🟢 Live Inventory Sync
+                    </span>
+                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#fef08a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      🎁 10% Scheme Active (&gt; ₹500)
+                    </span>
+                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      👨‍⚕️ Default: Dr. Priyadarshi Srivastava (UPMC 59048)
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', zIndex: 2, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setActiveTab('sales')}
+                    style={{
+                      background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 18px',
+                      fontSize: '13.5px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 14px rgba(20, 184, 166, 0.4)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <ShoppingCart size={17} />
+                    <span>⚡ Launch POS Billing [F2]</span>
+                  </button>
+                  <button
+                    onClick={handleOpenReturnModal}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      borderRadius: '8px',
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      backdropFilter: 'blur(4px)',
+                      transition: 'background 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
+                  >
+                    <RotateCcw size={15} />
+                    <span>↩️ Quick Return</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Top Row Metric Cards */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                 gap: '16px'
               }}>
-                <div className="card" style={{ padding: '16px' }}>
+                {/* Total Medicines */}
+                <div className="card" style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #e0f2fe',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%)',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.05)',
+                  position: 'relative'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                        Total Medicines
+                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Medicines Catalog
                       </div>
-                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                      <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                         {loadingSummary ? '...' : summary?.totalMedicines || 0}
                       </div>
                     </div>
-                    <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '6px', color: '#0284c7' }}>
-                      <Pill size={20} />
+                    <div style={{ background: '#0284c7', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
+                      <Pill size={22} />
                     </div>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('medicines')}
-                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11.5px', fontWeight: 600, padding: 0, marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    View Catalog <ArrowRight size={12} />
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>Active formulations & SKUs</span>
+                    <button
+                      onClick={() => setActiveTab('medicines')}
+                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      View All <ArrowRight size={12} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="card" style={{ padding: '16px' }}>
+                {/* Stock Value (Cost) */}
+                <div className="card" style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #dcfce7',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                        Stock Value (at Cost)
+                      <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Stock Valuation (Cost)
                       </div>
-                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                         ₹{loadingSummary ? '...' : (summary?.stockValueAtCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
-                    <div style={{ background: '#ecfdf5', padding: '8px', borderRadius: '6px', color: '#10b981' }}>
-                      <Boxes size={20} />
+                    <div style={{ background: '#10b981', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)' }}>
+                      <Boxes size={22} />
                     </div>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '12px' }}>
-                    {summary?.activeBatches || 0} active batches in stock
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '11.5px', color: '#166534', fontWeight: 700 }}>
+                      ✓ {summary?.activeBatches || 0} active batch lots
+                    </span>
+                    <button
+                      onClick={() => setActiveTab('batches')}
+                      style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      Batches <ArrowRight size={12} />
+                    </button>
                   </div>
                 </div>
 
-                <div className="card" style={{ padding: '16px' }}>
+                {/* Stock Value (MRP) */}
+                <div className="card" style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #fef3c7',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
+                  boxShadow: '0 4px 12px rgba(217, 119, 6, 0.05)'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                        Stock Value (at MRP)
+                      <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Retail Stock Value (MRP)
                       </div>
-                      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', marginTop: '4px' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
                         ₹{loadingSummary ? '...' : (summary?.stockValueAtRetail || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </div>
                     </div>
-                    <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '6px', color: '#d97706' }}>
-                      <TrendingUp size={20} />
+                    <div style={{ background: '#d97706', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)' }}>
+                      <TrendingUp size={22} />
                     </div>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '12px' }}>
-                    Retail gross valuation
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '11.5px', color: '#b45309', fontWeight: 600 }}>Gross Realizable Retail</span>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>Tax Inclusive</span>
                   </div>
                 </div>
 
-                <div className="card" style={{ padding: '16px' }}>
+                {/* Expiry Alerts */}
+                <div className="card" style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: (summary?.nearExpiryCount || 0) > 0 ? '1px solid #fecaca' : '1px solid #dcfce7',
+                  background: (summary?.nearExpiryCount || 0) > 0 ? 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)' : 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.05)'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                        Near-Expiry Alerts
+                      <div style={{ fontSize: '11px', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Near-Expiry & Expiry Alerts
                       </div>
                       <div style={{
-                        fontSize: '24px',
-                        fontWeight: 700,
-                        color: (summary?.nearExpiryCount || 0) > 0 ? 'var(--status-danger)' : 'var(--status-success)',
+                        fontSize: '28px',
+                        fontWeight: 800,
+                        color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a',
                         marginTop: '4px'
                       }}>
                         {loadingSummary ? '...' : summary?.nearExpiryCount || 0}
                       </div>
                     </div>
                     <div style={{
-                      background: (summary?.nearExpiryCount || 0) > 0 ? '#fef2f2' : '#f0fdf4',
-                      padding: '8px',
-                      borderRadius: '6px',
-                      color: (summary?.nearExpiryCount || 0) > 0 ? '#ef4444' : '#16a34a'
+                      background: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      color: '#ffffff',
+                      boxShadow: (summary?.nearExpiryCount || 0) > 0 ? '0 4px 10px rgba(220, 38, 38, 0.3)' : '0 4px 10px rgba(22, 163, 74, 0.3)'
                     }}>
-                      <Calendar size={20} />
+                      <Calendar size={22} />
                     </div>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('batches')}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11.5px', fontWeight: 600, padding: 0, marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '11.5px', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                      {(summary?.nearExpiryCount || 0) > 0 ? '⚠️ Action needed in 90 days' : '✓ All batches in safe period'}
+                    </span>
+                    <button
+                      onClick={() => setActiveTab('batches')}
+                      style={{ background: 'none', border: 'none', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      Inspect <ArrowRight size={12} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Operations Command Hub Grid */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    ⚡ Operations & Workflows
+                  </h2>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Click any module for instant access</span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {/* 1. Quick Return */}
+                  <div
+                    onClick={handleOpenReturnModal}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '2px solid #0d9488',
+                      background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(13, 148, 136, 0.2) 100%)',
+                      boxShadow: '0 4px 14px rgba(13, 148, 136, 0.15)',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(13, 148, 136, 0.25)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(13, 148, 136, 0.15)';
+                    }}
                   >
-                    Check Expiry Alerts <ArrowRight size={12} />
-                  </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#0f766e', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(15, 118, 110, 0.3)' }}>
+                        <RotateCcw size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f766e' }}>Patient Return</h3>
+                          <span style={{ background: '#0f766e', color: '#fff', fontSize: '9.5px', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>1-CLICK</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>Instant stock credit & refund (No bill needed)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Sales / POS Billing */}
+                  <div
+                    onClick={() => setActiveTab('sales')}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #ccfbf1',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)',
+                      boxShadow: '0 4px 12px rgba(20, 184, 166, 0.08)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#0d9488', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(13, 148, 136, 0.3)' }}>
+                        <ShoppingCart size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Sales & POS Billing</h3>
+                          <span style={{ background: '#dcfce7', color: '#166534', fontSize: '9.5px', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>10% SCHEME</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Non-GST & GST retail bills, barcode scan [F2]</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Purchases & Inward */}
+                  <div
+                    onClick={() => setActiveTab('purchases')}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #e0e7ff',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #eef2ff 100%)',
+                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.05)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#4f46e5', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)' }}>
+                        <Truck size={24} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Purchases & Inward</h3>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Distributor bills, lot entries & PTR calculation</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Medicine Catalog */}
+                  <div
+                    onClick={() => setActiveTab('medicines')}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #e0f2fe',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.05)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#0284c7', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
+                        <Pill size={24} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Medicine Catalog</h3>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Add formulations, strip conversions & HSN codes</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Batches & Expiry */}
+                  <div
+                    onClick={() => setActiveTab('batches')}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #fef3c7',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)',
+                      boxShadow: '0 4px 12px rgba(217, 119, 6, 0.05)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#d97706', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)' }}>
+                        <Layers size={24} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Batches & Expiry</h3>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>FEFO lot tracking, MRP/PTR & near-expiry list</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6. Parties & Ledger */}
+                  <div
+                    onClick={() => setActiveTab('parties')}
+                    className="card"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: '1px solid #dcfce7',
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.05)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ background: '#16a34a', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(22, 163, 74, 0.3)' }}>
+                        <Users size={24} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Suppliers & Customers</h3>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Distributors, Drug Licenses (20B/21B) & balances</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Quick Actions & Navigation */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '16px'
-              }}>
-                {/* 1-Click Patient Medicine Return Card */}
-                <div
-                  onClick={handleOpenReturnModal}
-                  className="card"
-                  style={{
-                    cursor: 'pointer',
-                    padding: '20px',
-                    transition: 'all 0.15s ease',
-                    border: '2px solid #0d9488',
-                    background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.1) 0%, rgba(13, 148, 136, 0.2) 100%)',
-                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.12)'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#0f766e', padding: '10px', borderRadius: '8px', color: '#ffffff' }}>
-                      <RotateCcw size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f766e' }}>↩️ Patient Medicine Return</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>1-Click stock credit & instant cash refund</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('sales')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0', background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.05) 0%, rgba(20, 184, 166, 0.15) 100%)' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#ccfbf1', padding: '10px', borderRadius: '8px', color: '#0f766e' }}>
-                      <ShoppingCart size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f766e' }}>Sales & POS Terminal</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fast billing & FEFO batch allocation</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('purchases')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '8px', color: '#1d4ed8' }}>
-                      <Truck size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Purchases & Inward</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enter distributor bills & inward batch lots</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('medicines')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#e0f2fe', padding: '10px', borderRadius: '8px', color: '#0284c7' }}>
-                      <Pill size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Medicine Catalog</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Add medicine SKUs, GST & conversion units</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('batches')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', color: '#d97706' }}>
-                      <Layers size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Batches & Expiry</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Track batch numbers, MRP/PTR & expiries</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('parties')}
-                  className="card"
-                  style={{ cursor: 'pointer', padding: '20px', transition: 'transform 0.15s', border: '1px solid #e2e8f0' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: '#f0fdf4', padding: '10px', borderRadius: '8px', color: '#16a34a' }}>
-                      <Users size={22} />
-                    </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Suppliers & Customers</h3>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage GSTIN, Drug License 20B/21B & contacts</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
