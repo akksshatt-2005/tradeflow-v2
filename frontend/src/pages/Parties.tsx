@@ -934,12 +934,12 @@ export default function Parties() {
                   <th style={{ padding: '0.9rem 1.2rem' }}>GSTIN / PAN</th>
                   <th style={{ padding: '0.9rem 1.2rem' }}>Drug License (DL)</th>
                   <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Balance (₹)</th>
-                  <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Actions</th>
+                  <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center', minWidth: '270px', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredParties.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', height: '62px' }}>
                     <td style={{ padding: '0.9rem 1.2rem' }}>
                       <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         {p.mailTo || p.name}
@@ -991,65 +991,85 @@ export default function Parties() {
                     <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '700', color: p.outstandingBalance > 0 ? (p.type === 'supplier' ? '#ef4444' : '#16a34a') : 'var(--text-secondary)' }}>
                       ₹{p.outstandingBalance.toFixed(2)}
                     </td>
-                    <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                         <button
                           onClick={() => handleOpenStatement(p)}
                           style={{
-                            padding: '0.4rem 0.65rem',
-                            background: 'rgba(2, 132, 199, 0.12)',
+                            padding: '6px 11px',
+                            background: 'rgba(2, 132, 199, 0.08)',
                             border: '1px solid rgba(2, 132, 199, 0.3)',
                             borderRadius: '6px',
                             color: '#0284c7',
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.3rem',
-                            fontSize: '0.8rem',
-                            fontWeight: 700
+                            gap: '5px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            transition: 'all 0.15s ease',
+                            whiteSpace: 'nowrap'
                           }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.18)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.08)'}
                           title="View complete Ledger Statement (Purchases, Returns & Payments)"
                         >
-                          <FileText size={13} /> Statement
+                          <FileText size={13} />
+                          <span>Statement</span>
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(p)}
                           style={{
-                            padding: '0.4rem 0.65rem',
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
+                            padding: '6px 11px',
+                            background: 'var(--bg-secondary, #f8fafc)',
+                            border: '1px solid var(--border-color, #cbd5e1)',
                             borderRadius: '6px',
-                            color: 'var(--text-primary)',
+                            color: 'var(--text-primary, #0f172a)',
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.3rem',
-                            fontSize: '0.8rem'
+                            gap: '5px',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            transition: 'all 0.15s ease',
+                            whiteSpace: 'nowrap'
                           }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary, #f8fafc)'}
+                          title="Modify Ledger Details"
                         >
-                          <Edit2 size={13} /> Modify
+                          <Edit2 size={13} />
+                          <span>Modify</span>
                         </button>
-                        {!p.isCash && (
+                        {!p.isCash ? (
                           <button
                             onClick={() => handleDeleteParty(p)}
                             disabled={deletingPartyId === p.id}
                             style={{
-                              padding: '0.4rem 0.6rem',
-                              background: 'rgba(239, 68, 68, 0.12)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              padding: '6px 11px',
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
                               borderRadius: '6px',
-                              color: '#ef4444',
+                              color: '#dc2626',
                               cursor: deletingPartyId === p.id ? 'not-allowed' : 'pointer',
                               opacity: deletingPartyId === p.id ? 0.6 : 1,
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
-                              fontSize: '0.8rem'
+                              gap: '5px',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              transition: 'all 0.15s ease',
+                              whiteSpace: 'nowrap'
                             }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
                             title="Delete Party Ledger"
                           >
-                            <Trash2 size={13} /> {deletingPartyId === p.id ? 'Deleting...' : 'Delete'}
+                            <Trash2 size={13} />
+                            <span>{deletingPartyId === p.id ? 'Deleting...' : 'Delete'}</span>
                           </button>
+                        ) : (
+                          <div style={{ width: '70px' }} />
                         )}
                       </div>
                     </td>

@@ -703,7 +703,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               title="Quick Patient Return (Direct Stock Inward & Cash Refund)"
             >
               <RotateCcw size={14} />
-              <span>↩️ Patient Return</span>
+              <span>Patient Return</span>
             </button>
 
             {/* Supplier Return Shortcut Button */}
@@ -727,7 +727,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               title="Supplier Return (Credit Note / Debit Note Outward Stock Debit)"
             >
               <Truck size={14} />
-              <span>🚚 Supplier Return (CN)</span>
+              <span>Supplier Return (CN)</span>
             </button>
 
             {/* User Pill */}
