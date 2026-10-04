@@ -122,11 +122,15 @@ export default function Parties() {
     setShowStatementModal(true);
     setLoadingStatement(true);
     setExpandedRows({});
+
+    const s = start !== undefined ? start : '';
+    const e = end !== undefined ? end : '';
+    setStatementStartDate(s);
+    setStatementEndDate(e);
+
     try {
       let url = `/api/parties/${party.id}/statement`;
       const queryParams: string[] = [];
-      const s = start !== undefined ? start : statementStartDate;
-      const e = end !== undefined ? end : statementEndDate;
       if (s) queryParams.push(`startDate=${s}`);
       if (e) queryParams.push(`endDate=${e}`);
       if (queryParams.length > 0) url += `?${queryParams.join('&')}`;

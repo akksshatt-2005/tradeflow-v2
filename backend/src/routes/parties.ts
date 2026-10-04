@@ -552,6 +552,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     const partyName = party.name.trim();
     const partyMailTo = (party.mailTo || '').trim();
     const partyGstin = (party.gstin || '').trim();
+    const firstWord = partyName.split(/[\s,.-]+/)[0] || '';
 
     const relatedParties = await prisma.party.findMany({
       where: {
@@ -560,20 +561,34 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
           { id },
           ...(partyName ? [{ name: { equals: partyName, mode: 'insensitive' as const } }] : []),
           ...(partyMailTo ? [{ mailTo: { equals: partyMailTo, mode: 'insensitive' as const } }] : []),
-          ...(partyGstin ? [{ gstin: { equals: partyGstin, mode: 'insensitive' as const } }] : [])
+          ...(partyGstin ? [{ gstin: { equals: partyGstin, mode: 'insensitive' as const } }] : []),
+          ...(firstWord.length >= 3 ? [{ name: { contains: firstWord, mode: 'insensitive' as const } }] : [])
         ]
       },
       select: { id: true }
     });
     const partyIds = Array.from(new Set(relatedParties.map(p => p.id)));
 
-    const purchaseWhere: any = { companyId, supplierId: { in: partyIds } };
-    const returnWhere: any = { companyId, supplierId: { in: partyIds } };
+    const purchaseWhere: any = {
+      companyId,
+      OR: [
+        { supplierId: { in: partyIds } },
+        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : [])
+      ]
+    };
+    const returnWhere: any = {
+      companyId,
+      OR: [
+        { supplierId: { in: partyIds } },
+        ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : [])
+      ]
+    };
     const invoiceWhere: any = {
       companyId,
       OR: [
         { partyId: { in: partyIds } },
-        ...(partyName ? [{ customerName: { equals: partyName, mode: 'insensitive' as const } }] : [])
+        ...(partyName ? [{ customerName: { equals: partyName, mode: 'insensitive' as const } }] : []),
+        ...(firstWord.length >= 3 ? [{ customerName: { contains: firstWord, mode: 'insensitive' as const } }] : [])
       ]
     };
 
@@ -614,8 +629,10 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       })
     ]);
 
-    const openingBalance = Number(party.openingBalance || 0);
-    const openingType = party.openingBalanceType || 'CR';
+    const rawOpeningBalance = Number(party.openingBalance || 0);
+    const outstanding = Number(party.outstandingBalance || 0);
+    const effectiveOpeningBalance = rawOpeningBalance > 0 ? rawOpeningBalance : (purchases.length === 0 && returns.length === 0 && outstanding > 0 ? outstanding : rawOpeningBalance);
+    const openingType = party.openingBalanceType || (party.type === 'supplier' ? 'CR' : 'DR');
 
     // Build unified chronological ledger stream
     const rawTransactions: Array<{
@@ -630,17 +647,17 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       credit: number;
     }> = [];
 
-    // 0. Include Opening Balance Row if recorded
-    if (openingBalance > 0 && !startDate) {
+    // 0. Include Opening Balance Row if recorded or present
+    if (effectiveOpeningBalance > 0) {
       rawTransactions.push({
-        date: party.createdAt,
+        date: party.createdAt || new Date('2026-01-01'),
         type: 'OPENING_BALANCE',
         typeLabel: 'Opening Balance',
         voucherNo: 'OP-BAL',
         referenceId: party.id,
         particulars: `Opening Balance as per Books (${openingType})`,
-        debit: openingType === 'CR' ? openingBalance : 0,
-        credit: openingType === 'DR' ? openingBalance : 0
+        debit: openingType === 'CR' ? effectiveOpeningBalance : 0,
+        credit: openingType === 'DR' ? effectiveOpeningBalance : 0
       });
     }
 
@@ -753,7 +770,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     rawTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     // 5. Calculate running balance
-    let runningBalance = (startDate && openingBalance > 0) ? (openingType === 'CR' ? openingBalance : -openingBalance) : 0;
+    let runningBalance = 0;
     let totalPurchases = 0;
     let totalReturns = 0;
     let totalPayments = 0;
@@ -779,6 +796,10 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       };
     });
 
+    const finalOutstanding = ledgerTransactions.length > 0
+      ? ledgerTransactions[ledgerTransactions.length - 1].runningBalance
+      : (effectiveOpeningBalance > 0 ? effectiveOpeningBalance : Number(party.outstandingBalance || 0));
+
     res.status(200).json({
       party: {
         id: party.id,
@@ -790,17 +811,17 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         gstin: party.gstin,
         drugLicenseNo: party.drugLicenseNo,
         address: party.address,
-        openingBalance,
-        openingBalanceType: party.openingBalanceType,
-        outstandingBalance: Number(party.outstandingBalance)
+        openingBalance: effectiveOpeningBalance,
+        openingBalanceType: openingType,
+        outstandingBalance: Math.round(finalOutstanding * 100) / 100
       },
       summary: {
-        openingBalance,
-        openingBalanceType: party.openingBalanceType,
+        openingBalance: effectiveOpeningBalance,
+        openingBalanceType: openingType,
         totalPurchases: Math.round(totalPurchases * 100) / 100,
         totalReturns: Math.round(totalReturns * 100) / 100,
         totalPayments: Math.round(totalPayments * 100) / 100,
-        netOutstanding: Math.round((runningBalance || openingBalance) * 100) / 100
+        netOutstanding: Math.round(finalOutstanding * 100) / 100
       },
       transactions: ledgerTransactions
     });
