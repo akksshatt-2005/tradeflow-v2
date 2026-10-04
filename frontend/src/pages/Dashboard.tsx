@@ -771,93 +771,179 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             )}
 
             {/* Step 1: Search & Pick Medicine */}
-            <div style={{ marginBottom: '1.2rem', position: 'relative' }}>
+            <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '0.4rem' }}>
                 1. SEARCH RETURNED MEDICINE :
               </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#0f766e', pointerEvents: 'none' }}>
-                  <Search size={16} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Type medicine name or generic name..."
-                  value={selectedMed ? selectedMed.name : returnSearch}
-                  onChange={e => {
-                    setReturnSearch(e.target.value);
-                    if (selectedMed) setSelectedMed(null);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 1rem 0.65rem 2.4rem',
-                    background: 'var(--bg-secondary, #f8fafc)',
-                    border: '1.5px solid var(--border-color, #cbd5e1)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary, #0f172a)',
-                    fontWeight: 700,
-                    fontSize: '0.92rem',
-                    outline: 'none'
-                  }}
-                />
-                {selectedMed && (
+              
+              {!selectedMed ? (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: returnSearch.trim().length > 0 ? '0.6rem' : '0' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#0f766e', pointerEvents: 'none' }}>
+                      <Search size={17} />
+                    </span>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Type brand name (e.g. AURDEP, PAN D, AUGMENTIN)..."
+                      value={returnSearch}
+                      onChange={e => setReturnSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem 0.75rem 2.5rem',
+                        background: 'var(--bg-secondary, #f8fafc)',
+                        border: '2px solid #0f766e',
+                        borderRadius: '9px',
+                        color: 'var(--text-primary, #0f172a)',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        boxShadow: '0 0 0 3px rgba(15, 118, 110, 0.15)'
+                      }}
+                    />
+                    {returnSearch.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setReturnSearch('')}
+                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: '#e2e8f0', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', cursor: 'pointer', fontSize: '11px', fontWeight: 700 }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Professional Search Results List */}
+                  {returnSearch.trim().length > 0 && (
+                    <div style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #cbd5e1',
+                      borderRadius: '10px',
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.08)'
+                    }}>
+                      {loadingItems ? (
+                        <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                          Fetching medicine catalog...
+                        </div>
+                      ) : (
+                        (() => {
+                          const matches = catalogItems
+                            .filter(i => 
+                              i.name.toLowerCase().includes(returnSearch.toLowerCase()) ||
+                              (i.genericName && i.genericName.toLowerCase().includes(returnSearch.toLowerCase())) ||
+                              (i.sku && i.sku.toLowerCase().includes(returnSearch.toLowerCase()))
+                            )
+                            .slice(0, 25);
+
+                          if (matches.length === 0) {
+                            return (
+                              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                                🔍 No medicines found matching "<strong>{returnSearch}</strong>"
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div>
+                              <div style={{ padding: '0.4rem 0.8rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {matches.length} matching medicines found (Click to select)
+                              </div>
+                              {matches.map(med => {
+                                const totalStock = med.batches?.reduce((sum, b) => sum + b.currentStock, 0) || 0;
+                                const factor = med.conversionFactor || 1;
+                                const stripsCount = Math.floor(totalStock / factor);
+                                return (
+                                  <div
+                                    key={med.id}
+                                    onClick={() => handleSelectReturnMed(med)}
+                                    style={{
+                                      padding: '0.75rem 1rem',
+                                      borderBottom: '1px solid #f1f5f9',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      transition: 'background 0.15s ease'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0fdfa'}
+                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <div>
+                                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                                        {med.name}
+                                      </div>
+                                      <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        {med.genericName && (
+                                          <span style={{ background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px', color: '#475569' }}>
+                                            {med.genericName}
+                                          </span>
+                                        )}
+                                        <span>Pack: 1 Strip = {factor > 1 ? `${factor} Tabs` : med.unit}</span>
+                                      </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f766e' }}>
+                                        {totalStock} units ({stripsCount} Strips)
+                                      </div>
+                                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                        {med.batches?.length || 0} active {med.batches?.length === 1 ? 'batch' : 'batches'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Selected Medicine Badge */
+                <div style={{
+                  background: '#f0fdfa',
+                  border: '1.5px solid #0f766e',
+                  borderRadius: '9px',
+                  padding: '0.75rem 1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: '#0f766e', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800 }}>
+                      ✓
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>
+                        {selectedMed.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {selectedMed.genericName ? `${selectedMed.genericName} • ` : ''}Pack: 1 Strip = {selectedMed.conversionFactor > 1 ? `${selectedMed.conversionFactor} Tabs` : selectedMed.unit}
+                      </div>
+                    </div>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setSelectedMed(null);
                       setReturnSearch('');
                       setSelectedBatchId('');
                     }}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#0f766e',
+                      cursor: 'pointer'
+                    }}
                   >
-                    ✕
+                    Change Medicine
                   </button>
-                )}
-              </div>
-
-              {/* Autocomplete dropdown */}
-              {!selectedMed && returnSearch.trim().length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  marginTop: '4px',
-                  maxHeight: '220px',
-                  overflowY: 'auto',
-                  zIndex: 80,
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-                }}>
-                  {catalogItems
-                    .filter(i => i.name.toLowerCase().includes(returnSearch.toLowerCase()) || (i.genericName && i.genericName.toLowerCase().includes(returnSearch.toLowerCase())))
-                    .slice(0, 15)
-                    .map(med => (
-                      <div
-                        key={med.id}
-                        onClick={() => handleSelectReturnMed(med)}
-                        style={{
-                          padding: '0.7rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0fdfa'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>{med.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            {med.genericName ? `${med.genericName} • ` : ''}Pack: {med.conversionFactor > 1 ? `${med.conversionFactor}T` : med.unit}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f766e' }}>
-                          {med.batches?.length || 0} batches
-                        </div>
-                      </div>
-                    ))}
                 </div>
               )}
             </div>
