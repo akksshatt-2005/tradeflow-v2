@@ -436,7 +436,7 @@ export default function Sales() {
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Legal: {inv.party.name}</div>
                       )}
                       {inv.doctorName && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Dr. {inv.doctorName}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{inv.doctorName.startsWith('Dr') ? inv.doctorName : `Dr. ${inv.doctorName}`}</div>
                       )}
                     </td>
                     <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
@@ -710,7 +710,8 @@ export default function Sales() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Prescription & Payment</div>
-                {viewingInvoice.doctorName && <div>Doctor: <strong>Dr. {viewingInvoice.doctorName}</strong></div>}
+                {viewingInvoice.doctorName && <div>Doctor: <strong>{viewingInvoice.doctorName.startsWith('Dr') ? viewingInvoice.doctorName : `Dr. ${viewingInvoice.doctorName}`}</strong></div>}
+                {viewingInvoice.doctorRegNo && <div>Reg No: <strong>{viewingInvoice.doctorRegNo}</strong></div>}
                 {viewingInvoice.patientName && <div>Patient: {viewingInvoice.patientName}</div>}
                 <div>Payment Mode: <strong>{viewingInvoice.paymentMode}</strong></div>
               </div>

@@ -103,8 +103,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [customerPhone, setCustomerPhone] = useState('');
   const [patientAddress, setPatientAddress] = useState('');
   const [customerGstin, setCustomerGstin] = useState('');
-  const [doctorName, setDoctorName] = useState('');
-  const [doctorRegNo, setDoctorRegNo] = useState('');
+  const [doctorName, setDoctorName] = useState('Dr. Priyadarshi Srivastava');
+  const [doctorRegNo, setDoctorRegNo] = useState('UPMC 59048');
   const [patientName, setPatientName] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
@@ -1355,7 +1355,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 <div style={{ textAlign: 'right' }}>
                   <div><strong>Patient/Customer:</strong> {createdInvoice.customerName}</div>
                   {createdInvoice.customerPhone && <div><strong>Mobile:</strong> {createdInvoice.customerPhone}</div>}
-                  {createdInvoice.doctorName && <div><strong>Doctor:</strong> Dr. {createdInvoice.doctorName}</div>}
+                  {createdInvoice.doctorName && <div><strong>Doctor:</strong> {createdInvoice.doctorName.startsWith('Dr') ? createdInvoice.doctorName : `Dr. ${createdInvoice.doctorName}`}</div>}
                   {createdInvoice.doctorRegNo && <div><strong>Reg No:</strong> {createdInvoice.doctorRegNo}</div>}
                 </div>
               </div>
