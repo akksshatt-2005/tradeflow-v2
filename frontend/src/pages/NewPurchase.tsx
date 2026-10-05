@@ -396,6 +396,23 @@ export default function NewPurchase({
               const mm = isNaN(expDate.getTime()) ? '12' : String(expDate.getMonth() + 1).padStart(2, '0');
               const yyyy = isNaN(expDate.getTime()) ? String(new Date().getFullYear() + 2).slice(-2) : String(expDate.getFullYear()).slice(-2);
 
+              const packStr = pi.pack || (pi.item?.conversionFactor > 1 ? `1*${pi.item.conversionFactor}` : '1*10');
+              const factor = pi.item?.conversionFactor || pi.conversionFactor || parseRowPackFactor(packStr);
+              let formattedQty = String(pi.quantity || 1);
+              let formattedFree = String(pi.freeQuantity || 0);
+
+              if (factor > 1 && pi.quantity !== undefined && pi.quantity !== null) {
+                const str = Math.floor(pi.quantity / factor);
+                const loose = pi.quantity % factor;
+                formattedQty = loose > 0 ? `${str}.${loose}` : `${str}`;
+
+                if (pi.freeQuantity > 0) {
+                  const fStr = Math.floor(pi.freeQuantity / factor);
+                  const fLoose = pi.freeQuantity % factor;
+                  formattedFree = fLoose > 0 ? `${fStr}.${fLoose}` : `${fStr}`;
+                }
+              }
+
               return {
                 id: `row-${idx + 1}`,
                 itemId: pi.item?.id || pi.itemId || '',
@@ -403,14 +420,14 @@ export default function NewPurchase({
                 genericName: pi.genericName || pi.item?.genericName || '',
                 manufacturer: pi.manufacturer || pi.item?.manufacturer || '',
                 sku: pi.sku || pi.item?.sku || '',
-                pack: pi.pack || '10 TAB',
+                pack: packStr,
                 oldMrp: String(pi.mrp || 0),
                 hsnCode: pi.hsnCode || pi.item?.hsnCode || '3004',
                 batchNumber: pi.batchNumber || '',
                 expiryMonth: mm,
                 expiryYear: yyyy,
-                quantity: String(pi.quantity || 1),
-                freeQuantity: String(pi.freeQuantity || 0),
+                quantity: formattedQty,
+                freeQuantity: formattedFree,
                 purchaseRate: String(pi.purchaseRate || 0),
                 discountPercent: String(pi.discountPercent || 0),
                 gstRate: String(pi.gstRate || 5),
