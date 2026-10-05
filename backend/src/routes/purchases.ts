@@ -90,6 +90,76 @@ export function parsePharmaQuantity(val: any, factor: number = 1): { strips: num
   }
 }
 
+/**
+ * Safely parses any pharma expiry date input into a valid Date object.
+ * Handles formats like: "MM/YY", "MM/YYYY", "YYYY-MM-DD", "YYYY-MM", or swapped/numeric forms.
+ * Guarantees never returning Invalid Date.
+ */
+export function safeParseExpiryDate(rawExpiry: any): Date {
+  if (!rawExpiry) {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 2);
+    return d;
+  }
+  if (rawExpiry instanceof Date && !isNaN(rawExpiry.getTime())) {
+    return rawExpiry;
+  }
+  const str = String(rawExpiry).trim();
+
+  // Format MM/YY or MM/YYYY
+  if (/^\d{1,2}\/\d{2,4}$/.test(str)) {
+    const parts = str.split('/');
+    let m = parseInt(parts[0], 10) || 12;
+    let y = parseInt(parts[1], 10) || (new Date().getFullYear() + 2);
+    if (m > 12 && y <= 12) {
+      const tmp = m;
+      m = y;
+      y = tmp;
+    } else if (m === 20 && y > 20) {
+      y = 2000 + (y % 100);
+      m = 12;
+    } else if (m > 12) {
+      m = 12;
+    }
+    if (y < 100) y += 2000;
+    m = Math.max(1, Math.min(12, m));
+    const lastDay = new Date(y, m, 0).getDate();
+    return new Date(y, m - 1, lastDay, 23, 59, 59, 999);
+  }
+
+  // Format YYYY-MM-DD or YYYY-MM
+  if (/^\d{4}-\d{1,2}(-\d{1,2})?$/.test(str)) {
+    const parts = str.split('-');
+    let y = parseInt(parts[0], 10) || (new Date().getFullYear() + 2);
+    let m = parseInt(parts[1], 10) || 12;
+    let d = parts[2] ? parseInt(parts[2], 10) : 0;
+    if (m > 12 && y <= 12) {
+      const tmp = m;
+      m = y;
+      y = tmp;
+    } else if (m === 20 && y >= 2000) {
+      m = 12;
+    } else if (m > 12) {
+      m = 12;
+    }
+    m = Math.max(1, Math.min(12, m));
+    const lastDay = new Date(y, m, 0).getDate();
+    const day = d > 0 ? Math.min(d, lastDay) : lastDay;
+    return new Date(y, m - 1, day, 23, 59, 59, 999);
+  }
+
+  // Fallback to standard Date parse
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  // If completely unparseable, default safely to 2 years in the future
+  const defaultExp = new Date();
+  defaultExp.setFullYear(defaultExp.getFullYear() + 2);
+  return defaultExp;
+}
+
 const router = Router();
 
 // Require auth and company access
@@ -314,7 +384,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         conversionFactor: factor,
         sku: rawItem.sku || null,
         batchNumber: rawItem.batchNumber.trim().toUpperCase(),
-        expiryDate: new Date(rawItem.expiryDate),
+        expiryDate: safeParseExpiryDate(rawItem.expiryDate),
         quantity: parsedQty.totalBaseUnits,
         freeQuantity: parsedFree.totalBaseUnits,
         purchaseRate: ptr,
@@ -682,20 +752,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       igstAmount += lineIgst;
 
       const cleanBatch = String(rawItem.batchNumber).trim().toUpperCase();
-      let parsedExpiry: Date;
-      const expStr = String(rawItem.expiryDate).trim();
-      if (/^\d{2}\/\d{2}$/.test(expStr)) {
-        const [mm, yy] = expStr.split('/').map(Number);
-        const fullYear = 2000 + yy;
-        parsedExpiry = new Date(fullYear, mm, 0, 23, 59, 59, 999);
-      } else {
-        parsedExpiry = new Date(expStr);
-      }
-
-      if (isNaN(parsedExpiry.getTime())) {
-        res.status(400).json({ error: `Invalid expiry date "${rawItem.expiryDate}" for ${medName || 'item'}` });
-        return;
-      }
+      const parsedExpiry = safeParseExpiryDate(rawItem.expiryDate);
 
       validatedItems.push({
         itemId: rawItem.itemId || null,

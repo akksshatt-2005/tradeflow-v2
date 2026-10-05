@@ -720,12 +720,34 @@ export default function NewPurchase({
       setError(null);
 
       const items = rows.map(r => {
-        const mm = (r.expiryMonth || '12').padStart(2, '0');
-        const rawY = r.expiryYear || String(new Date().getFullYear() + 2);
-        const yyyy = rawY.length === 2 ? `20${rawY}` : rawY;
-        // Last day of the expiry month
-        const lastDay = new Date(parseInt(yyyy), parseInt(mm), 0).getDate();
-        const expiryDate = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+        let rawM = parseInt(String(r.expiryMonth || '').replace(/\D/g, ''), 10) || 12;
+        let rawY = parseInt(String(r.expiryYear || '').replace(/\D/g, ''), 10) || (new Date().getFullYear() + 2);
+
+        let yyyy = rawY;
+        let mm = rawM;
+
+        if (rawM > 12 && rawY <= 12) {
+          // Swapped MM and YY (e.g. 29/05 -> Year 29, Month 05)
+          yyyy = rawM;
+          mm = rawY;
+        } else if (rawM === 20 && rawY > 20) {
+          // User typed "20" "29" for year 2029
+          yyyy = 2000 + (rawY % 100);
+          mm = 12;
+        } else if (rawM > 12) {
+          mm = 12;
+        }
+
+        if (yyyy < 100) {
+          yyyy = 2000 + yyyy;
+        } else if (yyyy < 2000) {
+          yyyy = 2000 + (yyyy % 100);
+        }
+
+        mm = Math.max(1, Math.min(12, mm));
+        const mmStr = String(mm).padStart(2, '0');
+        const lastDay = new Date(yyyy, mm, 0).getDate();
+        const expiryDate = `${yyyy}-${mmStr}-${String(lastDay).padStart(2, '0')}`;
 
         return {
           itemId: r.itemId || undefined,
@@ -1664,7 +1686,7 @@ export default function NewPurchase({
                       {activeCalc.parsedQty.strips > 0 || activeCalc.parsedQty.loose > 0 ? (
                         activeCalc.factor > 1 ? (
                           <span>
-                            <strong>{activeCalc.parsedQty.strips} Strips</strong> {activeCalc.parsedQty.loose > 0 ? `+ ${activeCalc.parsedQty.loose} Loose Tabs` : ''} $\rightarrow$ <strong>{activeCalc.parsedQty.totalBaseUnits} total tablets</strong> inwarded into stock
+                            <strong>{activeCalc.parsedQty.strips} Strips</strong> {activeCalc.parsedQty.loose > 0 ? `+ ${activeCalc.parsedQty.loose} Loose Tabs` : ''} ➔ <strong>{activeCalc.parsedQty.totalBaseUnits} total tablets</strong> inwarded into stock
                           </span>
                         ) : (
                           <span><strong>{activeCalc.parsedQty.totalBaseUnits} Units</strong> ({activeRow?.pack || '1*1'})</span>
