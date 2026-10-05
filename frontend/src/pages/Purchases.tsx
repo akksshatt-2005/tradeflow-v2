@@ -629,7 +629,27 @@ export default function Purchases() {
                       <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: 600 }}>{item.batchNumber}</td>
                       <td style={{ padding: '8px' }}>{new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</td>
                       <td style={{ padding: '8px', textAlign: 'right' }}>
-                        {item.quantity} {item.freeQuantity > 0 ? `+ ${item.freeQuantity} Free` : ''} {item.unit}s
+                        {item.conversionFactor > 1 ? (
+                          (() => {
+                            const str = Math.floor(item.quantity / item.conversionFactor);
+                            const tab = item.quantity % item.conversionFactor;
+                            const freeStr = item.freeQuantity > 0 ? Math.floor(item.freeQuantity / item.conversionFactor) : 0;
+                            const freeTab = item.freeQuantity > 0 ? item.freeQuantity % item.conversionFactor : 0;
+                            let mainStr = str > 0 && tab > 0 ? `${str} Str + ${tab} Tab` : (str > 0 ? `${str} Strips` : `${tab} Tabs`);
+                            let freeText = '';
+                            if (item.freeQuantity > 0) {
+                              freeText = ` + ${freeStr > 0 && freeTab > 0 ? `${freeStr} Str + ${freeTab} Tab` : (freeStr > 0 ? `${freeStr} Str` : `${freeTab} Tab`)} Free`;
+                            }
+                            return (
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{mainStr}{freeText}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>({item.quantity} total tabs)</div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          `${item.quantity} ${item.freeQuantity > 0 ? `+ ${item.freeQuantity} Free` : ''} ${item.unit}s`
+                        )}
                       </td>
                       <td style={{ padding: '8px', textAlign: 'right' }}>₹{item.purchaseRate.toFixed(2)}</td>
                       <td style={{ padding: '8px', textAlign: 'right' }}>₹{item.mrp.toFixed(2)}</td>

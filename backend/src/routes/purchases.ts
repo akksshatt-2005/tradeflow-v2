@@ -50,6 +50,46 @@ export function parsePackingString(packStr?: string | null, defaultUnit = 'STRIP
   return { unit: defaultUnit, conversionFactor: defaultFactor };
 }
 
+/**
+ * Parses standard Indian pharma bill quantity notation:
+ * - "20" on a 1*10 strip -> 20 full strips = 200 base units (tablets), decimalPacks = 20
+ * - "20.4" on a 1*10 strip -> 20 full strips + 4 loose tablets = 204 base units (tablets), decimalPacks = 20.4
+ * - "0.4" or ".4" on a 1*10 strip -> 0 full strips + 4 loose tablets = 4 base units (tablets), decimalPacks = 0.4
+ * - "5" on a 1*1 bottle -> 5 bottles = 5 base units, decimalPacks = 5
+ */
+export function parsePharmaQuantity(val: any, factor: number = 1): { strips: number; loose: number; totalBaseUnits: number; decimalPacks: number } {
+  const cleanFactor = Math.max(1, factor || 1);
+  if (val === null || val === undefined || val === '') {
+    return { strips: 0, loose: 0, totalBaseUnits: 0, decimalPacks: 0 };
+  }
+  const str = String(val).trim();
+  if (str === '' || isNaN(Number(str))) {
+    return { strips: 0, loose: 0, totalBaseUnits: 0, decimalPacks: 0 };
+  }
+
+  if (cleanFactor <= 1) {
+    const num = Math.max(0, parseFloat(str) || 0);
+    const intUnits = Math.round(num);
+    return { strips: intUnits, loose: 0, totalBaseUnits: intUnits, decimalPacks: num };
+  }
+
+  if (str.includes('.')) {
+    const parts = str.split('.');
+    const strips = Math.max(0, parseInt(parts[0], 10) || 0);
+    let loose = 0;
+    if (parts.length > 1 && parts[1]) {
+      loose = Math.max(0, parseInt(parts[1], 10) || 0);
+    }
+    const totalBaseUnits = (strips * cleanFactor) + loose;
+    const decimalPacks = strips + (loose / cleanFactor);
+    return { strips, loose, totalBaseUnits, decimalPacks };
+  } else {
+    const strips = Math.max(0, parseInt(str, 10) || 0);
+    const totalBaseUnits = strips * cleanFactor;
+    return { strips, loose: 0, totalBaseUnits, decimalPacks: strips };
+  }
+}
+
 const router = Router();
 
 // Require auth and company access
@@ -234,20 +274,25 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         return;
       }
 
-      const qty = parseInt(rawItem.quantity) || 0;
-      if (qty <= 0) {
+      const packStr = (rawItem.pack || '').trim();
+      const parsedPack = parsePackingString(packStr, rawItem.unit || 'STRIP', rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : 10);
+      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : parsedPack.conversionFactor;
+
+      const parsedQty = parsePharmaQuantity(rawItem.quantity, factor);
+      const parsedFree = parsePharmaQuantity(rawItem.freeQuantity, factor);
+
+      if (parsedQty.totalBaseUnits <= 0) {
         res.status(400).json({ error: `Quantity must be greater than 0 for batch ${rawItem.batchNumber}` });
         return;
       }
 
-      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
       const ptr = parseFloat(rawItem.purchaseRate) || 0; // PTR
       const mrp = parseFloat(rawItem.mrp) || ptr;
       const pts = parseFloat(rawItem.pts) || mrp;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = parseFloat(rawItem.gstRate) || 5.0;
 
-      const lineGross = qty * ptr;
+      const lineGross = parsedQty.decimalPacks * ptr;
       const lineDisc = (lineGross * discountPct) / 100;
       const lineTaxable = lineGross - lineDisc;
       const lineGst = (lineTaxable * gstRate) / 100;
@@ -264,14 +309,14 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         genericName: rawItem.genericName || rawItem.composition || null,
         manufacturer: rawItem.manufacturer || null,
         hsnCode: rawItem.hsnCode || '3004',
-        pack: rawItem.pack || null,
-        unit: rawItem.unit || null,
-        conversionFactor: rawItem.conversionFactor || null,
+        pack: rawItem.pack || (factor > 1 ? `1*${factor}` : '1*1'),
+        unit: rawItem.unit || parsedPack.unit || 'STRIP',
+        conversionFactor: factor,
         sku: rawItem.sku || null,
         batchNumber: rawItem.batchNumber.trim().toUpperCase(),
         expiryDate: new Date(rawItem.expiryDate),
-        quantity: qty,
-        freeQuantity: freeQty,
+        quantity: parsedQty.totalBaseUnits,
+        freeQuantity: parsedFree.totalBaseUnits,
         purchaseRate: ptr,
         mrp,
         pts,
@@ -595,19 +640,24 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         return;
       }
 
-      const qty = parseInt(rawItem.quantity) || 0;
-      if (qty <= 0) {
+      const packStr = (rawItem.pack || '').trim();
+      const parsedPack = parsePackingString(packStr, rawItem.unit || 'STRIP', rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : 10);
+      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : parsedPack.conversionFactor;
+
+      const parsedQty = parsePharmaQuantity(rawItem.quantity, factor);
+      const parsedFree = parsePharmaQuantity(rawItem.freeQuantity, factor);
+
+      if (parsedQty.totalBaseUnits <= 0) {
         res.status(400).json({ error: `Quantity must be greater than 0 for ${medName || 'all items'}` });
         return;
       }
 
-      const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
       const purchaseRate = parseFloat(rawItem.purchaseRate) || 0;
       const mrp = parseFloat(rawItem.mrp) || purchaseRate;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = parseFloat(rawItem.gstRate) || 5.0;
 
-      const gross = qty * purchaseRate;
+      const gross = parsedQty.decimalPacks * purchaseRate;
       const discount = (gross * discountPct) / 100;
       const lineTaxable = gross - discount;
       const gst = (lineTaxable * gstRate) / 100;
@@ -655,9 +705,11 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         hsnCode: rawItem.hsnCode || '3004',
         batchNumber: cleanBatch,
         expiryDate: parsedExpiry,
-        pack: rawItem.pack || '10 TAB',
-        quantity: qty,
-        freeQuantity: freeQty,
+        pack: rawItem.pack || (factor > 1 ? `1*${factor}` : '1*1'),
+        unit: rawItem.unit || parsedPack.unit || 'STRIP',
+        conversionFactor: factor,
+        quantity: parsedQty.totalBaseUnits,
+        freeQuantity: parsedFree.totalBaseUnits,
         purchaseRate,
         mrp,
         pts: parseFloat(rawItem.pts) || mrp,

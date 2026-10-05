@@ -582,12 +582,53 @@ export default function NewPurchase({
     }
   };
 
-  // Row financial calculations
+  const parseRowPackFactor = (packStr?: string) => {
+    if (!packStr) return 10;
+    const match = packStr.match(/^(\d+)\s*[\*xX]\s*(\d+)/);
+    if (match) return parseInt(match[2]) || 1;
+    const single = packStr.match(/^(\d+)/);
+    if (single) return parseInt(single[1]) || 10;
+    return 1;
+  };
+
+  const parseRowQuantity = (qtyStr: string, factor: number) => {
+    const cleanFactor = Math.max(1, factor || 1);
+    if (!qtyStr || isNaN(Number(qtyStr))) {
+      return { strips: 0, loose: 0, totalBaseUnits: 0, decimalPacks: 0 };
+    }
+    const str = String(qtyStr).trim();
+    if (cleanFactor <= 1) {
+      const n = Math.max(0, parseFloat(str) || 0);
+      return { strips: n, loose: 0, totalBaseUnits: Math.round(n), decimalPacks: n };
+    }
+    if (str.includes('.')) {
+      const parts = str.split('.');
+      const strips = Math.max(0, parseInt(parts[0], 10) || 0);
+      const loose = Math.max(0, parseInt(parts[1], 10) || 0);
+      return {
+        strips,
+        loose,
+        totalBaseUnits: (strips * cleanFactor) + loose,
+        decimalPacks: strips + (loose / cleanFactor)
+      };
+    } else {
+      const strips = Math.max(0, parseInt(str, 10) || 0);
+      return {
+        strips,
+        loose: 0,
+        totalBaseUnits: strips * cleanFactor,
+        decimalPacks: strips
+      };
+    }
+  };
+
+  // Row financial calculations (Supporting 20 = 20 strips, 20.4 = 20 strips + 4 loose tablets)
   const calculateRowTotal = (row: PurchaseRow) => {
-    const qty = parseFloat(row.quantity) || 0;
+    const factor = parseRowPackFactor(row.pack);
+    const parsedQty = parseRowQuantity(row.quantity, factor);
     const rate = parseFloat(row.purchaseRate) || 0;
     const discPct = Math.max(0, Math.min(100, parseFloat(row.discountPercent) || 0));
-    const gross = qty * rate;
+    const gross = parsedQty.decimalPacks * rate;
     const disc = (gross * discPct) / 100;
     const taxable = gross - disc;
     const gstRate = parseFloat(row.gstRate) || 0;
@@ -597,7 +638,9 @@ export default function NewPurchase({
       disc,
       taxable,
       gstAmt,
-      total: taxable + gstAmt
+      total: taxable + gstAmt,
+      parsedQty,
+      factor
     };
   };
 
@@ -673,11 +716,11 @@ export default function NewPurchase({
           genericName: r.genericName?.trim() || undefined,
           manufacturer: r.manufacturer?.trim() || undefined,
           hsnCode: r.hsnCode?.trim() || '3004',
-          pack: r.pack || '10 TAB',
+          pack: r.pack || '1*10',
           batchNumber: r.batchNumber.trim().toUpperCase(),
           expiryDate,
-          quantity: parseInt(r.quantity) || 1,
-          freeQuantity: parseInt(r.freeQuantity) || 0,
+          quantity: r.quantity, // Preserve fractional string e.g. "20.4"
+          freeQuantity: r.freeQuantity || '0',
           purchaseRate: parseFloat(r.purchaseRate) || 0,
           mrp: parseFloat(r.mrp || '') || parseFloat(r.oldMrp || '') || parseFloat(r.purchaseRate || '') || 0,
           pts: parseFloat(r.pts || '') || parseFloat(r.mrp || '') || parseFloat(r.purchaseRate || '') || 0,
@@ -1090,7 +1133,9 @@ export default function NewPurchase({
                 <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>HSN</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '105px' }}>Batch</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '90px', textAlign: 'center' }}>Exp.</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>Qty.</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'center' }} title="e.g. 20 = 20 Strips, 20.4 = 20 Strips + 4 loose tablets">
+                  Qty (Str.Tab)
+                </th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '60px', textAlign: 'center' }}>Free</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>Rate</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>Disc%</th>
@@ -1366,14 +1411,14 @@ export default function NewPurchase({
                       </div>
                     </td>
 
-                    {/* 7. Qty. */}
+                    {/* 7. Qty (Strips.Loose) */}
                     <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
-                        type="number"
-                        min="1"
-                        step="any"
+                        type="text"
+                        placeholder="e.g. 20 or 20.4"
                         value={row.quantity}
                         onChange={e => handleRowChange(idx, 'quantity', e.target.value)}
+                        title={rowCalc.factor > 1 && row.quantity ? `${rowCalc.parsedQty.strips} Strips ${rowCalc.parsedQty.loose > 0 ? `+ ${rowCalc.parsedQty.loose} Loose Tabs` : ''} (${rowCalc.parsedQty.totalBaseUnits} total tablets inwarded)` : 'Format: 20 for 20 strips, 20.4 for 20 strips + 4 loose tablets'}
                         style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                       />
                     </td>
@@ -1381,11 +1426,11 @@ export default function NewPurchase({
                     {/* 8. Free */}
                     <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
-                        type="number"
-                        min="0"
-                        step="any"
+                        type="text"
+                        placeholder="0"
                         value={row.freeQuantity}
                         onChange={e => handleRowChange(idx, 'freeQuantity', e.target.value)}
+                        title={rowCalc.factor > 1 && row.freeQuantity ? `${parseRowQuantity(row.freeQuantity, rowCalc.factor).strips} Free Strips ${parseRowQuantity(row.freeQuantity, rowCalc.factor).loose > 0 ? `+ ${parseRowQuantity(row.freeQuantity, rowCalc.factor).loose} Free Tabs` : ''}` : undefined}
                         style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                       />
                     </td>
@@ -1579,6 +1624,46 @@ export default function NewPurchase({
                   ))}
                 </div>
               </div>
+
+              {/* Inward Quantity Notation Breakdown Banner */}
+              {(() => {
+                const activeCalc = calculateRowTotal(activeRow);
+                return (
+                  <div style={{
+                    gridColumn: 'span 2',
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(2, 132, 199, 0.25)',
+                    fontSize: '0.8rem',
+                    color: '#0369a1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '2px'
+                  }}>
+                    <span>
+                      📦 <strong>Qty Notation: </strong>
+                      {activeCalc.parsedQty.strips > 0 || activeCalc.parsedQty.loose > 0 ? (
+                        activeCalc.factor > 1 ? (
+                          <span>
+                            <strong>{activeCalc.parsedQty.strips} Strips</strong> {activeCalc.parsedQty.loose > 0 ? `+ ${activeCalc.parsedQty.loose} Loose Tabs` : ''} $\rightarrow$ <strong>{activeCalc.parsedQty.totalBaseUnits} total tablets</strong> inwarded into stock
+                          </span>
+                        ) : (
+                          <span><strong>{activeCalc.parsedQty.totalBaseUnits} Units</strong> ({activeRow?.pack || '1*1'})</span>
+                        )
+                      ) : (
+                        <span>e.g. enter <strong>20</strong> for 20 strips, or <strong>20.4</strong> for 20 strips + 4 loose tablets</span>
+                      )}
+                    </span>
+                    {activeCalc.parsedQty.totalBaseUnits > 0 && (
+                      <span style={{ fontWeight: '700', color: '#0284c7', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                        ₹{activeCalc.gross.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
