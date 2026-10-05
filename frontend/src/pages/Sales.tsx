@@ -106,7 +106,7 @@ export default function Sales() {
       'Invoice #': inv.invoiceNumber,
       'Invoice Date': inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '',
       'Due Date': inv.dueDate ? inv.dueDate.split('T')[0] : '',
-      'Customer / Party Name': inv.party?.mailTo || inv.party?.name || inv.customerName,
+      'Customer / Party Name': (inv.customerName && inv.customerName !== 'Cash Customer') ? inv.customerName : (inv.party?.mailTo || inv.party?.name || inv.customerName),
       'Customer Phone': inv.customerPhone || inv.party?.phone || '',
       'Customer GSTIN': inv.party?.gstin || '',
       'Doctor Name': inv.doctorName || '',
@@ -235,7 +235,8 @@ export default function Sales() {
 
   const filteredInvoices = invoices.filter(inv =>
     inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-    inv.customerName.toLowerCase().includes(search.toLowerCase()) ||
+    (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
+    (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
     (inv.customerPhone && inv.customerPhone.includes(search)) ||
     (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
   );
@@ -431,7 +432,14 @@ export default function Sales() {
                       {new Date(inv.invoiceDate).toLocaleDateString('en-IN')}
                     </td>
                     <td style={{ padding: '0.9rem 1.2rem' }}>
-                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer'}</div>
+                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                        {inv.customerName && inv.customerName !== 'Cash Customer' 
+                          ? inv.customerName 
+                          : (inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
+                      </div>
+                      {inv.patientName && inv.patientName !== inv.customerName && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--brand-teal)', fontWeight: '500' }}>Patient: {inv.patientName}</div>
+                      )}
                       {inv.party?.mailTo && inv.party?.name && inv.party.mailTo !== inv.party.name && (
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Legal: {inv.party.name}</div>
                       )}

@@ -120,6 +120,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
     where.OR = [
       { invoiceNumber: { contains: search, mode: 'insensitive' } },
       { customerName: { contains: search, mode: 'insensitive' } },
+      { patientName: { contains: search, mode: 'insensitive' } },
       { customerPhone: { contains: search, mode: 'insensitive' } },
       { doctorName: { contains: search, mode: 'insensitive' } }
     ];
@@ -253,7 +254,9 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
         customerAddress: invoice.customerAddress,
         customerGstin: invoice.customerGstin,
         doctorName: invoice.doctorName,
+        doctorRegNo: invoice.doctorRegNo,
         patientName: invoice.patientName,
+        patientAddress: invoice.patientAddress,
         paymentMode: invoice.paymentMode,
         subtotal: Number(invoice.subtotal),
         itemDiscount: Number(invoice.itemDiscount),
@@ -331,6 +334,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     doctorName,
     doctorRegNo,
     patientName,
+    patientAddress,
     invoiceNumber,
     invoiceDate,
     dueDate,
@@ -342,10 +346,6 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     notes,
     items
   } = req.body;
-
-  const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
-    ? customerName.trim()
-    : 'Cash Customer';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: 'Invoice must contain at least one item' });
@@ -562,6 +562,18 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const parsedInvoiceDate = new Date(invoiceDate || Date.now());
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
+    const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
+      ? customerName.trim()
+      : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
+
+    const cleanPatientName = (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
+      ? patientName.trim()
+      : (cleanCustomerName && cleanCustomerName !== 'Cash Customer' ? cleanCustomerName : null);
+
+    const cleanPatientAddress = (patientAddress && typeof patientAddress === 'string' && patientAddress.trim().length > 0)
+      ? patientAddress.trim()
+      : (customerAddress && typeof customerAddress === 'string' && customerAddress.trim().length > 0 ? customerAddress.trim() : (customerParty ? customerParty.address : null));
+
     // Execute atomic transaction
     const savedInvoice = await prisma.$transaction(async (tx) => {
       // 1. Create Invoice
@@ -572,13 +584,14 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           invoiceNumber: finalInvoiceNumber,
           invoiceDate: parsedInvoiceDate,
           dueDate: parsedDueDate,
-          customerName: customerParty ? (customerParty.mailTo || customerParty.name) : cleanCustomerName,
-          customerPhone: customerPhone || (customerParty ? customerParty.phone : null),
-          customerAddress: customerAddress || (customerParty ? customerParty.address : null),
-          customerGstin: customerGstin || (customerParty ? customerParty.gstin : null),
+          customerName: cleanCustomerName,
+          customerPhone: customerPhone ? String(customerPhone).trim() : (customerParty ? customerParty.phone : null),
+          customerAddress: customerAddress ? String(customerAddress).trim() : (customerParty ? customerParty.address : null),
+          customerGstin: customerGstin ? String(customerGstin).trim() : (customerParty ? customerParty.gstin : null),
           doctorName: doctorName ? String(doctorName).trim() : 'Dr. Priyadarshi Srivastava',
           doctorRegNo: doctorRegNo ? String(doctorRegNo).trim() : 'UPMC 59048',
-          patientName: patientName ? String(patientName).trim() : null,
+          patientName: cleanPatientName,
+          patientAddress: cleanPatientAddress,
           paymentMode,
           subtotal: Math.round(subtotal * 100) / 100,
           itemDiscount: Math.round(totalItemDiscount * 100) / 100,
@@ -746,7 +759,15 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
     const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
       ? customerName.trim()
-      : 'Cash Customer';
+      : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
+
+    const cleanPatientName = (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
+      ? patientName.trim()
+      : (cleanCustomerName && cleanCustomerName !== 'Cash Customer' ? cleanCustomerName : null);
+
+    const cleanPatientAddress = (patientAddress && typeof patientAddress === 'string' && patientAddress.trim().length > 0)
+      ? patientAddress.trim()
+      : (customerAddress && typeof customerAddress === 'string' && customerAddress.trim().length > 0 ? customerAddress.trim() : (customerParty ? customerParty.address : null));
 
     // Calculate totals for new items
     let subtotal = 0;
@@ -1013,14 +1034,14 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           partyId: customerParty ? customerParty.id : null,
           invoiceDate: parsedInvoiceDate,
           dueDate: parsedDueDate,
-          customerName: customerParty ? (customerParty.mailTo || customerParty.name) : cleanCustomerName,
-          customerPhone: customerPhone || (customerParty ? customerParty.phone : null),
-          customerAddress: customerAddress || (customerParty ? customerParty.address : null),
-          customerGstin: customerGstin || (customerParty ? customerParty.gstin : null),
+          customerName: cleanCustomerName,
+          customerPhone: customerPhone ? String(customerPhone).trim() : (customerParty ? customerParty.phone : null),
+          customerAddress: customerAddress ? String(customerAddress).trim() : (customerParty ? customerParty.address : null),
+          customerGstin: customerGstin ? String(customerGstin).trim() : (customerParty ? customerParty.gstin : null),
           doctorName: doctorName ? String(doctorName).trim() : 'Dr. Priyadarshi Srivastava',
           doctorRegNo: doctorRegNo ? String(doctorRegNo).trim() : 'UPMC 59048',
-          patientName: patientName ? String(patientName).trim() : null,
-          patientAddress: patientAddress ? String(patientAddress).trim() : null,
+          patientName: cleanPatientName,
+          patientAddress: cleanPatientAddress,
           paymentMode,
           subtotal: Math.round(subtotal * 100) / 100,
           itemDiscount: Math.round(totalItemDiscount * 100) / 100,

@@ -464,7 +464,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         customerGstin: customerGstin.trim() || null,
         doctorName: doctorName.trim() || null,
         doctorRegNo: doctorRegNo.trim() || null,
-        patientName: patientName.trim() || null,
+        patientName: patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : null),
+        patientAddress: patientAddress.trim() || null,
         invoiceNumber: nextInvoiceNo,
         invoiceDate,
         paymentMode,
@@ -601,7 +602,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', alignItems: 'end' }}>
           
           {/* Patient [F2] */}
-          <div>
+          <div style={{ position: 'relative' }}>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--brand-teal)', marginBottom: '0.3rem' }}>
               PATIENT [F2] / CUSTOMER :
             </label>
@@ -611,11 +612,63 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               placeholder="Patient / Customer Name"
               value={customerName}
               onChange={e => {
-                setCustomerName(e.target.value);
+                const val = e.target.value;
+                setCustomerName(val);
+                setPatientName(val);
+                if (selectedCustomer && selectedCustomer.name !== val && !selectedCustomer.isCash) {
+                  setSelectedCustomer(null);
+                }
                 setShowCustomerDropdown(true);
               }}
+              onFocus={() => setShowCustomerDropdown(true)}
               style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
             />
+            {showCustomerDropdown && customers.length > 0 && customerName.trim() && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  zIndex: 50,
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                  maxHeight: '180px',
+                  overflowY: 'auto'
+                }}
+              >
+                {customers
+                  .filter(c => c.name.toLowerCase().includes(customerName.toLowerCase()) || (c.phone && c.phone.includes(customerName)))
+                  .slice(0, 6)
+                  .map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setSelectedCustomer(c);
+                        setCustomerName(c.name);
+                        setPatientName(c.name);
+                        if (c.phone) setCustomerPhone(c.phone);
+                        if (c.address) setPatientAddress(c.address);
+                        if (c.gstin) setCustomerGstin(c.gstin);
+                        setShowCustomerDropdown(false);
+                      }}
+                      style={{
+                        padding: '0.5rem 0.8rem',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--border-color)',
+                        fontSize: '0.85rem'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{c.name} {c.isCash ? '(Cash)' : ''}</div>
+                      {c.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📞 {c.phone}</div>}
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Patient Address & Phone */}
