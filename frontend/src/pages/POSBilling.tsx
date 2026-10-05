@@ -266,14 +266,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }));
   };
 
-  // Select Item & Auto-Pick FEFO Batch
+  // Select Item & Auto-Pick FEFO Batch (Supports Negative Stock Billing)
   const handleSelectItem = (item: MedicineItem) => {
-    const availableBatches = (item.batches || [])
+    let availableBatches = (item.batches || [])
       .filter(b => b.currentStock > 0)
       .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
 
     if (availableBatches.length === 0) {
-      setError(`"${item.name}" has zero stock across all batches.`);
+      availableBatches = (item.batches || [])
+        .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+    }
+
+    if (availableBatches.length === 0) {
+      setError(`"${item.name}" does not have any registered batch. Please add an opening batch in Medicine Catalog.`);
       return;
     }
 
@@ -445,13 +450,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       return;
     }
 
-    for (const item of invoiceItems) {
-      if (item.quantity > item.currentStock) {
-        setError(`Insufficient stock for "${item.medicineName}" (Batch: ${item.batchNumber}). Available: ${item.currentStock} units, Entered: ${item.quantity}`);
-        return;
-      }
-    }
-
+    // Negative stock is allowed (Tally Prime / Marg ERP style) for fast retail checkout
     try {
       setSubmitting(true);
       setError(null);
@@ -924,7 +923,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         style={{
                           padding: '0.7rem 1rem',
                           borderBottom: '1px solid var(--border-color)',
-                          cursor: totalStock > 0 ? 'pointer' : 'not-allowed',
+                          cursor: 'pointer',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center'
@@ -939,8 +938,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: '800', color: totalStock > 0 ? 'var(--brand-teal)' : 'var(--accent-red)' }}>
-                            {totalStock > 0 ? `${totalStock} in stock` : 'Out of stock'}
+                          <div style={{ fontWeight: '800', color: totalStock > 0 ? 'var(--brand-teal)' : (totalStock < 0 ? 'var(--accent-red)' : 'var(--text-muted)') }}>
+                            {totalStock > 0 ? `${totalStock} in stock` : (totalStock < 0 ? `${totalStock} units (Negative)` : '0 in stock')}
                           </div>
                           {topBatch && (
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -1221,7 +1220,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </div>
               <div>
                 <span style={{ color: 'var(--text-secondary)' }}>Live Stock : </span>
-                <strong style={{ color: '#10b981' }}>{activeRow?.currentStock ?? 0} units</strong>
+                <strong style={{ color: (activeRow?.currentStock ?? 0) < 0 ? 'var(--accent-red)' : '#10b981' }}>
+                  {activeRow?.currentStock ?? 0} units {(activeRow?.currentStock ?? 0) < 0 ? '(Negative)' : ''}
+                </strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-secondary)' }}>M.R.P. : </span>

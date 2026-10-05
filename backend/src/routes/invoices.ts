@@ -459,13 +459,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         lineGross = qty * unitPrice;
       }
 
-      if (batch.currentStock < totalUnitsNeeded) {
-        res.status(400).json({
-          error: `Insufficient stock for "${batch.item.name}" batch "${batch.batchNumber}". Available: ${batch.currentStock} units, Requested: ${totalUnitsNeeded} units.`
-        });
-        return;
-      }
-
+      // Negative stock allowed (Tally Prime / Marg ERP style) for billing when inventory isn't fully entered yet
       const lineDiscount = (lineGross * discountPct) / 100;
       const lineTaxable = lineGross - lineDiscount;
 
@@ -972,8 +966,8 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       for (const item of validatedItems) {
         // Fetch current batch stock (post reversal)
         const batch = await tx.batch.findUnique({ where: { id: item.batchId } });
-        if (!batch || batch.currentStock < item.totalUnitsNeeded) {
-          throw new Error(`Insufficient stock for batch "${item.batchNumber}". Available: ${batch?.currentStock || 0}, Requested: ${item.totalUnitsNeeded}`);
+        if (!batch) {
+          throw new Error(`Batch "${item.batchNumber}" not found`);
         }
 
         // Deduct new stock

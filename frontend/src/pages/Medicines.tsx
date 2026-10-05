@@ -816,14 +816,19 @@ export default function Medicines() {
                     }}>
                       {item.conversionFactor > 1 ? (
                         (() => {
-                          const str = Math.floor(item.totalStock / item.conversionFactor);
-                          const tab = item.totalStock % item.conversionFactor;
-                          if (str > 0 && tab > 0) return `${str} STRIPS + ${tab} TABS`;
-                          if (str > 0) return `${str} STRIPS`;
-                          return `${tab} TABS`;
+                          const isNeg = item.totalStock < 0;
+                          const abs = Math.abs(item.totalStock);
+                          const str = Math.floor(abs / item.conversionFactor);
+                          const tab = abs % item.conversionFactor;
+                          const sign = isNeg ? '-' : '';
+                          let txt = '';
+                          if (str > 0 && tab > 0) txt = `${sign}${str} STRIPS + ${tab} TABS`;
+                          else if (str > 0) txt = `${sign}${str} STRIPS`;
+                          else txt = `${sign}${tab} TABS`;
+                          return isNeg ? `${txt} (Negative)` : txt;
                         })()
                       ) : (
-                        `${item.totalStock} ${item.unit}s`
+                        `${item.totalStock} ${item.unit}s${item.totalStock < 0 ? ' (Negative)' : ''}`
                       )}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -1440,11 +1445,14 @@ export default function Medicines() {
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>
                             {viewingItemBatches.conversionFactor > 1 ? (
                               (() => {
-                                const str = Math.floor(b.currentStock / viewingItemBatches.conversionFactor);
-                                const tab = b.currentStock % viewingItemBatches.conversionFactor;
-                                if (str > 0 && tab > 0) return `${str} Str + ${tab} Tab (${b.currentStock})`;
-                                if (str > 0) return `${str} Str (${b.currentStock})`;
-                                return `${tab} Tab`;
+                                const isNeg = b.currentStock < 0;
+                                const abs = Math.abs(b.currentStock);
+                                const str = Math.floor(abs / viewingItemBatches.conversionFactor);
+                                const tab = abs % viewingItemBatches.conversionFactor;
+                                const sign = isNeg ? '-' : '';
+                                if (str > 0 && tab > 0) return `${sign}${str} Str + ${tab} Tab (${b.currentStock})`;
+                                if (str > 0) return `${sign}${str} Str (${b.currentStock})`;
+                                return `${sign}${tab} Tab (${b.currentStock})`;
                               })()
                             ) : (
                               `${b.currentStock} ${viewingItemBatches.unit}s`

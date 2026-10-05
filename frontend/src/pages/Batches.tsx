@@ -223,7 +223,13 @@ export default function Batches() {
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>
-                      {b.currentStock} {b.unit}s
+                      {b.currentStock < 0 ? (
+                        <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                          {b.currentStock} {b.unit}s (Negative)
+                        </span>
+                      ) : (
+                        `${b.currentStock} ${b.unit}s`
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>
                       ₹{stockVal.toFixed(2)}
