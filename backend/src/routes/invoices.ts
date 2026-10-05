@@ -420,7 +420,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       }
 
       const factor = batch.item?.conversionFactor || (rawItem.pack ? parseInt(rawItem.pack) : 1) || 1;
-      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
+      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.mrp) || Number(batch.pts);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const freeQty = Math.max(0, parseInt(rawItem.freeQuantity) || 0);
@@ -793,7 +793,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       }
 
       const factor = batch.item?.conversionFactor || (rawItem.pack ? parseInt(rawItem.pack) : 1) || 1;
-      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.pts) || Number(batch.mrp);
+      const unitPrice = parseFloat(rawItem.unitPrice) || Number(batch.mrp) || Number(batch.pts);
       const mrp = parseFloat(rawItem.mrp) || Number(batch.mrp);
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = (rawItem.gstRate !== undefined && rawItem.gstRate !== null && !isNaN(parseFloat(rawItem.gstRate)))

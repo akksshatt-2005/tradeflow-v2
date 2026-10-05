@@ -283,7 +283,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }
 
     const fefoBatch = availableBatches[0];
-    const unitPrice = Number(fefoBatch.pts) || Number(fefoBatch.mrp);
+    const unitPrice = Number(fefoBatch.mrp) || Number(fefoBatch.pts) || 0;
     const catalogGst = Number(item.gstRate) !== undefined && !isNaN(Number(item.gstRate)) ? Number(item.gstRate) : 5.0;
     const gstRate = isGstBill ? catalogGst : 0;
     const factor = item.conversionFactor || 1;
@@ -1026,7 +1026,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                                   expiryDate: b.expiryDate,
                                   currentStock: b.currentStock,
                                   mrp: Number(b.mrp),
-                                  unitPrice: Number(b.pts) || Number(b.mrp)
+                                  unitPrice: Number(b.mrp) || Number(b.pts) || 0
                                 });
                               }
                             }}
