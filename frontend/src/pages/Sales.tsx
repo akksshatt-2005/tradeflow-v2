@@ -233,13 +233,22 @@ export default function Sales() {
     );
   }
 
-  const filteredInvoices = invoices.filter(inv =>
-    inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-    (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
-    (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
-    (inv.customerPhone && inv.customerPhone.includes(search)) ||
-    (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredInvoices = [...invoices]
+    .sort((a, b) => {
+      const dateA = new Date(a.invoiceDate).getTime();
+      const dateB = new Date(b.invoiceDate).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      const createdA = new Date(a.createdAt || a.invoiceDate).getTime();
+      const createdB = new Date(b.createdAt || b.invoiceDate).getTime();
+      return createdB - createdA;
+    })
+    .filter(inv =>
+      inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+      (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
+      (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
+      (inv.customerPhone && inv.customerPhone.includes(search)) ||
+      (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
+    );
 
   const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
   const totalSalesVal = activeInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);

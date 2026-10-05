@@ -156,7 +156,10 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
             select: { id: true }
           }
         },
-        orderBy: { invoiceDate: 'desc' },
+        orderBy: [
+          { invoiceDate: 'desc' },
+          { createdAt: 'desc' }
+        ],
         skip,
         take: limit
       })

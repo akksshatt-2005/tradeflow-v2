@@ -83,7 +83,10 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
           select: { username: true }
         }
       },
-      orderBy: { returnDate: 'desc' }
+      orderBy: [
+        { returnDate: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
 
     res.status(200).json({

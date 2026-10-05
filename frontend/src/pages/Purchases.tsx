@@ -238,11 +238,20 @@ export default function Purchases() {
     );
   }
 
-  const filtered = purchases.filter(p => {
-    const s = search.toLowerCase();
-    return p.invoiceNumber.toLowerCase().includes(s) ||
-      (p.supplier.mailTo || p.supplier.name).toLowerCase().includes(s);
-  });
+  const filtered = [...purchases]
+    .sort((a, b) => {
+      const dateA = new Date(a.purchaseDate).getTime();
+      const dateB = new Date(b.purchaseDate).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      const createdA = new Date(a.createdAt || a.purchaseDate).getTime();
+      const createdB = new Date(b.createdAt || b.purchaseDate).getTime();
+      return createdB - createdA;
+    })
+    .filter(p => {
+      const s = search.toLowerCase();
+      return p.invoiceNumber.toLowerCase().includes(s) ||
+        (p.supplier.mailTo || p.supplier.name).toLowerCase().includes(s);
+    });
 
   const activePurchases = purchases.filter(p => p.status !== 'CANCELLED');
   const totalInwardValue = activePurchases.reduce((sum, p) => sum + p.totalAmount, 0);

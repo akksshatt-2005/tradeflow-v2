@@ -215,7 +215,10 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
             }
           }
         },
-        orderBy: { purchaseDate: 'desc' },
+        orderBy: [
+          { purchaseDate: 'desc' },
+          { createdAt: 'desc' }
+        ],
         skip,
         take: limit
       })
