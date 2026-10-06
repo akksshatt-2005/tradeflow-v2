@@ -105,7 +105,7 @@ router.get('/fefo-suggestions', async (req: CompanyScopedRequest, res: Response)
 router.get('/', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+  const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit as string) || 500));
   const skip = (page - 1) * limit;
 
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
@@ -136,7 +136,11 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
 
   if (startDate || endDate) {
     where.invoiceDate = {};
-    if (startDate) where.invoiceDate.gte = new Date(startDate);
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      where.invoiceDate.gte = start;
+    }
     if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);

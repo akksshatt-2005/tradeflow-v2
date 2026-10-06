@@ -53,11 +53,15 @@ interface InvoiceListItem {
   createdAt: string;
 }
 
+type PeriodOption = 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM';
+
 export default function Sales() {
   const { activeCompany } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'PARTIAL' | 'UNPAID' | 'CANCELLED'>('ALL');
+  const [period, setPeriod] = useState<PeriodOption>('TODAY');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -72,19 +76,59 @@ export default function Sales() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
 
-  useEffect(() => {
-    fetchInvoices();
-  }, [activeCompany?.id, statusFilter]);
+  const getDateRangeForPeriod = (p: PeriodOption, customStart?: string, customEnd?: string) => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
 
-  const fetchInvoices = async () => {
+    if (p === 'TODAY') {
+      return { startDate: todayStr, endDate: todayStr, label: "Today's Sale (1 Day)" };
+    }
+    if (p === 'WEEK') {
+      const past7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { startDate: past7.toISOString().split('T')[0], endDate: todayStr, label: '1 Week Sale (Last 7 Days)' };
+    }
+    if (p === 'MONTH') {
+      const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { startDate: past30.toISOString().split('T')[0], endDate: todayStr, label: '1 Month Sale (Last 30 Days)' };
+    }
+    if (p === 'CUSTOM') {
+      return {
+        startDate: customStart || '',
+        endDate: customEnd || '',
+        label: customStart && customEnd ? `Custom (${customStart} to ${customEnd})` : 'Custom Date Range'
+      };
+    }
+    return { startDate: '', endDate: '', label: 'All Invoices' };
+  };
+
+  useEffect(() => {
+    if (period !== 'CUSTOM') {
+      fetchInvoices(period);
+    } else if (customStartDate && customEndDate) {
+      fetchInvoices('CUSTOM', customStartDate, customEndDate);
+    }
+  }, [activeCompany?.id, period, customStartDate, customEndDate]);
+
+  const fetchInvoices = async (overridePeriod?: PeriodOption, overrideStart?: string, overrideEnd?: string) => {
     if (!activeCompany) return;
     try {
       setLoading(true);
       setError(null);
-      const url = statusFilter === 'ALL'
-        ? '/api/invoices'
-        : `/api/invoices?status=${statusFilter}`;
-      const res = await api.get<{ invoices: InvoiceListItem[] }>(url, {
+      const activePeriod = overridePeriod ?? period;
+      const { startDate, endDate } = getDateRangeForPeriod(
+        activePeriod,
+        overrideStart ?? customStartDate,
+        overrideEnd ?? customEndDate
+      );
+
+      const queryParams: Record<string, string> = {
+        limit: '1000'
+      };
+      if (startDate) queryParams.startDate = startDate;
+      if (endDate) queryParams.endDate = endDate;
+
+      const queryString = new URLSearchParams(queryParams).toString();
+      const res = await api.get<{ invoices: InvoiceListItem[] }>(`/api/invoices?${queryString}`, {
         companyId: activeCompany.id
       });
       setInvoices(res.invoices || []);
@@ -315,14 +359,14 @@ export default function Sales() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            <span>Total Sales (Billed)</span>
+            <span>Total Sales ({getDateRangeForPeriod(period, customStartDate, customEndDate).label})</span>
             <FileText size={18} style={{ color: 'var(--brand-teal)' }} />
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.4rem' }}>
             ₹{totalSalesVal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            {invoices.length} invoices generated
+            {activeInvoices.length} invoices in selected period
           </div>
         </div>
 
@@ -360,47 +404,157 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Filter & Search Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-        <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.3rem' }}>
-          {(['ALL', 'PAID', 'PARTIAL', 'UNPAID'] as const).map(st => (
+      {/* Period Filter & Search Bar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div style={{ display: 'flex', gap: '0.35rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.3rem', flexWrap: 'wrap' }}>
+            {[
+              { id: 'TODAY', label: '1 Day Sale (Today)' },
+              { id: 'WEEK', label: '1 Week Sale' },
+              { id: 'MONTH', label: '1 Month Sale' },
+              { id: 'ALL', label: 'All Invoices' },
+              { id: 'CUSTOM', label: 'Customized Date' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setPeriod(tab.id as PeriodOption);
+                  if (tab.id === 'CUSTOM' && !customStartDate) {
+                    const nowStr = new Date().toISOString().split('T')[0];
+                    setCustomStartDate(nowStr);
+                    setCustomEndDate(nowStr);
+                  }
+                }}
+                style={{
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: period === tab.id ? 'var(--brand-teal)' : 'transparent',
+                  color: period === tab.id ? '#fff' : 'var(--text-secondary)',
+                  fontWeight: period === tab.id ? '700' : '500',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Calendar size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', width: '320px', maxWidth: '100%' }}>
+            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            <input
+              type="text"
+              placeholder="Search invoice no, customer, doctor..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.8rem 0.5rem 2rem',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Customized Date Range Pickers (Visible when CUSTOM is selected) */}
+        {period === 'CUSTOM' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.8rem',
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '0.7rem 1rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              <Filter size={15} style={{ color: 'var(--brand-teal)' }} />
+              <span>Select Custom Period:</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>From:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={e => setCustomStartDate(e.target.value)}
+                style={{
+                  padding: '0.4rem 0.6rem',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>To:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={e => setCustomEndDate(e.target.value)}
+                style={{
+                  padding: '0.4rem 0.6rem',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
+              type="button"
+              onClick={() => fetchInvoices('CUSTOM', customStartDate, customEndDate)}
               style={{
                 padding: '0.4rem 0.9rem',
-                borderRadius: '6px',
+                background: 'var(--brand-teal)',
+                color: '#fff',
                 border: 'none',
-                background: statusFilter === st ? 'var(--brand-teal)' : 'transparent',
-                color: statusFilter === st ? '#fff' : 'var(--text-secondary)',
-                fontWeight: statusFilter === st ? '600' : '400',
+                borderRadius: '6px',
+                fontWeight: '600',
                 fontSize: '0.85rem',
                 cursor: 'pointer'
               }}
             >
-              {st === 'ALL' ? 'All Invoices' : st}
+              Apply Filter
             </button>
-          ))}
-        </div>
-
-        <div style={{ position: 'relative', width: '320px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input
-            type="text"
-            placeholder="Search invoice no, customer, doctor..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.8rem 0.5rem 2rem',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem'
-            }}
-          />
-        </div>
+            {(customStartDate || customEndDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nowStr = new Date().toISOString().split('T')[0];
+                  setCustomStartDate(nowStr);
+                  setCustomEndDate(nowStr);
+                  fetchInvoices('CUSTOM', nowStr, nowStr);
+                }}
+                style={{
+                  padding: '0.4rem 0.7rem',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Reset to Today
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Invoices List Table */}
