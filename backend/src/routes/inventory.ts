@@ -89,7 +89,7 @@ router.get('/expiring', async (req: CompanyScopedRequest, res: Response) => {
       },
       include: {
         item: {
-          select: { id: true, sku: true, name: true, unit: true, genericName: true }
+          select: { id: true, sku: true, name: true, unit: true, genericName: true, conversionFactor: true }
         }
       },
       orderBy: {
@@ -102,6 +102,7 @@ router.get('/expiring', async (req: CompanyScopedRequest, res: Response) => {
       const exp = new Date(b.expiryDate);
       const diffTime = exp.getTime() - now.getTime();
       const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const factor = Math.max(1, b.item.conversionFactor || 1);
 
       return {
         batchId: b.id,
@@ -114,6 +115,7 @@ router.get('/expiring', async (req: CompanyScopedRequest, res: Response) => {
         daysRemaining,
         isExpired: daysRemaining <= 0,
         currentStock: b.currentStock,
+        conversionFactor: factor,
         unit: b.item.unit,
         mrp: Number(b.mrp),
         ptr: Number(b.ptr)

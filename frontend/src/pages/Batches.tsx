@@ -23,6 +23,7 @@ interface ExpiringBatch {
   daysRemaining: number;
   isExpired: boolean;
   currentStock: number;
+  conversionFactor?: number;
   unit: string;
   mrp: number;
   ptr: number;
@@ -175,7 +176,11 @@ export default function Batches() {
             ) : (
               filtered.map((b) => {
                 const exp = new Date(b.expiryDate);
-                const stockVal = b.currentStock * b.ptr;
+                const factor = b.conversionFactor && b.conversionFactor > 0 ? b.conversionFactor : 1;
+                const stockVal = Math.round(((b.currentStock / factor) * b.ptr) * 100) / 100;
+                const isNeg = b.currentStock < 0;
+                const absStock = Math.abs(b.currentStock);
+                const sign = isNeg ? '-' : '';
 
                 return (
                   <tr key={b.batchId} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -222,13 +227,25 @@ export default function Batches() {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>
-                      {b.currentStock < 0 ? (
-                        <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                          {b.currentStock} {b.unit}s (Negative)
-                        </span>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      {factor > 1 ? (
+                        <div>
+                          <div style={{ fontWeight: 700, color: isNeg ? '#ef4444' : 'var(--text-main)' }}>
+                            {sign}{(absStock / factor).toFixed(1).replace(/\.0$/, '')} STRIPs
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {absStock % factor === 0
+                              ? `(${sign}${absStock} Tabs)`
+                              : `(${sign}${Math.floor(absStock / factor)} Str + ${absStock % factor} Tab)`}
+                          </div>
+                        </div>
                       ) : (
-                        `${b.currentStock} ${b.unit}s`
+                        <div>
+                          <div style={{ fontWeight: 700, color: isNeg ? '#ef4444' : 'var(--text-main)' }}>
+                            {sign}{absStock} {b.unit}s
+                          </div>
+                          {isNeg && <div style={{ fontSize: '11px', color: '#ef4444' }}>(Negative)</div>}
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>
