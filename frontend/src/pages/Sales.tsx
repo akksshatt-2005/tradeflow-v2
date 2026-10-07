@@ -405,9 +405,8 @@ export default function Sales() {
     const activeInvs = invoices.filter(inv => inv.status !== 'CANCELLED');
     const grossVal = activeInvs.reduce((sum, inv) => sum + inv.grandTotal, 0);
     const returnVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
-    const netVal = grossVal - returnVal;
+    const netVal = Math.max(0, grossVal - returnVal);
     const receivedVal = activeInvs.reduce((sum, inv) => sum + inv.paidAmount, 0);
-    const receivableVal = activeInvs.reduce((sum, inv) => sum + inv.balanceAmount, 0);
 
     const summaryData = [
       { 'Metric': 'Selected Period', 'Value': getDateRangeForPeriod(period, customStartDate, customEndDate).label },
@@ -415,7 +414,6 @@ export default function Sales() {
       { 'Metric': 'Patient Returns / Refunds (B)', 'Value': `-₹${returnVal.toFixed(2)}` },
       { 'Metric': 'NET REALIZED SALES (A - B)', 'Value': `₹${netVal.toFixed(2)}` },
       { 'Metric': 'Collected Cash / UPI', 'Value': `₹${receivedVal.toFixed(2)}` },
-      { 'Metric': 'Customer Receivables Due', 'Value': `₹${receivableVal.toFixed(2)}` },
       { 'Metric': 'Total Invoices Count', 'Value': activeInvs.length },
       { 'Metric': 'Total Patient Returns Count', 'Value': patientReturns.length }
     ];
@@ -564,7 +562,6 @@ export default function Sales() {
   const totalReturnsVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
   const netSalesVal = Math.max(0, grossSalesVal - totalReturnsVal);
   const totalReceivedVal = activeInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-  const totalReceivableVal = activeInvoices.reduce((sum, inv) => sum + inv.balanceAmount, 0);
 
   return (
     <div className="sales-container" style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
@@ -666,8 +663,8 @@ export default function Sales() {
         </div>
       )}
 
-      {/* 5-Metric Financial Cards (Gross, Returns, Net Sales, Received, Receivables) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      {/* 4-Metric Financial Cards (Gross, Returns, Net Sales, Received) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {/* 1. Gross Sales */}
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.15rem', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: '600' }}>
@@ -730,20 +727,6 @@ export default function Sales() {
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
             Direct counter & digital collections
-          </div>
-        </div>
-
-        {/* 5. Customer Receivables */}
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.15rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: '600' }}>
-            <span>Customer Receivables</span>
-            <Clock size={17} style={{ color: 'var(--accent-red)' }} />
-          </div>
-          <div style={{ fontSize: '1.45rem', fontWeight: '800', color: totalReceivableVal > 0 ? 'var(--accent-red)' : 'var(--text-primary)', marginTop: '0.4rem', letterSpacing: '-0.02em' }}>
-            ₹{totalReceivableVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Uncollected credit balance
           </div>
         </div>
       </div>
