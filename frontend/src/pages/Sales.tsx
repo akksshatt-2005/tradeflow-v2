@@ -25,8 +25,6 @@ import {
   RotateCcw,
   Receipt,
   TrendingUp,
-  TrendingDown,
-  Sparkles,
   Package,
   Layers,
   ArrowDownLeft,
@@ -87,6 +85,46 @@ export interface PatientReturnItem {
   createdByUser: string;
 }
 
+export interface ReturnCartItem {
+  id: string;
+  batchId: string;
+  itemId: string;
+  medicineName: string;
+  sku: string;
+  batchNumber: string;
+  expiryDate?: string | null;
+  unit: string;
+  conversionFactor: number;
+  strips: number;
+  looseQty: number;
+  unitsToAdd: number;
+  unitRetailPrice: number;
+  itemRefund: number;
+}
+
+export interface MultiItemReturnSlip {
+  voucherNumber: string;
+  createdAt: string;
+  patientName: string;
+  reason: string;
+  totalRefundAmount: number;
+  totalUnitsAdded: number;
+  createdByUser: string;
+  items: Array<{
+    medicineName: string;
+    sku: string;
+    batchNumber: string;
+    expiryDate?: string | null;
+    unit: string;
+    conversionFactor: number;
+    strips: number;
+    looseQty: number;
+    unitsAdded: number;
+    mrp: number;
+    refundAmount: number;
+  }>;
+}
+
 type PeriodOption = 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM';
 type SalesTab = 'INVOICES' | 'RETURNS';
 
@@ -109,8 +147,16 @@ export default function Sales() {
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Quick Patient Return State
+  // Multi-Item Patient Return State
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnCart, setReturnCart] = useState<ReturnCartItem[]>([]);
+  const [returnPatientName, setReturnPatientName] = useState<string>('');
+  const [returnReason, setReturnReason] = useState<string>('Doctor changed medicine / prescription');
+  const [customGrandTotalRefund, setCustomGrandTotalRefund] = useState<string>('');
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
+  const [viewingMultiReturnSlip, setViewingMultiReturnSlip] = useState<MultiItemReturnSlip | null>(null);
+
+  // Single Item Picker inside Return Modal
   const [returnSearchQuery, setReturnSearchQuery] = useState('');
   const [returnMedicinesList, setReturnMedicinesList] = useState<any[]>([]);
   const [searchingReturnMedicines, setSearchingReturnMedicines] = useState(false);
@@ -118,11 +164,7 @@ export default function Sales() {
   const [selectedReturnBatch, setSelectedReturnBatch] = useState<any | null>(null);
   const [returnStrips, setReturnStrips] = useState<string>('1');
   const [returnLoose, setReturnLoose] = useState<string>('0');
-  const [returnPatientName, setReturnPatientName] = useState<string>('');
-  const [returnReason, setReturnReason] = useState<string>('Doctor changed medicine / prescription');
-  const [customRefundAmount, setCustomRefundAmount] = useState<string>('');
-  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
-  const [viewingReturnSlip, setViewingReturnSlip] = useState<PatientReturnItem | null>(null);
+  const [currentItemRefund, setCurrentItemRefund] = useState<string>('');
 
   // Payment Recording State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -180,7 +222,6 @@ export default function Sales() {
 
       const queryString = new URLSearchParams(queryParams).toString();
 
-      // Fetch Invoices and Patient Returns in parallel
       const [invRes, retRes] = await Promise.all([
         api.get<{ invoices: InvoiceListItem[] }>(`/api/invoices?${queryString}`, {
           companyId: activeCompany.id
@@ -206,14 +247,14 @@ export default function Sales() {
     }
   };
 
-  // Search items for Quick Return Modal
+  // Search medicines for Multi-Item Return Modal
   useEffect(() => {
     if (!showReturnModal || !activeCompany) return;
     const timer = setTimeout(async () => {
       if (!returnSearchQuery.trim()) {
         try {
           setSearchingReturnMedicines(true);
-          const res = await api.get<{ items: any[] }>(`/api/items?limit=20`, {
+          const res = await api.get<{ items: any[] }>(`/api/items?limit=25`, {
             companyId: activeCompany.id
           });
           setReturnMedicinesList(res.items || []);
@@ -227,7 +268,7 @@ export default function Sales() {
 
       try {
         setSearchingReturnMedicines(true);
-        const res = await api.get<{ items: any[] }>(`/api/items?search=${encodeURIComponent(returnSearchQuery)}&limit=30`, {
+        const res = await api.get<{ items: any[] }>(`/api/items?search=${encodeURIComponent(returnSearchQuery)}&limit=35`, {
           companyId: activeCompany.id
         });
         setReturnMedicinesList(res.items || []);
@@ -241,7 +282,6 @@ export default function Sales() {
     return () => clearTimeout(timer);
   }, [returnSearchQuery, showReturnModal, activeCompany?.id]);
 
-  // Handle Return Item Selection
   const handleSelectReturnItem = (item: any) => {
     setSelectedReturnItem(item);
     if (item.batches && item.batches.length > 0) {
@@ -249,10 +289,13 @@ export default function Sales() {
     } else {
       setSelectedReturnBatch(null);
     }
+    setReturnStrips('1');
+    setReturnLoose('0');
+    setCurrentItemRefund('');
   };
 
-  // Auto calculate recommended refund amount based on retail MRP
-  const calculatedRefund = React.useMemo(() => {
+  // Auto calculate item refund based on MRP
+  const calculatedCurrentItemRefund = React.useMemo(() => {
     if (!selectedReturnBatch || !selectedReturnItem) return 0;
     const factor = selectedReturnItem.conversionFactor || 1;
     const strips = Math.max(0, parseInt(returnStrips) || 0);
@@ -262,22 +305,107 @@ export default function Sales() {
     return Math.round(total * 100) / 100;
   }, [selectedReturnBatch, selectedReturnItem, returnStrips, returnLoose]);
 
-  const effectiveRefundAmount = customRefundAmount.trim() !== ''
-    ? Math.max(0, parseFloat(customRefundAmount) || 0)
-    : calculatedRefund;
+  const effectiveCurrentItemRefund = currentItemRefund.trim() !== ''
+    ? Math.max(0, parseFloat(currentItemRefund) || 0)
+    : calculatedCurrentItemRefund;
 
-  const handleProcessPatientReturn = async () => {
-    if (!activeCompany) return;
-    if (!selectedReturnBatch) {
-      setError('Please select a medicine batch to return to inventory');
+  // Add Medicine to Return Cart
+  const handleAddMedicineToCart = () => {
+    if (!selectedReturnItem || !selectedReturnBatch) {
+      setError('Please select a medicine and batch to return');
       return;
     }
 
+    const factor = selectedReturnItem.conversionFactor || 1;
     const strips = Math.max(0, parseInt(returnStrips) || 0);
     const loose = Math.max(0, parseInt(returnLoose) || 0);
+    const totalUnits = (strips * factor) + loose;
 
-    if (strips === 0 && loose === 0) {
-      setError('Please enter at least 1 strip or loose tablet to return');
+    if (totalUnits <= 0) {
+      setError('Please enter at least 1 strip or loose tablet for this medicine');
+      return;
+    }
+
+    const unitPrice = Number(selectedReturnBatch.mrp) > 0 ? Number(selectedReturnBatch.mrp) : Number(selectedReturnBatch.pts || 0);
+
+    const newItem: ReturnCartItem = {
+      id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      batchId: selectedReturnBatch.id,
+      itemId: selectedReturnItem.id,
+      medicineName: selectedReturnItem.name,
+      sku: selectedReturnItem.sku || '',
+      batchNumber: selectedReturnBatch.batchNumber,
+      expiryDate: selectedReturnBatch.expiryDate,
+      unit: selectedReturnItem.unit || 'TAB',
+      conversionFactor: factor,
+      strips,
+      looseQty: loose,
+      unitsToAdd: totalUnits,
+      unitRetailPrice: unitPrice,
+      itemRefund: effectiveCurrentItemRefund
+    };
+
+    setReturnCart(prev => [...prev, newItem]);
+
+    // Reset current item picker to immediately allow adding the next medicine
+    setSelectedReturnItem(null);
+    setSelectedReturnBatch(null);
+    setReturnSearchQuery('');
+    setReturnStrips('1');
+    setReturnLoose('0');
+    setCurrentItemRefund('');
+    setError(null);
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setReturnCart(prev => prev.filter(i => i.id !== id));
+  };
+
+  // Grand Total of Return Cart
+  const sumOfCartRefunds = React.useMemo(() => {
+    return Math.round(returnCart.reduce((sum, itm) => sum + itm.itemRefund, 0) * 100) / 100;
+  }, [returnCart]);
+
+  const effectiveGrandTotalRefund = customGrandTotalRefund.trim() !== ''
+    ? Math.max(0, parseFloat(customGrandTotalRefund) || 0)
+    : sumOfCartRefunds;
+
+  // Submit Multi-Item Patient Return
+  const handleProcessPatientReturn = async () => {
+    if (!activeCompany) return;
+
+    let itemsToSubmit = [...returnCart];
+
+    // If staff picked a medicine but forgot to click "+ Add Medicine", auto-add it
+    if (selectedReturnItem && selectedReturnBatch) {
+      const factor = selectedReturnItem.conversionFactor || 1;
+      const strips = Math.max(0, parseInt(returnStrips) || 0);
+      const loose = Math.max(0, parseInt(returnLoose) || 0);
+      const totalUnits = (strips * factor) + loose;
+
+      if (totalUnits > 0) {
+        const unitPrice = Number(selectedReturnBatch.mrp) > 0 ? Number(selectedReturnBatch.mrp) : Number(selectedReturnBatch.pts || 0);
+        itemsToSubmit.push({
+          id: `cart-auto-${Date.now()}`,
+          batchId: selectedReturnBatch.id,
+          itemId: selectedReturnItem.id,
+          medicineName: selectedReturnItem.name,
+          sku: selectedReturnItem.sku || '',
+          batchNumber: selectedReturnBatch.batchNumber,
+          expiryDate: selectedReturnBatch.expiryDate,
+          unit: selectedReturnItem.unit || 'TAB',
+          conversionFactor: factor,
+          strips,
+          looseQty: loose,
+          unitsToAdd: totalUnits,
+          unitRetailPrice: unitPrice,
+          itemRefund: effectiveCurrentItemRefund
+        });
+      }
+    }
+
+    if (itemsToSubmit.length === 0) {
+      setError('Please add at least 1 medicine to the return list');
       return;
     }
 
@@ -286,60 +414,64 @@ export default function Sales() {
       setError(null);
 
       const res = await api.post<any>('/api/inventory/quick-return', {
-        batchId: selectedReturnBatch.id,
-        strips,
-        looseQty: loose,
-        refundAmount: effectiveRefundAmount,
-        patientName: returnPatientName.trim() || 'Cash Customer',
-        reason: returnReason.trim() || 'Patient Return'
-      }, {
-        companyId: activeCompany.id,
-        idempotencyKey: `ret-${Date.now()}`
-      });
-
-      setSuccessMessage(`Patient return logged successfully! ₹${effectiveRefundAmount.toFixed(2)} refund recorded & stock inwarded.`);
-      setShowReturnModal(false);
-
-      // Create return receipt object for instant view/print
-      const factor = selectedReturnItem?.conversionFactor || 1;
-      const createdReturnSlip: PatientReturnItem = {
-        id: res.voucherNumber || `RET-${Date.now()}`,
-        voucherNumber: res.voucherNumber || `RET-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        itemId: selectedReturnItem?.id || '',
-        medicineName: res.medicineName || selectedReturnItem?.name,
-        sku: selectedReturnItem?.sku || '',
-        unit: selectedReturnItem?.unit || 'TAB',
-        conversionFactor: factor,
-        batchId: selectedReturnBatch.id,
-        batchNumber: res.batchNumber || selectedReturnBatch.batchNumber,
-        expiryDate: selectedReturnBatch.expiryDate,
-        mrp: Number(selectedReturnBatch.mrp || 0),
-        pts: Number(selectedReturnBatch.pts || 0),
-        currentStock: res.newStock,
-        unitsReturned: res.unitsAdded || (strips * factor + loose),
-        strips,
-        looseQty: loose,
-        refundAmount: effectiveRefundAmount,
         patientName: returnPatientName.trim() || 'Cash Customer',
         reason: returnReason.trim() || 'Patient Return',
-        createdByUser: 'Current Staff'
+        totalRefundAmount: effectiveGrandTotalRefund > 0 ? effectiveGrandTotalRefund : itemsToSubmit.reduce((s, i) => s + i.itemRefund, 0),
+        items: itemsToSubmit.map(i => ({
+          batchId: i.batchId,
+          strips: i.strips,
+          looseQty: i.looseQty,
+          quantity: i.unitsToAdd,
+          refundAmount: i.itemRefund
+        }))
+      }, {
+        companyId: activeCompany.id,
+        idempotencyKey: `multi-ret-${Date.now()}`
+      });
+
+      const totalRefund = res.totalRefundAmount || itemsToSubmit.reduce((s, i) => s + i.itemRefund, 0);
+      setSuccessMessage(`Patient return logged successfully! ${itemsToSubmit.length} medicine(s) returned. Total refund ₹${totalRefund.toFixed(2)} recorded & stock inwarded.`);
+      setShowReturnModal(false);
+
+      // Create multi-item return slip for print
+      const slip: MultiItemReturnSlip = {
+        voucherNumber: res.voucherNumber || `RET-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        patientName: returnPatientName.trim() || 'Cash Customer',
+        reason: returnReason.trim() || 'Patient Return',
+        totalRefundAmount: totalRefund,
+        totalUnitsAdded: res.totalUnitsAdded || itemsToSubmit.reduce((s, i) => s + i.unitsToAdd, 0),
+        createdByUser: 'Current Staff',
+        items: itemsToSubmit.map(i => ({
+          medicineName: i.medicineName,
+          sku: i.sku,
+          batchNumber: i.batchNumber,
+          expiryDate: i.expiryDate,
+          unit: i.unit,
+          conversionFactor: i.conversionFactor,
+          strips: i.strips,
+          looseQty: i.looseQty,
+          unitsAdded: i.unitsToAdd,
+          mrp: i.unitRetailPrice,
+          refundAmount: i.itemRefund
+        }))
       };
 
       // Reset form state
+      setReturnCart([]);
       setSelectedReturnItem(null);
       setSelectedReturnBatch(null);
+      setReturnSearchQuery('');
       setReturnStrips('1');
       setReturnLoose('0');
       setReturnPatientName('');
-      setCustomRefundAmount('');
+      setCustomGrandTotalRefund('');
       setReturnReason('Doctor changed medicine / prescription');
 
-      // Refresh sales data and show return slip
       await fetchSalesData();
-      setViewingReturnSlip(createdReturnSlip);
+      setViewingMultiReturnSlip(slip);
     } catch (err: any) {
-      console.error('Failed to log patient return:', err);
+      console.error('Failed to log multi-item patient return:', err);
       setError(err.response?.data?.error || err.message || 'Failed to process return');
     } finally {
       setIsProcessingReturn(false);
@@ -488,7 +620,7 @@ export default function Sales() {
     const confirmDelete = window.confirm(
       isCancelled
         ? `Permanently delete cancelled sale invoice #${invoiceNumber}?`
-        : `Are you sure you want to cancel sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Mark invoice status as CANCELLED\n- Inward items and quantities back into batch inventory\n- Log append-only reversing audit ledger (SALE_RETURN)\n- Reconcile customer balances`
+        : `Are you sure you want to cancel sale invoice #${invoiceNumber}?\n\nThis will atomically:\n- Mark invoice status as CANCELLED\n- Inward items and quantities back into batch inventory\n- Log append-only reversing audit ledger (ADJUSTMENT)\n- Reconcile customer balances`
     );
     if (!confirmDelete) return;
 
@@ -556,7 +688,6 @@ export default function Sales() {
       ret.reason.toLowerCase().includes(search.toLowerCase())
     );
 
-  // Comprehensive Sales Calculations
   const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
   const grossSalesVal = activeInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
   const totalReturnsVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
@@ -598,9 +729,15 @@ export default function Sales() {
             <Download size={16} /> Export Excel
           </button>
 
-          {/* Quick Patient Return Action Button */}
+          {/* Multi-Item Patient Return Action Button */}
           <button
             onClick={() => {
+              setReturnCart([]);
+              setSelectedReturnItem(null);
+              setSelectedReturnBatch(null);
+              setReturnSearchQuery('');
+              setReturnPatientName('');
+              setCustomGrandTotalRefund('');
               setShowReturnModal(true);
               setError(null);
             }}
@@ -619,7 +756,7 @@ export default function Sales() {
               boxShadow: '0 4px 14px rgba(225, 29, 72, 0.25)',
               transition: 'all 0.15s ease'
             }}
-            title="Record medicine returned by a patient and issue refund / credit note"
+            title="Return 1 or multiple medicines brought back by a patient and issue refund / credit note"
           >
             <RotateCcw size={17} /> + Patient Return
           </button>
@@ -1164,6 +1301,12 @@ export default function Sales() {
             </div>
             <button
               onClick={() => {
+                setReturnCart([]);
+                setSelectedReturnItem(null);
+                setSelectedReturnBatch(null);
+                setReturnSearchQuery('');
+                setReturnPatientName('');
+                setCustomGrandTotalRefund('');
                 setShowReturnModal(true);
                 setError(null);
               }}
@@ -1267,7 +1410,35 @@ export default function Sales() {
                       </td>
                       <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
                         <button
-                          onClick={() => setViewingReturnSlip(ret)}
+                          onClick={() => {
+                            // Find all items with this voucherNumber for multi-item view
+                            const siblingReturns = patientReturns.filter(r => r.voucherNumber === ret.voucherNumber);
+                            const totalRef = siblingReturns.reduce((s, r) => s + r.refundAmount, 0);
+                            const totalUnits = siblingReturns.reduce((s, r) => s + r.unitsReturned, 0);
+
+                            setViewingMultiReturnSlip({
+                              voucherNumber: ret.voucherNumber,
+                              createdAt: ret.createdAt,
+                              patientName: ret.patientName,
+                              reason: ret.reason,
+                              totalRefundAmount: totalRef,
+                              totalUnitsAdded: totalUnits,
+                              createdByUser: ret.createdByUser,
+                              items: siblingReturns.map(r => ({
+                                medicineName: r.medicineName,
+                                sku: r.sku,
+                                batchNumber: r.batchNumber,
+                                expiryDate: r.expiryDate,
+                                unit: r.unit,
+                                conversionFactor: r.conversionFactor,
+                                strips: r.strips,
+                                looseQty: r.looseQty,
+                                unitsAdded: r.unitsReturned,
+                                mrp: r.mrp,
+                                refundAmount: r.refundAmount
+                              }))
+                            });
+                          }}
                           style={{
                             padding: '0.4rem 0.65rem',
                             background: 'var(--bg-secondary)',
@@ -1294,7 +1465,7 @@ export default function Sales() {
         </div>
       )}
 
-      {/* QUICK PATIENT RETURN MODAL */}
+      {/* MULTI-ITEM PATIENT RETURN TERMINAL MODAL */}
       {showReturnModal && (
         <div style={{
           position: 'fixed',
@@ -1302,7 +1473,7 @@ export default function Sales() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
+          background: 'rgba(0,0,0,0.75)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -1312,27 +1483,27 @@ export default function Sales() {
           <div style={{
             background: 'var(--card-bg)',
             border: '1px solid var(--border-color)',
-            borderRadius: '14px',
+            borderRadius: '16px',
             width: '100%',
-            maxWidth: '650px',
-            maxHeight: '92vh',
+            maxWidth: '850px',
+            maxHeight: '94vh',
             overflowY: 'auto',
             padding: '1.6rem',
             position: 'relative',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)'
           }}>
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <div style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#e11d48', padding: '0.5rem', borderRadius: '8px' }}>
-                  <RotateCcw size={22} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                <div style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#e11d48', padding: '0.55rem', borderRadius: '10px' }}>
+                  <RotateCcw size={24} />
                 </div>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-                    Quick Patient Medicine Return
+                  <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                    Patient Medicine Return Terminal
                   </h2>
                   <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                    Restores stock into inventory batch & deducts refund from Net Sales
+                    Return multiple medicines at once, restore inventory batches, and issue a consolidated refund credit slip
                   </p>
                 </div>
               </div>
@@ -1344,343 +1515,413 @@ export default function Sales() {
               </button>
             </div>
 
-            {/* Step 1: Search & Select Medicine */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                1. Search Medicine to Return *
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+            {/* Patient Name & Return Reason Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '10px', marginBottom: '1.4rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                  Patient Name / Customer
+                </label>
                 <input
                   type="text"
-                  placeholder="Type medicine name, SKU, or generic..."
-                  value={returnSearchQuery}
-                  onChange={e => setReturnSearchQuery(e.target.value)}
+                  placeholder="e.g. Ramesh Kumar / Cash Customer"
+                  value={returnPatientName}
+                  onChange={e => setReturnPatientName(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.65rem 0.8rem 0.65rem 2.2rem',
-                    background: 'var(--bg-secondary)',
+                    padding: '0.55rem 0.8rem',
+                    background: 'var(--card-bg)',
                     border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     color: 'var(--text-primary)',
-                    fontSize: '0.9rem'
+                    fontSize: '0.88rem',
+                    fontWeight: '600'
                   }}
                 />
               </div>
 
-              {/* Suggestions / Dropdown */}
-              {!selectedReturnItem && (
-                <div style={{ marginTop: '0.5rem', maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-secondary)' }}>
-                  {searchingReturnMedicines ? (
-                    <div style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Searching medicines...</div>
-                  ) : returnMedicinesList.length === 0 ? (
-                    <div style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No medicines found. Type to search.</div>
-                  ) : (
-                    returnMedicinesList.map(item => (
-                      <div
-                        key={item.id}
-                        onClick={() => handleSelectReturnItem(item)}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                  Reason for Return
+                </label>
+                <input
+                  type="text"
+                  value={returnReason}
+                  onChange={e => setReturnReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.8rem',
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Section: Add Medicines to Return Cart */}
+            <div style={{ background: 'rgba(20, 184, 166, 0.04)', border: '1px solid rgba(20, 184, 166, 0.25)', borderRadius: '12px', padding: '1.2rem', marginBottom: '1.4rem' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--brand-teal)', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Plus size={16} /> Add Medicine to Return List
+              </div>
+
+              {/* Medicine Search Box */}
+              {!selectedReturnItem ? (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: '0.6rem' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input
+                      type="text"
+                      placeholder="Type medicine name or SKU to add (e.g. BETAGAL, ADDITEK, DETLAM)..."
+                      value={returnSearchQuery}
+                      onChange={e => setReturnSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.8rem 0.65rem 2.2rem',
+                        background: 'var(--card-bg)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--card-bg)' }}>
+                    {searchingReturnMedicines ? (
+                      <div style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Searching medicines...</div>
+                    ) : returnMedicinesList.length === 0 ? (
+                      <div style={{ padding: '0.8rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No medicines found. Type name to search.</div>
+                    ) : (
+                      returnMedicinesList.map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => handleSelectReturnItem(item)}
+                          style={{
+                            padding: '0.6rem 0.9rem',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '0.85rem'
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{item.name}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                              {item.sku} • {item.unit} (1 Strip = {item.conversionFactor || 1} Tabs)
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--brand-teal)', fontWeight: '600' }}>
+                            {item.batches?.length || 0} batches available
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Selected Medicine Configuration */
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', paddingBottom: '0.5rem', borderBottom: '1px dashed var(--border-color)' }}>
+                    <div>
+                      <span style={{ fontWeight: '800', fontSize: '1rem', color: 'var(--text-primary)' }}>{selectedReturnItem.name}</span>
+                      <span style={{ marginLeft: '0.6rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        ({selectedReturnItem.unit}, 1 Strip = {selectedReturnItem.conversionFactor || 1} Tabs)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedReturnItem(null);
+                        setSelectedReturnBatch(null);
+                        setReturnSearchQuery('');
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                    >
+                      Pick Different Medicine
+                    </button>
+                  </div>
+
+                  {/* Batch Selection */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                      Select Batch to Inward Stock:
+                    </label>
+                    {(!selectedReturnItem.batches || selectedReturnItem.batches.length === 0) ? (
+                      <div style={{ padding: '0.6rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', borderRadius: '6px', fontSize: '0.82rem' }}>
+                        No batches found. Please create a batch in Inventory first.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                        {selectedReturnItem.batches.map((b: any) => {
+                          const isSelected = selectedReturnBatch?.id === b.id;
+                          return (
+                            <div
+                              key={b.id}
+                              onClick={() => setSelectedReturnBatch(b)}
+                              style={{
+                                padding: '0.6rem',
+                                borderRadius: '8px',
+                                border: isSelected ? '2px solid var(--brand-teal)' : '1px solid var(--border-color)',
+                                background: isSelected ? 'rgba(20, 184, 166, 0.12)' : 'var(--card-bg)',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              <div style={{ fontWeight: '700', color: isSelected ? 'var(--brand-teal)' : 'var(--text-primary)' }}>
+                                Batch: {b.batchNumber}
+                              </div>
+                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                                MRP: <strong>₹{Number(b.mrp || 0).toFixed(2)}</strong> • Exp: {b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : 'N/A'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quantities & Refund Input */}
+                  {selectedReturnBatch && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr auto', gap: '0.8rem', alignItems: 'flex-end' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                          Strips
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={returnStrips}
+                          onChange={e => setReturnStrips(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.55rem',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '700',
+                            fontSize: '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                          Loose Tabs
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={returnLoose}
+                          onChange={e => setReturnLoose(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.55rem',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '700',
+                            fontSize: '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                          Item Refund (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder={`₹${calculatedCurrentItemRefund.toFixed(2)}`}
+                          value={currentItemRefund}
+                          onChange={e => setCurrentItemRefund(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.55rem',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: '#e11d48',
+                            fontWeight: '800',
+                            fontSize: '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddMedicineToCart}
                         style={{
-                          padding: '0.65rem 0.9rem',
-                          borderBottom: '1px solid var(--border-color)',
+                          padding: '0.58rem 1.1rem',
+                          background: 'var(--brand-teal)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontWeight: '700',
+                          fontSize: '0.88rem',
                           cursor: 'pointer',
                           display: 'flex',
-                          justifyContent: 'space-between',
                           alignItems: 'center',
-                          fontSize: '0.85rem'
+                          gap: '0.4rem',
+                          height: '38px',
+                          boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--card-bg)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div>
-                          <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-                            {item.sku} • {item.unit} (Pack of {item.conversionFactor || 1})
-                          </div>
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--brand-teal)', fontWeight: '600' }}>
-                          {item.batches?.length || 0} batches
-                        </span>
-                      </div>
-                    ))
+                        <Plus size={16} /> Add to List
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Selected Medicine Info Banner */}
-            {selectedReturnItem && (
-              <div style={{ background: 'rgba(20, 184, 166, 0.08)', border: '1px solid rgba(20, 184, 166, 0.3)', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{selectedReturnItem.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    Unit: <strong>{selectedReturnItem.unit}</strong> (1 Strip = {selectedReturnItem.conversionFactor || 1} Tabs)
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedReturnItem(null);
-                    setSelectedReturnBatch(null);
-                  }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
-                >
-                  Change Medicine
-                </button>
-              </div>
-            )}
-
-            {/* Step 2: Batch Selection */}
-            {selectedReturnItem && (
-              <div style={{ marginBottom: '1.2rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                  2. Select Batch for Inwarding Stock *
-                </label>
-                {(!selectedReturnItem.batches || selectedReturnItem.batches.length === 0) ? (
-                  <div style={{ padding: '0.8rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                    No active batches found for this medicine. Please create a batch in Inventory first.
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
-                    {selectedReturnItem.batches.map((b: any) => {
-                      const isSelected = selectedReturnBatch?.id === b.id;
-                      return (
-                        <div
-                          key={b.id}
-                          onClick={() => setSelectedReturnBatch(b)}
-                          style={{
-                            padding: '0.7rem',
-                            borderRadius: '8px',
-                            border: isSelected ? '2px solid var(--brand-teal)' : '1px solid var(--border-color)',
-                            background: isSelected ? 'rgba(20, 184, 166, 0.1)' : 'var(--bg-secondary)',
-                            cursor: 'pointer',
-                            fontSize: '0.82rem'
-                          }}
-                        >
-                          <div style={{ fontWeight: '700', color: isSelected ? 'var(--brand-teal)' : 'var(--text-primary)' }}>
-                            Batch: {b.batchNumber}
-                          </div>
-                          <div style={{ color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                            MRP: <strong>₹{Number(b.mrp || 0).toFixed(2)}</strong>
-                          </div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                            Exp: {b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : 'N/A'} • Stock: {b.currentStock}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+            {/* List of Medicines Added to Return Cart */}
+            <div style={{ marginBottom: '1.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span style={{ fontWeight: '800', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  Medicines to Refund ({returnCart.length} item{returnCart.length === 1 ? '' : 's'})
+                </span>
+                {returnCart.length > 0 && (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--brand-teal)', fontWeight: '600' }}>
+                    Total Units to Inward: {returnCart.reduce((s, i) => s + i.unitsToAdd, 0)} base units
+                  </span>
                 )}
               </div>
-            )}
 
-            {/* Step 3: Quantities and Patient Information */}
-            {selectedReturnBatch && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Strips Returned
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={returnStrips}
-                      onChange={e => setReturnStrips(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.6rem 0.8rem',
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontWeight: '700',
-                        fontSize: '1rem'
-                      }}
-                    />
-                  </div>
+              {returnCart.length === 0 ? (
+                <div style={{ padding: '1.8rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  No medicines added yet. Use the search box above to add 1, 2, 5, or more medicines to this return slip.
+                </div>
+              ) : (
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>#</th>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>Medicine Name</th>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>Batch & Exp</th>
+                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Return Qty</th>
+                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>MRP Rate</th>
+                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>Refund (₹)</th>
+                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Remove</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {returnCart.map((item, idx) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '0.65rem 0.8rem', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                          <td style={{ padding: '0.65rem 0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                            {item.medicineName}
+                          </td>
+                          <td style={{ padding: '0.65rem 0.8rem', color: 'var(--brand-teal)' }}>
+                            {item.batchNumber} {item.expiryDate ? `(${new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })})` : ''}
+                          </td>
+                          <td style={{ padding: '0.65rem 0.8rem', textAlign: 'center', fontWeight: '700' }}>
+                            {item.strips > 0 && item.looseQty > 0
+                              ? `${item.strips} Str + ${item.looseQty} Tab`
+                              : item.strips > 0
+                              ? `${item.strips} Strip(s)`
+                              : `${item.looseQty} Tab(s)`}
+                          </td>
+                          <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                            ₹{item.unitRetailPrice.toFixed(2)}
+                          </td>
+                          <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: '800', color: '#e11d48' }}>
+                            ₹{item.itemRefund.toFixed(2)}
+                          </td>
+                          <td style={{ padding: '0.65rem 0.8rem', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCartItem(item.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem' }}
+                              title="Remove this medicine"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Loose Tabs Returned
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={returnLoose}
-                      onChange={e => setReturnLoose(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.6rem 0.8rem',
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontWeight: '700',
-                        fontSize: '1rem'
-                      }}
-                    />
+            {/* Grand Total Summary Box */}
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '10px', marginBottom: '1.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontWeight: '800', fontSize: '1rem', color: 'var(--text-primary)' }}>
+                    GRAND TOTAL PATIENT REFUND:
+                  </span>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                    Deducted from Net Sales & cash outflow
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.2rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Patient Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ramesh Kumar / Cash Customer"
-                      value={returnPatientName}
-                      onChange={e => setReturnPatientName(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.6rem 0.8rem',
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.88rem'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Refund Amount (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder={`₹${calculatedRefund.toFixed(2)}`}
-                      value={customRefundAmount}
-                      onChange={e => setCustomRefundAmount(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.6rem 0.8rem',
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        color: '#e11d48',
-                        fontWeight: '800',
-                        fontSize: '1rem'
-                      }}
-                    />
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Auto-calculated at MRP: ₹{calculatedRefund.toFixed(2)}
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '1.45rem', fontWeight: '900', color: '#e11d48' }}>
+                    ₹{effectiveGrandTotalRefund.toFixed(2)}
+                  </span>
                 </div>
+              </div>
+            </div>
 
-                <div style={{ marginBottom: '1.4rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                    Reason for Return
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                    {[
-                      'Doctor changed prescription',
-                      'Excess strips / not needed',
-                      'Patient recovered',
-                      'Wrong medicine given',
-                      'Adverse reaction / allergy'
-                    ].map(reasonChip => (
-                      <button
-                        key={reasonChip}
-                        type="button"
-                        onClick={() => setReturnReason(reasonChip)}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          background: returnReason === reasonChip ? 'rgba(244, 63, 94, 0.15)' : 'var(--bg-secondary)',
-                          border: returnReason === reasonChip ? '1px solid #e11d48' : '1px solid var(--border-color)',
-                          color: returnReason === reasonChip ? '#e11d48' : 'var(--text-secondary)',
-                          borderRadius: '999px',
-                          fontSize: '0.74rem',
-                          fontWeight: returnReason === reasonChip ? '700' : '500',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {reasonChip}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    value={returnReason}
-                    onChange={e => setReturnReason(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.8rem',
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-
-                {/* Refund & Accounting Impact Preview */}
-                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.9rem', borderRadius: '8px', marginBottom: '1.4rem', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Inventory Restored:</span>
-                    <strong style={{ color: 'var(--accent-green)' }}>
-                      +{(Math.max(0, parseInt(returnStrips) || 0) * (selectedReturnItem?.conversionFactor || 1)) + Math.max(0, parseInt(returnLoose) || 0)} Units to Batch {selectedReturnBatch.batchNumber}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '700' }}>Patient Refund (Cash Outflow):</span>
-                    <strong style={{ color: '#e11d48', fontSize: '1rem' }}>₹{effectiveRefundAmount.toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                {/* Modal Footer Actions */}
-                <div style={{ display: 'flex', gap: '0.8rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowReturnModal(false)}
-                    style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleProcessPatientReturn}
-                    disabled={isProcessingReturn}
-                    style={{
-                      flex: 2,
-                      padding: '0.75rem',
-                      background: '#e11d48',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 4px 14px rgba(225, 29, 72, 0.3)'
-                    }}
-                  >
-                    <RotateCcw size={17} />
-                    {isProcessingReturn ? 'Processing Return...' : `Submit Return & Refund ₹${effectiveRefundAmount.toFixed(2)}`}
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '0.8rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProcessPatientReturn}
+                disabled={isProcessingReturn || (returnCart.length === 0 && !selectedReturnBatch)}
+                style={{
+                  flex: 2,
+                  padding: '0.75rem',
+                  background: '#e11d48',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(225, 29, 72, 0.3)'
+                }}
+              >
+                <RotateCcw size={17} />
+                {isProcessingReturn
+                  ? 'Processing Return...'
+                  : `Submit Return & Refund ₹${(effectiveGrandTotalRefund > 0 ? effectiveGrandTotalRefund : calculatedCurrentItemRefund).toFixed(2)}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* PATIENT RETURN VOUCHER / SLIP MODAL */}
-      {viewingReturnSlip && (
+      {/* MULTI-ITEM PATIENT RETURN VOUCHER / SLIP MODAL */}
+      {viewingMultiReturnSlip && (
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
+          background: 'rgba(0,0,0,0.75)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -1691,71 +1932,95 @@ export default function Sales() {
             background: '#ffffff',
             color: '#0f172a',
             border: '1px solid #cbd5e1',
-            borderRadius: '12px',
+            borderRadius: '14px',
             width: '100%',
-            maxWidth: '520px',
-            padding: '1.8rem',
+            maxWidth: '680px',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            padding: '2rem',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             position: 'relative'
           }}>
             <div style={{ textAlign: 'center', borderBottom: '2px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>
                 {activeCompany?.name || 'PHARMACY'}
               </h2>
-              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.2rem' }}>
-                PATIENT MEDICINE RETURN & REFUND VOUCHER
+              <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.2rem' }}>
+                PATIENT MEDICINE RETURN & REFUND VOUCHER (CREDIT NOTE)
               </div>
-              <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#e11d48', marginTop: '0.4rem' }}>
-                Voucher #: {viewingReturnSlip.voucherNumber}
+              <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#e11d48', marginTop: '0.4rem' }}>
+                Voucher #: {viewingMultiReturnSlip.voucherNumber}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Date: {new Date(viewingReturnSlip.createdAt).toLocaleString('en-IN')}
-              </div>
-            </div>
-
-            <div style={{ fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Patient Name:</span>
-                <strong style={{ color: '#0f172a' }}>{viewingReturnSlip.patientName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Medicine Name:</span>
-                <strong style={{ color: '#0f172a' }}>{viewingReturnSlip.medicineName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Batch Number:</span>
-                <strong style={{ color: '#0f172a' }}>{viewingReturnSlip.batchNumber} {viewingReturnSlip.expiryDate ? `(Exp: ${viewingReturnSlip.expiryDate})` : ''}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Quantity Returned:</span>
-                <strong style={{ color: '#0f172a' }}>
-                  {viewingReturnSlip.strips > 0 && viewingReturnSlip.looseQty > 0
-                    ? `${viewingReturnSlip.strips} Strips + ${viewingReturnSlip.looseQty} Loose Tabs`
-                    : viewingReturnSlip.strips > 0
-                    ? `${viewingReturnSlip.strips} Strip(s)`
-                    : `${viewingReturnSlip.looseQty} Loose Tab(s)`} ({viewingReturnSlip.unitsReturned} Base Units)
-                </strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Reason:</span>
-                <span style={{ color: '#0f172a' }}>{viewingReturnSlip.reason}</span>
+              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Date: {new Date(viewingMultiReturnSlip.createdAt).toLocaleString('en-IN')}
               </div>
             </div>
 
-            <div style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.8rem 1rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-              <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>TOTAL REFUND ISSUED:</span>
-              <span style={{ fontWeight: '900', fontSize: '1.35rem', color: '#e11d48' }}>₹{viewingReturnSlip.refundAmount.toFixed(2)}</span>
+            <div style={{ fontSize: '0.88rem', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '8px' }}>
+              <div>
+                <span style={{ color: '#64748b' }}>Patient Name: </span>
+                <strong style={{ color: '#0f172a' }}>{viewingMultiReturnSlip.patientName}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#64748b' }}>Reason: </span>
+                <span style={{ color: '#0f172a' }}>{viewingMultiReturnSlip.reason}</span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.75rem', color: '#64748b', borderTop: '1px dashed #cbd5e1', paddingTop: '0.8rem', marginBottom: '1.2rem' }}>
-              <div>Processed by: <strong>{viewingReturnSlip.createdByUser || 'Staff'}</strong></div>
+            {/* Table of Returned Items */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '1.2rem' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '0.6rem 0.8rem' }}>#</th>
+                  <th style={{ padding: '0.6rem 0.8rem' }}>Medicine</th>
+                  <th style={{ padding: '0.6rem 0.8rem' }}>Batch & Exp</th>
+                  <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Qty Returned</th>
+                  <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>MRP</th>
+                  <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>Refund (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {viewingMultiReturnSlip.items.map((itm, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '0.6rem 0.8rem', color: '#64748b' }}>{i + 1}</td>
+                    <td style={{ padding: '0.6rem 0.8rem', fontWeight: '700', color: '#0f172a' }}>
+                      {itm.medicineName}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.8rem', color: '#0f766e' }}>
+                      {itm.batchNumber} {itm.expiryDate ? `(${itm.expiryDate})` : ''}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.8rem', textAlign: 'center', fontWeight: '700' }}>
+                      {itm.strips > 0 && itm.looseQty > 0
+                        ? `${itm.strips} Str + ${itm.looseQty} Tab`
+                        : itm.strips > 0
+                        ? `${itm.strips} Strip(s)`
+                        : `${itm.looseQty} Tab(s)`}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', color: '#64748b' }}>
+                      ₹{itm.mrp.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', fontWeight: '800', color: '#e11d48' }}>
+                      ₹{itm.refundAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', padding: '0.9rem 1.2rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.4rem' }}>
+              <span style={{ fontWeight: '900', fontSize: '1.05rem', color: '#0f172a' }}>TOTAL REFUND ISSUED:</span>
+              <span style={{ fontWeight: '900', fontSize: '1.5rem', color: '#e11d48' }}>₹{viewingMultiReturnSlip.totalRefundAmount.toFixed(2)}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.78rem', color: '#64748b', borderTop: '1px dashed #cbd5e1', paddingTop: '0.9rem', marginBottom: '1.4rem' }}>
+              <div>Processed by: <strong>{viewingMultiReturnSlip.createdByUser || 'Staff'}</strong></div>
               <div style={{ textAlign: 'right' }}>Pharmacist Signature: _____________</div>
             </div>
 
             <div style={{ display: 'flex', gap: '0.8rem' }}>
               <button
-                onClick={() => setViewingReturnSlip(null)}
-                style={{ flex: 1, padding: '0.65rem', background: '#e2e8f0', border: 'none', borderRadius: '6px', color: '#334155', fontWeight: '700', cursor: 'pointer' }}
+                onClick={() => setViewingMultiReturnSlip(null)}
+                style={{ flex: 1, padding: '0.7rem', background: '#e2e8f0', border: 'none', borderRadius: '6px', color: '#334155', fontWeight: '700', cursor: 'pointer' }}
               >
                 Close
               </button>
@@ -1763,7 +2028,7 @@ export default function Sales() {
                 onClick={handlePrint}
                 style={{
                   flex: 1,
-                  padding: '0.65rem',
+                  padding: '0.7rem',
                   background: 'var(--brand-teal)',
                   color: '#fff',
                   border: 'none',
@@ -1776,7 +2041,7 @@ export default function Sales() {
                   gap: '0.4rem'
                 }}
               >
-                <Printer size={15} /> Print Slip
+                <Printer size={16} /> Print Return Voucher
               </button>
             </div>
           </div>

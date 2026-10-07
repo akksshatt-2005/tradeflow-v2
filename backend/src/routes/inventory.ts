@@ -349,103 +349,200 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
 
 /**
  * POST /inventory/quick-return
- * 1-Click Patient Medicine Return / Direct Stock Inward with audit logging
+ * Multi-Item / 1-Click Patient Medicine Return & Stock Inward with audit logging
  */
 router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const userId = req.user!.userId;
-  const { batchId, strips = 0, looseQty = 0, quantity = 0, refundAmount, patientName, reason } = req.body;
+  const {
+    items, // Array of { batchId, strips, looseQty, quantity, refundAmount }
+    batchId, // Single item fallback
+    strips = 0,
+    looseQty = 0,
+    quantity = 0,
+    refundAmount,
+    patientName,
+    reason,
+    totalRefundAmount: customTotalRefund
+  } = req.body;
 
-  if (!batchId) {
-    res.status(400).json({ error: 'Batch ID is required' });
+  // Normalize incoming payload to a list of return items
+  const rawItemsList: Array<{
+    batchId: string;
+    strips?: number;
+    looseQty?: number;
+    quantity?: number;
+    refundAmount?: number;
+  }> = Array.isArray(items) && items.length > 0
+    ? items
+    : (batchId ? [{ batchId, strips, looseQty, quantity, refundAmount }] : []);
+
+  if (rawItemsList.length === 0) {
+    res.status(400).json({ error: 'At least one medicine item is required for patient return' });
     return;
   }
 
   try {
-    const batch = await prisma.batch.findFirst({
-      where: { id: batchId, companyId },
-      include: { item: true }
-    });
-
-    if (!batch) {
-      res.status(404).json({ error: 'Batch not found in this company' });
-      return;
-    }
-
-    const factor = batch.item.conversionFactor || 1;
-    const numStrips = Math.max(0, parseInt(strips) || 0);
-    const numLoose = Math.max(0, parseInt(looseQty) || 0);
-    const directQty = Math.max(0, parseInt(quantity) || 0);
-
-    const totalUnitsToAdd = (numStrips > 0 || numLoose > 0)
-      ? (numStrips * factor) + numLoose
-      : directQty;
-
-    if (totalUnitsToAdd <= 0) {
-      res.status(400).json({ error: 'Return quantity must be greater than 0' });
-      return;
-    }
-
-    // Default refund is based on MRP (retail price customer paid)
-    const unitRetailPrice = Number(batch.mrp) > 0 ? Number(batch.mrp) : Number(batch.pts || 0);
-    const calculatedRefund = (refundAmount !== undefined && refundAmount !== null && Number(refundAmount) >= 0 && String(refundAmount).trim() !== '')
-      ? Number(refundAmount)
-      : Math.round(((numStrips * unitRetailPrice) + (numLoose * (unitRetailPrice / factor))) * 100) / 100;
-
     const returnVoucherNo = `RET-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const finalPatientName = patientName?.trim() || 'Cash Customer';
+    const finalReason = reason?.trim() || 'Patient Medicine Return';
 
-    const structuredPayload = {
-      voucherNo: returnVoucherNo,
-      patientName: patientName?.trim() || 'Cash Customer',
-      reason: reason?.trim() || 'Patient Medicine Return',
-      strips: numStrips,
-      looseQty: numLoose,
-      units: totalUnitsToAdd,
-      refundAmount: calculatedRefund
-    };
+    const processedItems: Array<{
+      batchId: string;
+      itemId: string;
+      medicineName: string;
+      sku: string;
+      batchNumber: string;
+      expiryDate: string | null;
+      unit: string;
+      conversionFactor: number;
+      strips: number;
+      looseQty: number;
+      unitsToAdd: number;
+      unitRetailPrice: number;
+      calculatedRefund: number;
+    }> = [];
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Increment batch stock (Rule E / stock restoration)
-      const updatedBatch = await tx.batch.update({
-        where: { id: batch.id },
-        data: {
-          currentStock: { increment: totalUnitsToAdd }
-        }
+    // Pre-validate all batches
+    for (const raw of rawItemsList) {
+      if (!raw.batchId) {
+        res.status(400).json({ error: 'All returned items must specify a valid batch ID' });
+        return;
+      }
+
+      const batch = await prisma.batch.findFirst({
+        where: { id: raw.batchId, companyId },
+        include: { item: true }
       });
 
-      // 2. Log immutable stock ledger audit entry
-      const ledgerEntry = await tx.stockLedger.create({
-        data: {
-          companyId,
-          itemId: batch.itemId,
-          batchId: batch.id,
-          entryType: 'SALE_RETURN',
-          quantity: totalUnitsToAdd,
-          unitPrice: unitRetailPrice,
-          referenceId: returnVoucherNo,
-          notes: JSON.stringify(structuredPayload),
-          createdBy: userId
-        }
-      });
+      if (!batch) {
+        res.status(404).json({ error: `Batch ID "${raw.batchId}" not found in company` });
+        return;
+      }
 
-      return { updatedBatch, ledgerEntry };
+      const factor = batch.item.conversionFactor || 1;
+      const numStrips = Math.max(0, parseInt(String(raw.strips || 0)) || 0);
+      const numLoose = Math.max(0, parseInt(String(raw.looseQty || 0)) || 0);
+      const directQty = Math.max(0, parseInt(String(raw.quantity || 0)) || 0);
+
+      const totalUnitsToAdd = (numStrips > 0 || numLoose > 0)
+        ? (numStrips * factor) + numLoose
+        : directQty;
+
+      if (totalUnitsToAdd <= 0) {
+        res.status(400).json({ error: `Return quantity for "${batch.item.name}" must be greater than 0` });
+        return;
+      }
+
+      const unitRetailPrice = Number(batch.mrp) > 0 ? Number(batch.mrp) : Number(batch.pts || 0);
+      const itemRefund = (raw.refundAmount !== undefined && raw.refundAmount !== null && Number(raw.refundAmount) >= 0 && String(raw.refundAmount).trim() !== '')
+        ? Number(raw.refundAmount)
+        : Math.round(((numStrips * unitRetailPrice) + (numLoose * (unitRetailPrice / factor))) * 100) / 100;
+
+      processedItems.push({
+        batchId: batch.id,
+        itemId: batch.itemId,
+        medicineName: batch.item.name,
+        sku: batch.item.sku,
+        batchNumber: batch.batchNumber,
+        expiryDate: batch.expiryDate ? batch.expiryDate.toISOString().split('T')[0] : null,
+        unit: batch.item.unit,
+        conversionFactor: factor,
+        strips: numStrips,
+        looseQty: numLoose,
+        unitsToAdd: totalUnitsToAdd,
+        unitRetailPrice,
+        calculatedRefund: itemRefund
+      });
+    }
+
+    let calculatedGrandTotalRefund = processedItems.reduce((sum, itm) => sum + itm.calculatedRefund, 0);
+    calculatedGrandTotalRefund = Math.round(calculatedGrandTotalRefund * 100) / 100;
+
+    const finalGrandTotalRefund = (customTotalRefund !== undefined && customTotalRefund !== null && Number(customTotalRefund) >= 0)
+      ? Number(customTotalRefund)
+      : calculatedGrandTotalRefund;
+
+    // Execute atomic transaction for all returned items
+    const txResults = await prisma.$transaction(async (tx) => {
+      const updatedBatches = [];
+      const ledgerEntries = [];
+
+      for (let i = 0; i < processedItems.length; i++) {
+        const item = processedItems[i];
+
+        // 1. Increment batch stock
+        const updatedBatch = await tx.batch.update({
+          where: { id: item.batchId },
+          data: {
+            currentStock: { increment: item.unitsToAdd }
+          }
+        });
+        updatedBatches.push(updatedBatch);
+
+        // 2. Log immutable stock ledger audit entry
+        const structuredPayload = {
+          voucherNo: returnVoucherNo,
+          patientName: finalPatientName,
+          reason: finalReason,
+          medicineName: item.medicineName,
+          sku: item.sku,
+          batchNumber: item.batchNumber,
+          strips: item.strips,
+          looseQty: item.looseQty,
+          units: item.unitsToAdd,
+          refundAmount: item.calculatedRefund,
+          itemIndex: i + 1,
+          totalItemsInReturn: processedItems.length
+        };
+
+        const ledgerEntry = await tx.stockLedger.create({
+          data: {
+            companyId,
+            itemId: item.itemId,
+            batchId: item.batchId,
+            entryType: 'SALE_RETURN',
+            quantity: item.unitsToAdd,
+            unitPrice: item.unitRetailPrice,
+            referenceId: returnVoucherNo,
+            notes: JSON.stringify(structuredPayload),
+            createdBy: userId
+          }
+        });
+        ledgerEntries.push(ledgerEntry);
+      }
+
+      return { updatedBatches, ledgerEntries };
     });
+
+    const totalUnitsRestored = processedItems.reduce((sum, itm) => sum + itm.unitsToAdd, 0);
 
     res.status(200).json({
       success: true,
-      message: `Successfully returned ${totalUnitsToAdd} units of ${batch.item.name} into batch ${batch.batchNumber}`,
+      message: `Successfully returned ${processedItems.length} medicine(s) (${totalUnitsRestored} total units) under voucher ${returnVoucherNo}`,
       voucherNumber: returnVoucherNo,
-      medicineName: batch.item.name,
-      batchNumber: batch.batchNumber,
-      unitsAdded: totalUnitsToAdd,
-      newStock: result.updatedBatch.currentStock,
-      refundAmount: calculatedRefund,
-      patientName: structuredPayload.patientName,
-      reason: structuredPayload.reason
+      patientName: finalPatientName,
+      reason: finalReason,
+      totalItemsCount: processedItems.length,
+      totalUnitsAdded: totalUnitsRestored,
+      totalRefundAmount: finalGrandTotalRefund,
+      items: processedItems.map(p => ({
+        medicineName: p.medicineName,
+        sku: p.sku,
+        batchNumber: p.batchNumber,
+        expiryDate: p.expiryDate,
+        unit: p.unit,
+        conversionFactor: p.conversionFactor,
+        strips: p.strips,
+        looseQty: p.looseQty,
+        unitsAdded: p.unitsToAdd,
+        mrp: p.unitRetailPrice,
+        refundAmount: p.calculatedRefund
+      }))
     });
   } catch (error: any) {
-    console.error('Quick medicine return error:', error);
-    res.status(500).json({ error: error.message || 'Failed to process quick medicine return' });
+    console.error('Multi-item medicine return error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process patient medicine return' });
   }
 });
 
