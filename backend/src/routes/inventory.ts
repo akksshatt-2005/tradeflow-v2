@@ -169,13 +169,163 @@ router.get('/ledger', async (req: CompanyScopedRequest, res: Response) => {
 });
 
 /**
+ * GET /inventory/patient-returns
+ * Fetch patient medicine return records with date range filtering and financial aggregates
+ */
+router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { startDate, endDate, search, limit = '200' } = req.query as {
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+    limit?: string;
+  };
+
+  try {
+    const whereClause: any = {
+      companyId,
+      entryType: 'SALE_RETURN'
+    };
+
+    if (startDate || endDate) {
+      whereClause.createdAt = {};
+      if (startDate) {
+        whereClause.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+      }
+      if (endDate) {
+        whereClause.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+      }
+    }
+
+    const ledgers = await prisma.stockLedger.findMany({
+      where: whereClause,
+      include: {
+        item: { select: { id: true, name: true, sku: true, unit: true, conversionFactor: true } },
+        batch: { select: { id: true, batchNumber: true, expiryDate: true, mrp: true, pts: true, currentStock: true } },
+        user: {
+          select: { id: true, username: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(1000, parseInt(limit) || 200)
+    });
+
+    let totalRefundAmount = 0;
+    let totalUnitsReturned = 0;
+
+    const formattedReturns = ledgers.map(l => {
+      const factor = l.item.conversionFactor || 1;
+      const units = Math.abs(l.quantity);
+      totalUnitsReturned += units;
+
+      let patientName = 'Cash Customer';
+      let reason = 'Patient Return / Refund';
+      let refundAmount = 0;
+      let strips = Math.floor(units / factor);
+      let looseQty = units % factor;
+
+      // Extract details from notes if structured or legacy
+      if (l.notes) {
+        try {
+          if (l.notes.startsWith('{') && l.notes.endsWith('}')) {
+            const parsed = JSON.parse(l.notes);
+            if (parsed.patientName) patientName = parsed.patientName;
+            if (parsed.reason) reason = parsed.reason;
+            if (parsed.refundAmount !== undefined) refundAmount = Number(parsed.refundAmount);
+            if (parsed.strips !== undefined) strips = Number(parsed.strips);
+            if (parsed.looseQty !== undefined) looseQty = Number(parsed.looseQty);
+          } else {
+            // Legacy format: "Patient Return (Patient Name): +X units (Refund ₹250.00)"
+            const patientMatch = l.notes.match(/Patient Return \((.*?)\)/i) || l.notes.match(/Patient: (.*?)(?: \||\))/i);
+            if (patientMatch && patientMatch[1]) patientName = patientMatch[1].trim();
+
+            const refundMatch = l.notes.match(/Refund ₹?([0-9.]+)/i);
+            if (refundMatch && refundMatch[1]) {
+              refundAmount = parseFloat(refundMatch[1]);
+            }
+
+            const reasonMatch = l.notes.match(/Reason: (.*?)(?: \||\))/i);
+            if (reasonMatch && reasonMatch[1]) {
+              reason = reasonMatch[1].trim();
+            } else if (!l.notes.startsWith('Patient Return')) {
+              reason = l.notes;
+            }
+          }
+        } catch {
+          reason = l.notes || reason;
+        }
+      }
+
+      // If refundAmount was not explicitly parsed, fallback to MRP-based calculation
+      if (!refundAmount || refundAmount <= 0) {
+        const itemMrp = Number(l.batch?.mrp || l.unitPrice || 0);
+        refundAmount = Math.round(((strips * itemMrp) + (looseQty * (itemMrp / factor))) * 100) / 100;
+        if (refundAmount <= 0 && l.unitPrice) {
+          refundAmount = Math.round(Number(l.unitPrice) * units * 100) / 100;
+        }
+      }
+
+      totalRefundAmount += refundAmount;
+
+      return {
+        id: l.id,
+        voucherNumber: l.referenceId || `RET-${l.createdAt.getFullYear()}-${l.id.slice(0, 6).toUpperCase()}`,
+        createdAt: l.createdAt.toISOString(),
+        itemId: l.itemId,
+        medicineName: l.item.name,
+        sku: l.item.sku,
+        unit: l.item.unit,
+        conversionFactor: factor,
+        batchId: l.batchId,
+        batchNumber: l.batch?.batchNumber || 'N/A',
+        expiryDate: l.batch?.expiryDate ? l.batch.expiryDate.toISOString().split('T')[0] : null,
+        mrp: Number(l.batch?.mrp || 0),
+        pts: Number(l.batch?.pts || 0),
+        currentStock: l.batch?.currentStock ?? 0,
+        unitsReturned: units,
+        strips,
+        looseQty,
+        refundAmount,
+        patientName,
+        reason,
+        rawNotes: l.notes,
+        createdByUser: l.user?.username || 'Staff'
+      };
+    });
+
+    const filtered = search
+      ? formattedReturns.filter(r =>
+          r.medicineName.toLowerCase().includes(search.toLowerCase()) ||
+          r.patientName.toLowerCase().includes(search.toLowerCase()) ||
+          r.batchNumber.toLowerCase().includes(search.toLowerCase()) ||
+          r.voucherNumber.toLowerCase().includes(search.toLowerCase()) ||
+          r.reason.toLowerCase().includes(search.toLowerCase())
+        )
+      : formattedReturns;
+
+    res.status(200).json({
+      success: true,
+      returns: filtered,
+      summary: {
+        totalReturnsCount: filtered.length,
+        totalRefundAmount: Math.round(totalRefundAmount * 100) / 100,
+        totalUnitsReturned
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching patient returns:', error);
+    res.status(500).json({ error: 'Failed to fetch patient returns log' });
+  }
+});
+
+/**
  * POST /inventory/quick-return
  * 1-Click Patient Medicine Return / Direct Stock Inward with audit logging
  */
 router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const userId = req.user!.userId;
-  const { batchId, strips = 0, looseQty = 0, quantity = 0, refundAmount = 0, patientName, reason } = req.body;
+  const { batchId, strips = 0, looseQty = 0, quantity = 0, refundAmount, patientName, reason } = req.body;
 
   if (!batchId) {
     res.status(400).json({ error: 'Batch ID is required' });
@@ -207,12 +357,26 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
       return;
     }
 
-    const calculatedRefund = refundAmount !== undefined && refundAmount !== null && Number(refundAmount) > 0
+    // Default refund is based on MRP (retail price customer paid)
+    const unitRetailPrice = Number(batch.mrp) > 0 ? Number(batch.mrp) : Number(batch.pts || 0);
+    const calculatedRefund = (refundAmount !== undefined && refundAmount !== null && Number(refundAmount) >= 0 && String(refundAmount).trim() !== '')
       ? Number(refundAmount)
-      : Math.round(((numStrips * Number(batch.pts || batch.mrp)) + (numLoose * (Number(batch.pts || batch.mrp) / factor))) * 100) / 100;
+      : Math.round(((numStrips * unitRetailPrice) + (numLoose * (unitRetailPrice / factor))) * 100) / 100;
+
+    const returnVoucherNo = `RET-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const structuredPayload = {
+      voucherNo: returnVoucherNo,
+      patientName: patientName?.trim() || 'Cash Customer',
+      reason: reason?.trim() || 'Patient Medicine Return',
+      strips: numStrips,
+      looseQty: numLoose,
+      units: totalUnitsToAdd,
+      refundAmount: calculatedRefund
+    };
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Increment batch stock
+      // 1. Increment batch stock (Rule E / stock restoration)
       const updatedBatch = await tx.batch.update({
         where: { id: batch.id },
         data: {
@@ -221,30 +385,34 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
       });
 
       // 2. Log immutable stock ledger audit entry
-      await tx.stockLedger.create({
+      const ledgerEntry = await tx.stockLedger.create({
         data: {
           companyId,
           itemId: batch.itemId,
           batchId: batch.id,
           entryType: 'SALE_RETURN',
           quantity: totalUnitsToAdd,
-          unitPrice: Number(batch.pts) || Number(batch.mrp),
-          notes: reason || `Patient Return${patientName ? ` (${patientName})` : ''}: +${totalUnitsToAdd} units (Refund ₹${calculatedRefund.toFixed(2)})`,
+          unitPrice: unitRetailPrice,
+          referenceId: returnVoucherNo,
+          notes: JSON.stringify(structuredPayload),
           createdBy: userId
         }
       });
 
-      return updatedBatch;
+      return { updatedBatch, ledgerEntry };
     });
 
     res.status(200).json({
       success: true,
       message: `Successfully returned ${totalUnitsToAdd} units of ${batch.item.name} into batch ${batch.batchNumber}`,
+      voucherNumber: returnVoucherNo,
       medicineName: batch.item.name,
       batchNumber: batch.batchNumber,
       unitsAdded: totalUnitsToAdd,
-      newStock: result.currentStock,
-      refundAmount: calculatedRefund
+      newStock: result.updatedBatch.currentStock,
+      refundAmount: calculatedRefund,
+      patientName: structuredPayload.patientName,
+      reason: structuredPayload.reason
     });
   } catch (error: any) {
     console.error('Quick medicine return error:', error);
