@@ -937,17 +937,17 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           data: { currentStock: { increment: oldUnits } }
         });
 
-        // Write append-only compensating reversal
+        // Write append-only compensating revision adjustment in stock ledger
         await tx.stockLedger.create({
           data: {
             companyId,
             itemId: oldItem.itemId,
             batchId: oldItem.batchId,
-            entryType: 'SALE_RETURN',
+            entryType: 'ADJUSTMENT',
             quantity: oldUnits,
             unitPrice: oldItem.unitPrice,
             referenceId: existingInvoice.id,
-            notes: `Reversal for Edited Sales Invoice #${existingInvoice.invoiceNumber} (+${oldUnits} units restored)`,
+            notes: `Invoice Edit Revision #${existingInvoice.invoiceNumber} (+${oldUnits} units restored)`,
             createdBy: userId
           }
         });

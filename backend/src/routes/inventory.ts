@@ -182,9 +182,30 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
   };
 
   try {
+    // 1. One-time clean up / reclassify historical internal invoice edit/cancel reversals from SALE_RETURN to ADJUSTMENT
+    await prisma.stockLedger.updateMany({
+      where: {
+        companyId,
+        entryType: 'SALE_RETURN',
+        OR: [
+          { notes: { contains: 'Reversal for Edited Sales Invoice' } },
+          { notes: { contains: 'Invoice Edit Revision' } },
+          { notes: { contains: 'Reversal for Cancelled Sales Invoice' } }
+        ]
+      },
+      data: {
+        entryType: 'ADJUSTMENT'
+      }
+    }).catch(e => console.warn('Ledger reclassification cleanup error:', e));
+
     const whereClause: any = {
       companyId,
-      entryType: 'SALE_RETURN'
+      entryType: 'SALE_RETURN',
+      NOT: [
+        { notes: { contains: 'Reversal for Edited Sales Invoice' } },
+        { notes: { contains: 'Invoice Edit Revision' } },
+        { notes: { contains: 'Reversal for Cancelled Sales Invoice' } }
+      ]
     };
 
     if (startDate || endDate) {
@@ -213,41 +234,47 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
     let totalRefundAmount = 0;
     let totalUnitsReturned = 0;
 
-    const formattedReturns = ledgers.map(l => {
-      const factor = l.item.conversionFactor || 1;
-      const units = Math.abs(l.quantity);
-      totalUnitsReturned += units;
+    const formattedReturns = ledgers
+      .filter(l => {
+        // Double check to ensure internal invoice edit reversals are excluded
+        if (!l.notes) return true;
+        return !l.notes.includes('Reversal for Edited') && !l.notes.includes('Reversal for Cancelled') && !l.notes.includes('Invoice Edit');
+      })
+      .map(l => {
+        const factor = l.item.conversionFactor || 1;
+        const units = Math.abs(l.quantity);
+        totalUnitsReturned += units;
 
-      let patientName = 'Cash Customer';
-      let reason = 'Patient Return / Refund';
-      let refundAmount = 0;
-      let strips = Math.floor(units / factor);
-      let looseQty = units % factor;
+        let patientName = 'Cash Customer';
+        let reason = 'Patient Return / Refund';
+        let refundAmount = 0;
+        let strips = Math.floor(units / factor);
+        let looseQty = units % factor;
 
-      // Extract details from notes if structured or legacy
-      if (l.notes) {
-        try {
-          if (l.notes.startsWith('{') && l.notes.endsWith('}')) {
-            const parsed = JSON.parse(l.notes);
-            if (parsed.patientName) patientName = parsed.patientName;
-            if (parsed.reason) reason = parsed.reason;
-            if (parsed.refundAmount !== undefined) refundAmount = Number(parsed.refundAmount);
-            if (parsed.strips !== undefined) strips = Number(parsed.strips);
-            if (parsed.looseQty !== undefined) looseQty = Number(parsed.looseQty);
-          } else {
-            // Legacy format: "Patient Return (Patient Name): +X units (Refund ₹250.00)"
-            const patientMatch = l.notes.match(/Patient Return \((.*?)\)/i) || l.notes.match(/Patient: (.*?)(?: \||\))/i);
-            if (patientMatch && patientMatch[1]) patientName = patientMatch[1].trim();
+        // Extract details from notes if structured or legacy
+        if (l.notes) {
+          try {
+            if (l.notes.startsWith('{') && l.notes.endsWith('}')) {
+              const parsed = JSON.parse(l.notes);
+              if (parsed.patientName) patientName = parsed.patientName;
+              if (parsed.reason) reason = parsed.reason;
+              if (parsed.refundAmount !== undefined) refundAmount = Number(parsed.refundAmount);
+              if (parsed.strips !== undefined) strips = Number(parsed.strips);
+              if (parsed.looseQty !== undefined) looseQty = Number(parsed.looseQty);
+            } else {
+              // Legacy format: "Patient Return (Patient Name): +X units (Refund ₹250.00)"
+              const patientMatch = l.notes.match(/Patient Return \((.*?)\)/i) || l.notes.match(/Patient: (.*?)(?: \||\))/i);
+              if (patientMatch && patientMatch[1]) patientName = patientMatch[1].trim();
 
-            const refundMatch = l.notes.match(/Refund ₹?([0-9.]+)/i);
-            if (refundMatch && refundMatch[1]) {
-              refundAmount = parseFloat(refundMatch[1]);
-            }
+              const refundMatch = l.notes.match(/Refund ₹?([0-9.]+)/i);
+              if (refundMatch && refundMatch[1]) {
+                refundAmount = parseFloat(refundMatch[1]);
+              }
 
-            const reasonMatch = l.notes.match(/Reason: (.*?)(?: \||\))/i);
-            if (reasonMatch && reasonMatch[1]) {
-              reason = reasonMatch[1].trim();
-            } else if (!l.notes.startsWith('Patient Return')) {
+              const reasonMatch = l.notes.match(/Reason: (.*?)(?: \||\))/i);
+              if (reasonMatch && reasonMatch[1]) {
+                reason = reasonMatch[1].trim();
+              } else if (!l.notes.startsWith('Patient Return')) {
               reason = l.notes;
             }
           }
