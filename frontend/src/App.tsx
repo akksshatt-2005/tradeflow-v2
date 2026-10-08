@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ServerWakeBanner from './components/ServerWakeBanner';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import SelectCompany from './pages/SelectCompany';
@@ -62,8 +63,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ErrorBoundary fallbackTitle="TradeFlow encountered an unexpected error">
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

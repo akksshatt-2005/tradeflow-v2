@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import * as XLSX from 'xlsx';
 import POSBilling from './POSBilling';
+import ErrorBoundary from '../components/ErrorBoundary';
 import MultiPatientReturnModal, { MultiItemReturnSlip } from '../components/MultiPatientReturnModal';
 import MultiItemReturnSlipModal from '../components/MultiItemReturnSlipModal';
 import {
@@ -398,18 +399,27 @@ export default function Sales() {
 
   if (showPOS) {
     return (
-      <POSBilling
-        editingInvoiceId={editingInvoiceId}
-        onBack={() => {
+      <ErrorBoundary
+        fallbackTitle="POS Billing Terminal Encountered An Issue"
+        onReset={() => {
           setShowPOS(false);
           setEditingInvoiceId(null);
           fetchSalesData();
         }}
-        onInvoiceCreated={() => {
-          setEditingInvoiceId(null);
-          fetchSalesData();
-        }}
-      />
+      >
+        <POSBilling
+          editingInvoiceId={editingInvoiceId}
+          onBack={() => {
+            setShowPOS(false);
+            setEditingInvoiceId(null);
+            fetchSalesData();
+          }}
+          onInvoiceCreated={() => {
+            setEditingInvoiceId(null);
+            fetchSalesData();
+          }}
+        />
+      </ErrorBoundary>
     );
   }
 

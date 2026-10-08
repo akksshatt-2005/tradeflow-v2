@@ -147,18 +147,27 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       const [itemsRes, partiesRes, nextNumRes] = await Promise.all([
         api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', {
           companyId: activeCompany.id
+        }).catch(err => {
+          console.warn('Failed to fetch items:', err);
+          return { items: [] };
         }),
         api.get<{ parties: CustomerParty[] }>('/api/parties?type=customer', {
           companyId: activeCompany.id
+        }).catch(err => {
+          console.warn('Failed to fetch customers:', err);
+          return { parties: [] };
         }),
         api.get<{ invoiceNumber: string }>('/api/invoices/next-number', {
           companyId: activeCompany.id
+        }).catch(err => {
+          console.warn('Failed to fetch next invoice number:', err);
+          return { invoiceNumber: `INV-${new Date().getFullYear()}-0001` };
         })
       ]);
 
       setItems(itemsRes.items || []);
       setCustomers(partiesRes.parties || []);
-      setNextInvoiceNo(nextNumRes.invoiceNumber || 'INV-0001');
+      setNextInvoiceNo(nextNumRes.invoiceNumber || `INV-${new Date().getFullYear()}-0001`);
 
       if (editingInvoiceId) {
         const editRes = await api.get<{ invoice: any }>(`/api/invoices/${editingInvoiceId}`, {
@@ -522,12 +531,22 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }
   };
 
+  const formatDateLabel = (d?: string | null) => {
+    if (!d) return '—';
+    try {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+    } catch {
+      return '—';
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
-  const activeRow = invoiceItems[activeRowIndex] || invoiceItems[0];
-  const activeMedicine = items.find(i => i.id === activeRow?.itemId);
+  const activeRow = invoiceItems && invoiceItems.length > 0 ? (invoiceItems[activeRowIndex] || invoiceItems[0]) : null;
+  const activeMedicine = items && activeRow ? items.find(i => i.id === activeRow?.itemId) : null;
 
   return (
     <div style={{ padding: '1.2rem', maxWidth: '1440px', margin: '0 auto' }}>
@@ -622,7 +641,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               onFocus={() => setShowCustomerDropdown(true)}
               style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
             />
-            {showCustomerDropdown && customers.length > 0 && customerName.trim() && (
+            {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
               <div
                 style={{
                   position: 'absolute',
@@ -638,8 +657,15 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   overflowY: 'auto'
                 }}
               >
-                {customers
-                  .filter(c => c.name.toLowerCase().includes(customerName.toLowerCase()) || (c.phone && c.phone.includes(customerName)))
+                {(customers || [])
+                  .filter(c => {
+                    if (!c) return false;
+                    const q = (customerName || '').trim().toLowerCase();
+                    if (!q) return true;
+                    const nameMatch = (c.name || '').toLowerCase().includes(q);
+                    const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
+                    return nameMatch || phoneMatch;
+                  })
                   .slice(0, 6)
                   .map(c => (
                     <div
@@ -896,7 +922,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               }}
             />
 
-            {showMedicineDropdown && medicineSearch.trim().length > 0 && (
+            {showMedicineDropdown && (medicineSearch || '').trim().length > 0 && (
               <div style={{
                 position: 'absolute',
                 top: '100%',
@@ -911,10 +937,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 zIndex: 70,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
               }}>
-                {items
-                  .filter(i => i.name.toLowerCase().includes(medicineSearch.toLowerCase()) || (i.genericName && i.genericName.toLowerCase().includes(medicineSearch.toLowerCase())) || i.sku.toLowerCase().includes(medicineSearch.toLowerCase()))
+                {(items || [])
+                  .filter(i => {
+                    if (!i) return false;
+                    const q = (medicineSearch || '').trim().toLowerCase();
+                    if (!q) return true;
+                    const nameMatch = (i.name || '').toLowerCase().includes(q);
+                    const genMatch = Boolean(i.genericName && (i.genericName || '').toLowerCase().includes(q));
+                    const skuMatch = Boolean(i.sku && (i.sku || '').toLowerCase().includes(q));
+                    return nameMatch || genMatch || skuMatch;
+                  })
+                  .slice(0, 40)
                   .map(med => {
-                    const totalStock = med.totalStock ?? med.batches?.reduce((s, b) => s + b.currentStock, 0) ?? 0;
+                    const totalStock = med.totalStock ?? (med.batches || []).reduce((s, b) => s + (b.currentStock || 0), 0) ?? 0;
                     const topBatch = med.batches?.[0];
                     return (
                       <div
@@ -943,7 +978,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           </div>
                           {topBatch && (
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                              MRP: ₹{Number(topBatch.mrp).toFixed(2)} | Exp: {new Date(topBatch.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+                              MRP: ₹{Number(topBatch.mrp || 0).toFixed(2)} | Exp: {formatDateLabel(topBatch.expiryDate)}
                             </div>
                           )}
                         </div>
@@ -1216,7 +1251,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </div>
               <div>
                 <span style={{ color: 'var(--text-secondary)' }}>Expiry : </span>
-                <strong>{activeRow ? new Date(activeRow.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : '—'}</strong>
+                <strong>{activeRow ? formatDateLabel(activeRow.expiryDate) : '—'}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-secondary)' }}>Live Stock : </span>
@@ -1446,7 +1481,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.8rem' }}>
                 <div>
                   <div><strong>Bill No:</strong> {createdInvoice.invoiceNumber}</div>
-                  <div><strong>Date:</strong> {new Date(createdInvoice.invoiceDate).toLocaleDateString('en-IN')}</div>
+                  <div><strong>Date:</strong> {formatDateLabel(createdInvoice.invoiceDate)}</div>
                   <div><strong>Payment Mode:</strong> {createdInvoice.paymentMode}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -1476,7 +1511,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       <td style={{ padding: '0.4rem 0' }}>{i + 1}</td>
                       <td style={{ padding: '0.4rem 0' }}>{item.medicineName}</td>
                       <td style={{ padding: '0.4rem 0' }}>{item.batchNumber}</td>
-                      <td style={{ padding: '0.4rem 0' }}>{new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}</td>
+                      <td style={{ padding: '0.4rem 0' }}>{formatDateLabel(item.expiryDate)}</td>
                       <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>
                         {item.strips > 0 && item.looseQty > 0
                           ? `${item.strips} Str + ${item.looseQty} Tab`
