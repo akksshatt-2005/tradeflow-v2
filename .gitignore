@@ -4,8 +4,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.npm/
 
-# Environment & Secret Files (IMPORTANT: Keep private!)
+# Environment & Secret Files (Keep private)
 .env
 .env.local
 .env.development.local
@@ -16,8 +17,20 @@ pnpm-debug.log*
 dist/
 build/
 .output/
+*.tsbuildinfo
 
-# Backups (contain real database records - never commit to public git)
+# Raw data imports & scratch files
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.webp
+*.png
+*.jpg
+*.jpeg
+scratch/
+
+# Backups (contain real database records)
 backups/*.sql
 backups/*.json
 backups/*.gz
@@ -34,3 +47,4 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
