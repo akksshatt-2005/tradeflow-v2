@@ -526,10 +526,20 @@ export default function Parties() {
         const firmTradeName = (d.tradeName || d.mailTo || d.legalName || '').trim();
         const legalName = (d.legalName || d.tradeName || '').trim();
 
-        if (firmTradeName) setMailTo(firmTradeName);
-        if (legalName) setName(legalName);
-        if (!firmTradeName && legalName) setMailTo(legalName);
-        if (!legalName && firmTradeName) setName(firmTradeName);
+        // Always prioritize the Firm / Trade Name as the primary Name & MailTo
+        if (firmTradeName) {
+          setName(firmTradeName);
+          setMailTo(firmTradeName);
+        } else if (legalName) {
+          setName(legalName);
+          setMailTo(legalName);
+        }
+
+        // Store legal proprietor name in contactPerson if different from trade name
+        if (legalName && legalName !== firmTradeName) {
+          setContactPerson(legalName);
+          setDesignation('Proprietor / Authorized Signatory');
+        }
 
         if (d.address) setAddress(d.address);
         if (d.city) setStation(d.city);
@@ -551,7 +561,7 @@ export default function Parties() {
           setActiveSection('BASIC');
           setGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Taxpayer'}${legalName && legalName !== firmTradeName ? ` (Legal: ${legalName})` : ''} — ${d.state} (${d.taxpayerType || 'Regular'})`
+            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Firm'}${legalName && legalName !== firmTradeName ? ` (Proprietor: ${legalName})` : ''} — ${d.state} (${d.taxpayerType || 'Regular'})`
           });
         } else {
           setActiveSection('BASIC');
@@ -1242,18 +1252,18 @@ export default function Parties() {
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                        Mail To (Mailing Display Name) *
+                        Firm / Trade Name * (Business Name)
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="Display Name for Invoices & Statements (e.g. SHREE GANESH MEDICOS)"
-                        value={mailTo}
+                        placeholder="e.g. SHREE GANESH MEDICOS / ADMARIS PHARMA"
+                        value={name}
                         onChange={e => {
-                          setMailTo(e.target.value);
-                          if (!name) setName(e.target.value);
+                          setName(e.target.value);
+                          if (!mailTo) setMailTo(e.target.value);
                         }}
-                        style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+                        style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
                       />
                     </div>
                     <div>
@@ -1325,13 +1335,13 @@ export default function Parties() {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                      Ledger Name (Legal / Registered Name)
+                      Billing / Mailing Name (Optional display name)
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. ADMARIS PHARMACEUTICALS PVT. LTD."
-                      value={name}
-                      onChange={e => setName(e.target.value)}
+                      placeholder="Same as Firm Name or specialized billing name"
+                      value={mailTo}
+                      onChange={e => setMailTo(e.target.value)}
                       style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
                     />
                   </div>

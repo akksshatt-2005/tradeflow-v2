@@ -206,10 +206,15 @@ export default function NewPurchase({
         const firmTradeName = (d.tradeName || d.mailTo || d.legalName || '').trim();
         const legalName = (d.legalName || d.tradeName || '').trim();
 
-        if (firmTradeName) setNewSupName(firmTradeName);
-        if (legalName) setNewSupLegalName(legalName);
-        if (!firmTradeName && legalName) setNewSupName(legalName);
-        if (!legalName && firmTradeName) setNewSupLegalName(firmTradeName);
+        if (firmTradeName) {
+          setNewSupName(firmTradeName);
+        } else if (legalName) {
+          setNewSupName(legalName);
+        }
+
+        if (legalName) {
+          setNewSupLegalName(legalName);
+        }
 
         if (d.address) setNewSupAddress(d.address);
         if (d.city) setNewSupStation(d.city);
@@ -227,7 +232,7 @@ export default function NewPurchase({
         if (d.status?.toLowerCase() === 'active') {
           setSupGstLookupMsg({
             type: 'success',
-            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Taxpayer'}${legalName && legalName !== firmTradeName ? ` (Legal: ${legalName})` : ''} — ${d.state}`
+            text: `✅ Verified (${srcLabel}): ${firmTradeName || 'Active Firm'}${legalName && legalName !== firmTradeName ? ` (Proprietor: ${legalName})` : ''} — ${d.state}`
           });
         } else {
           setSupGstLookupMsg({
@@ -256,13 +261,15 @@ export default function NewPurchase({
     try {
       setSavingNewSup(true);
       const res = await api.post('/api/parties', {
-        name: finalLegalName,
+        name: finalTradeName, // Always use Firm / Trade Name as primary party name
         type: 'supplier',
         accountGroup: 'SUNDRY_CREDITORS',
         balancingMethod: 'BILL_BY_BILL',
         openingBalance: 0,
         openingBalanceType: 'CR',
         mailTo: finalTradeName,
+        contactPerson: finalLegalName !== finalTradeName ? finalLegalName : null,
+        designation: finalLegalName !== finalTradeName ? 'Proprietor' : null,
         address: newSupAddress.trim() || null,
         station: newSupStation.trim() || null,
         state: newSupState.trim() || null,
@@ -281,7 +288,7 @@ export default function NewPurchase({
       if (newParty) {
         setSuppliers(prev => [...prev, newParty]);
         setSelectedSupplierId(newParty.id);
-        setSupplierSearchText(newParty.mailTo || newParty.name);
+        setSupplierSearchText(newParty.name || newParty.mailTo);
       }
       setShowAddSupplierModal(false);
       setNewSupGstin('');
