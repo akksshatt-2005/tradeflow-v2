@@ -60,7 +60,6 @@ interface PurchaseRow {
   medicineName: string;
   genericName?: string;
   manufacturer?: string;
-  oldMrp: string; // O/MRP
   hsnCode: string; // HSN
   batchNumber: string; // Batch
   expiryMonth: string; // Exp. MM
@@ -70,7 +69,7 @@ interface PurchaseRow {
   purchaseRate: string; // Rate (PTR)
   discountPercent: string; // Disc%
   gstRate: string; // GST%
-  mrp: string; // N/MRP
+  mrp: string; // MRP
   pts?: string;
   pack?: string;
   sku?: string;
@@ -119,7 +118,6 @@ export default function NewPurchase({
     medicineName: '',
     genericName: '',
     manufacturer: '',
-    oldMrp: '',
     hsnCode: '',
     sku: '',
     pack: '1*10',
@@ -421,7 +419,6 @@ export default function NewPurchase({
                 manufacturer: pi.manufacturer || pi.item?.manufacturer || '',
                 sku: pi.sku || pi.item?.sku || '',
                 pack: packStr,
-                oldMrp: String(pi.mrp || 0),
                 hsnCode: pi.hsnCode || pi.item?.hsnCode || '3004',
                 batchNumber: pi.batchNumber || '',
                 expiryMonth: mm,
@@ -482,8 +479,7 @@ export default function NewPurchase({
         medicineName: med.name,
         genericName: med.genericName || '',
         manufacturer: med.manufacturer || '',
-        oldMrp: existingMrp, // Auto-suggest previous purchase MRP e.g. 20
-        mrp: existingMrp,    // Pre-populate N/MRP with previous MRP (user can change if revised)
+        mrp: existingMrp, // Auto-suggest previous MRP
         purchaseRate: existingPtr, // Auto-suggest previous purchase rate (PTR)
         pts: existingPts,
         hsnCode: med.hsnCode || '3004',
@@ -510,7 +506,6 @@ export default function NewPurchase({
         medicineName: cleanName,
         genericName: '',
         manufacturer: '',
-        oldMrp: '',
         mrp: '',
         purchaseRate: '',
         pts: '',
@@ -561,7 +556,6 @@ export default function NewPurchase({
             medicineName: createdMed.name,
             genericName: createdMed.genericName || '',
             manufacturer: createdMed.manufacturer || '',
-            oldMrp: String(newMedForm.defaultMrp || 140),
             hsnCode: createdMed.hsnCode || '3004',
             sku: createdMed.sku,
             pack: createdMed.conversionFactor > 1 ? `1*${createdMed.conversionFactor}` : `1*1 (${createdMed.unit || 'Unit'})`,
@@ -761,7 +755,7 @@ export default function NewPurchase({
           quantity: r.quantity, // Preserve fractional string e.g. "20.4"
           freeQuantity: r.freeQuantity || '0',
           purchaseRate: parseFloat(r.purchaseRate) || 0,
-          mrp: parseFloat(r.mrp || '') || parseFloat(r.oldMrp || '') || parseFloat(r.purchaseRate || '') || 0,
+          mrp: parseFloat(r.mrp || '') || parseFloat(r.purchaseRate || '') || 0,
           pts: parseFloat(r.pts || '') || parseFloat(r.mrp || '') || parseFloat(r.purchaseRate || '') || 0,
           discountPercent: parseFloat(r.discountPercent || '') || 0,
           gstRate: parseFloat(r.gstRate || '') || 5
@@ -1168,7 +1162,6 @@ export default function NewPurchase({
                 <th style={{ padding: '0.7rem 0.6rem', width: '38px', textAlign: 'center' }}>Sr.</th>
                 <th style={{ padding: '0.7rem 0.6rem', minWidth: '200px' }}>Description Of Goods</th>
                 <th style={{ padding: '0.7rem 0.5rem', width: '85px', textAlign: 'center' }}>Pack (1*X)</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '80px', textAlign: 'right' }}>O/MRP</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>HSN</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '105px' }}>Batch</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '90px', textAlign: 'center' }}>Exp.</th>
@@ -1179,7 +1172,7 @@ export default function NewPurchase({
                 <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>Rate</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>Disc%</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>GST%</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>N/MRP</th>
+                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>MRP</th>
                 <th style={{ padding: '0.7rem 0.6rem', width: '95px', textAlign: 'right' }}>Amount</th>
                 <th style={{ padding: '0.7rem 0.4rem', width: '32px' }}></th>
               </tr>
@@ -1240,7 +1233,6 @@ export default function NewPurchase({
                                   medicineName: exactMatch.name,
                                   genericName: exactMatch.genericName || '',
                                   manufacturer: exactMatch.manufacturer || '',
-                                  oldMrp: existingMrp,
                                   mrp: existingMrp,
                                   purchaseRate: existingPtr,
                                   pts: existingPts,
@@ -1393,18 +1385,6 @@ export default function NewPurchase({
                       />
                     </td>
 
-                    {/* 4. O/MRP (Old MRP) */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={row.oldMrp}
-                        onChange={e => handleRowChange(idx, 'oldMrp', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right' }}
-                      />
-                    </td>
-
                     {/* 4. HSN */}
                     <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
@@ -1509,7 +1489,7 @@ export default function NewPurchase({
                       />
                     </td>
 
-                    {/* 12. N/MRP (New MRP) */}
+                    {/* 12. MRP */}
                     <td style={{ padding: '0.5rem 0.6rem' }}>
                       <input
                         type="number"
@@ -1605,20 +1585,11 @@ export default function NewPurchase({
               </div>
 
               <div>
-                <span style={{ color: 'var(--text-secondary)' }}>O/MRP (₹) : </span>
+                <span style={{ color: 'var(--text-secondary)' }}>MRP (₹) : </span>
                 <input
                   type="number"
                   step="0.01"
-                  value={activeRow?.oldMrp}
-                  onChange={e => handleRowChange(activeRowIndex, 'oldMrp', e.target.value)}
-                  style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem' }}
-                />
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-secondary)' }}>N/MRP (₹) : </span>
-                <input
-                  type="number"
-                  step="0.01"
+                  placeholder="0.00"
                   value={activeRow?.mrp}
                   onChange={e => handleRowChange(activeRowIndex, 'mrp', e.target.value)}
                   style={{ width: '80px', padding: '0.2rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', marginLeft: '0.4rem', fontWeight: '700' }}
