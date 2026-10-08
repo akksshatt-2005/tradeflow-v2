@@ -307,6 +307,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         message: string;
         purchaseReturn: any;
       }>('/api/purchase-returns', {
+        supplierId: selectedSupplierId,
         partyId: selectedSupplierId,
         reason: suppReturnReason.trim() || undefined,
         items: suppReturnItems.map(item => ({
@@ -314,6 +315,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           batchId: item.batchId,
           strips: item.strips,
           looseQty: item.looseQty,
+          returnRate: item.ratePerStrip,
           ratePerStrip: item.ratePerStrip
         }))
       }, {

@@ -226,12 +226,15 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
   const userId = req.user!.userId;
 
   const {
-    supplierId,
+    supplierId: reqSupplierId,
+    partyId,
     returnDate,
     reason,
     notes,
     items: inputItems
   } = req.body;
+
+  const supplierId = reqSupplierId || partyId;
 
   if (!supplierId) {
     res.status(400).json({ error: 'Supplier is required for purchase return' });
