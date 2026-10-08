@@ -59,24 +59,29 @@ Built with **TypeScript, React 18, Node.js, Express, PostgreSQL, and Prisma**, i
 ## 🛠️ Architecture & Tech Stack
 
 ```mermaid
-graph TD
-    Client[React 18 + Vite SPA Frontend] -->|JWT Auth + JSON REST API| API[Express.js API Gateway]
-    API --> AuthMW[Auth & Company Scoping Middleware]
-    AuthMW --> IdempMW[Idempotency & Rate Limiting]
-    IdempMW --> Controllers[Business Logic Routes]
-    Controllers --> Prisma[Prisma ORM Client]
-    Prisma --> DB[(PostgreSQL Database)]
+flowchart TD
+    Client["React 18 + Vite SPA (TypeScript)"] -->|REST API / JWT Session| Gateway["Express.js API Gateway"]
     
-    subgraph Core Modules
-        M1[POS Billing & Sales]
-        M2[Purchases & Inward]
-        M3[Batch & FEFO Engine]
-        M4[Parties & Ledgers]
-        M5[Credit Notes & Returns]
-        M6[Immutable Stock Ledger]
+    subgraph Security ["Security & Isolation Layer"]
+        Gateway --> Auth["JWT & Multi-Company Tenant Scoping"]
+        Auth --> RateLimit["Rate Limiting & Idempotency Keys"]
     end
     
-    Controllers --> Core Modules
+    subgraph BusinessEngine ["Pharma Core Business Logic"]
+        RateLimit --> POS["POS Retail Billing Terminal"]
+        RateLimit --> Purchases["Purchases & Inward Module"]
+        RateLimit --> FEFO["FEFO & Batch Expiry Engine"]
+        RateLimit --> Ledger["Immutable Double-Entry Stock Ledger"]
+        RateLimit --> Returns["Credit Notes (CN) & Returns Engine"]
+    end
+    
+    POS --> Prisma["Prisma ORM Client"]
+    Purchases --> Prisma
+    FEFO --> Prisma
+    Ledger --> Prisma
+    Returns --> Prisma
+    
+    Prisma --> DB[("PostgreSQL Database")]
 ```
 
 | Layer | Technology | Key Libraries |
