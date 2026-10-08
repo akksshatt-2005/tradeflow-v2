@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import * as XLSX from 'xlsx';
@@ -30,7 +30,9 @@ import {
   Package,
   Layers,
   ArrowDownLeft,
-  Check
+  Check,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -87,6 +89,17 @@ export interface PatientReturnItem {
   createdByUser: string;
 }
 
+export interface GroupedPatientReturn {
+  voucherNumber: string;
+  createdAt: string;
+  patientName: string;
+  reason: string;
+  createdByUser: string;
+  totalRefundAmount: number;
+  totalUnitsReturned: number;
+  items: PatientReturnItem[];
+}
+
 type PeriodOption = 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM';
 type SalesTab = 'INVOICES' | 'RETURNS';
 
@@ -112,6 +125,14 @@ export default function Sales() {
   // Multi-Item Patient Return State
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [viewingMultiReturnSlip, setViewingMultiReturnSlip] = useState<MultiItemReturnSlip | null>(null);
+  const [expandedVouchers, setExpandedVouchers] = useState<Record<string, boolean>>({});
+
+  const toggleExpandVoucher = (vNo: string) => {
+    setExpandedVouchers(prev => ({
+      ...prev,
+      [vNo]: !prev[vNo]
+    }));
+  };
 
   // Payment Recording State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -227,9 +248,25 @@ export default function Sales() {
       XLSX.utils.book_append_sheet(workbook, wsInv, 'Sales Invoices (Gross)');
     }
 
-    // Sheet 2: Patient Returns
-    if (patientReturns.length > 0) {
-      const retData = patientReturns.map((ret, idx) => ({
+    // Sheet 2: Patient Return Vouchers (Grouped)
+    if (groupedReturns.length > 0) {
+      const retVoucherData = groupedReturns.map((grp, idx) => ({
+        'S.No': idx + 1,
+        'Voucher #': grp.voucherNumber,
+        'Return Date': new Date(grp.createdAt).toLocaleString('en-IN'),
+        'Patient Name': grp.patientName,
+        'Items Count': grp.items.length,
+        'Medicines Summary': grp.items.map(i => `${i.medicineName} (${i.unitsReturned} units)`).join('; '),
+        'Total Units Inwarded': grp.totalUnitsReturned,
+        'Total Refund Amount (₹)': grp.totalRefundAmount,
+        'Return Reason': grp.reason,
+        'Processed By': grp.createdByUser
+      }));
+      const wsRetVouchers = XLSX.utils.json_to_sheet(retVoucherData);
+      XLSX.utils.book_append_sheet(workbook, wsRetVouchers, 'Patient Returns (Vouchers)');
+
+      // Sheet 3: Itemized Return Lines
+      const retItemData = patientReturns.map((ret, idx) => ({
         'S.No': idx + 1,
         'Voucher #': ret.voucherNumber,
         'Return Date': new Date(ret.createdAt).toLocaleString('en-IN'),
@@ -245,11 +282,11 @@ export default function Sales() {
         'Return Reason': ret.reason,
         'Processed By': ret.createdByUser
       }));
-      const wsRet = XLSX.utils.json_to_sheet(retData);
-      XLSX.utils.book_append_sheet(workbook, wsRet, 'Patient Returns & Refunds');
+      const wsRetItems = XLSX.utils.json_to_sheet(retItemData);
+      XLSX.utils.book_append_sheet(workbook, wsRetItems, 'Return Lines (Itemized)');
     }
 
-    // Sheet 3: Financial Period Summary
+    // Sheet 4: Financial Period Summary
     const activeInvs = invoices.filter(inv => inv.status !== 'CANCELLED');
     const grossVal = activeInvs.reduce((sum, inv) => sum + inv.grandTotal, 0);
     const returnVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
@@ -263,7 +300,8 @@ export default function Sales() {
       { 'Metric': 'NET REALIZED SALES (A - B)', 'Value': `₹${netVal.toFixed(2)}` },
       { 'Metric': 'Collected Cash / UPI', 'Value': `₹${receivedVal.toFixed(2)}` },
       { 'Metric': 'Total Invoices Count', 'Value': activeInvs.length },
-      { 'Metric': 'Total Patient Returns Count', 'Value': patientReturns.length }
+      { 'Metric': 'Total Return Vouchers Count', 'Value': groupedReturns.length },
+      { 'Metric': 'Total Return Items Count', 'Value': patientReturns.length }
     ];
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, wsSummary, 'Sales & Returns Summary');
@@ -393,16 +431,51 @@ export default function Sales() {
       (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
     );
 
-  // Filter patient returns
-  const filteredReturns = [...patientReturns]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .filter(ret =>
-      ret.medicineName.toLowerCase().includes(search.toLowerCase()) ||
-      ret.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      ret.voucherNumber.toLowerCase().includes(search.toLowerCase()) ||
-      ret.batchNumber.toLowerCase().includes(search.toLowerCase()) ||
-      ret.reason.toLowerCase().includes(search.toLowerCase())
+  // Group patient returns by voucherNumber so multi-item returns appear as 1 return entry
+  const groupedReturns = useMemo<GroupedPatientReturn[]>(() => {
+    const map = new Map<string, GroupedPatientReturn>();
+
+    for (const ret of patientReturns) {
+      const vKey = ret.voucherNumber || ret.id;
+      if (!map.has(vKey)) {
+        map.set(vKey, {
+          voucherNumber: ret.voucherNumber || `RET-${ret.id.slice(0, 8)}`,
+          createdAt: ret.createdAt,
+          patientName: ret.patientName || 'Cash Customer',
+          reason: ret.reason || 'Patient Return',
+          createdByUser: ret.createdByUser || 'Staff',
+          totalRefundAmount: 0,
+          totalUnitsReturned: 0,
+          items: []
+        });
+      }
+      const grp = map.get(vKey)!;
+      grp.totalRefundAmount += ret.refundAmount;
+      grp.totalUnitsReturned += ret.unitsReturned;
+      grp.items.push(ret);
+    }
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+  }, [patientReturns]);
+
+  // Filter grouped patient returns
+  const filteredGroupedReturns = useMemo<GroupedPatientReturn[]>(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return groupedReturns;
+    return groupedReturns.filter(grp =>
+      grp.voucherNumber.toLowerCase().includes(q) ||
+      grp.patientName.toLowerCase().includes(q) ||
+      grp.reason.toLowerCase().includes(q) ||
+      grp.items.some(
+        itm =>
+          itm.medicineName.toLowerCase().includes(q) ||
+          itm.batchNumber.toLowerCase().includes(q) ||
+          itm.sku.toLowerCase().includes(q)
+      )
+    );
+  }, [groupedReturns, search]);
 
   const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
   const grossSalesVal = activeInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
@@ -534,7 +607,7 @@ export default function Sales() {
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <span style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#e11d48', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-              {patientReturns.length} returns
+              {groupedReturns.length} return voucher{groupedReturns.length !== 1 ? 's' : ''} ({patientReturns.length} item{patientReturns.length !== 1 ? 's' : ''})
             </span>
             <span>deducted from revenue</span>
           </div>
@@ -792,7 +865,7 @@ export default function Sales() {
             fontSize: '0.78rem',
             fontWeight: '700'
           }}>
-            {patientReturns.length} | −₹{totalReturnsVal.toFixed(2)}
+            {groupedReturns.length} voucher{groupedReturns.length !== 1 ? 's' : ''} | −₹{totalReturnsVal.toFixed(2)}
           </span>
         </button>
       </div>
@@ -1003,7 +1076,7 @@ export default function Sales() {
                 <RotateCcw size={16} style={{ color: '#e11d48' }} /> Patient Returns & Credit Notes Audit Log
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                All inwarded returns are automatically added back into batch inventory stock and deducted from Net Sales.
+                Multi-medicine returns for a patient are unified into single vouchers. All inwarded medicines are automatically restored to stock.
               </div>
             </div>
             <button
@@ -1030,7 +1103,7 @@ export default function Sales() {
             <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
               Loading patient returns...
             </div>
-          ) : filteredReturns.length === 0 ? (
+          ) : filteredGroupedReturns.length === 0 ? (
             <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
               <RotateCcw size={42} style={{ opacity: 0.3, marginBottom: '0.8rem', color: '#e11d48' }} />
               <p style={{ margin: 0, fontWeight: '600', fontSize: '1.05rem' }}>No patient returns recorded in this period.</p>
@@ -1043,11 +1116,12 @@ export default function Sales() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '0.9rem 1.2rem', width: '40px' }}></th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Voucher / Slip #</th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Date & Time</th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Patient Name</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Medicine & Batch</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Returned Qty</th>
+                    <th style={{ padding: '0.9rem 1.2rem' }}>Returned Medicines</th>
+                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Total Items / Qty</th>
                     <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Refund Amount (₹)</th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Return Reason</th>
                     <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Stock Status</th>
@@ -1055,107 +1129,266 @@ export default function Sales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReturns.map(ret => (
-                    <tr key={ret.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.9rem 1.2rem', fontWeight: '700', color: '#e11d48' }}>
-                        {ret.voucherNumber}
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
-                        <div>{new Date(ret.createdAt).toLocaleDateString('en-IN')}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{new Date(ret.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                        {ret.patientName}
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem' }}>
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{ret.medicineName}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--brand-teal)' }}>
-                          Batch: <strong>{ret.batchNumber}</strong> {ret.expiryDate ? `(Exp: ${ret.expiryDate})` : ''}
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                          {ret.strips > 0 && ret.looseQty > 0
-                            ? `${ret.strips} Str + ${ret.looseQty} Tab`
-                            : ret.strips > 0
-                            ? `${ret.strips} Strip(s)`
-                            : `${ret.looseQty} Tab(s)`}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          ({ret.unitsReturned} base units)
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '800', color: '#e11d48', fontSize: '0.95rem' }}>
-                        −₹{ret.refundAmount.toFixed(2)}
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)', maxWidth: '220px' }}>
-                        <span style={{ fontSize: '0.82rem' }}>{ret.reason}</span>
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '999px',
-                          background: 'rgba(34, 197, 94, 0.15)',
-                          color: 'var(--accent-green)',
-                          fontSize: '0.74rem',
-                          fontWeight: '700',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem'
-                        }}>
-                          <Check size={12} /> +{ret.unitsReturned} Inwarded
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => {
-                            // Find all items with this voucherNumber for multi-item view
-                            const siblingReturns = patientReturns.filter(r => r.voucherNumber === ret.voucherNumber);
-                            const totalRef = siblingReturns.reduce((s, r) => s + r.refundAmount, 0);
-                            const totalUnits = siblingReturns.reduce((s, r) => s + r.unitsReturned, 0);
+                  {filteredGroupedReturns.map(grp => {
+                    const isExpanded = !!expandedVouchers[grp.voucherNumber];
+                    const itemsCount = grp.items.length;
 
-                            setViewingMultiReturnSlip({
-                              voucherNumber: ret.voucherNumber,
-                              createdAt: ret.createdAt,
-                              patientName: ret.patientName,
-                              reason: ret.reason,
-                              totalRefundAmount: totalRef,
-                              totalUnitsAdded: totalUnits,
-                              createdByUser: ret.createdByUser,
-                              items: siblingReturns.map(r => ({
-                                medicineName: r.medicineName,
-                                sku: r.sku,
-                                batchNumber: r.batchNumber,
-                                expiryDate: r.expiryDate,
-                                unit: r.unit,
-                                conversionFactor: r.conversionFactor,
-                                strips: r.strips,
-                                looseQty: r.looseQty,
-                                unitsAdded: r.unitsReturned,
-                                mrp: r.mrp,
-                                refundAmount: r.refundAmount
-                              }))
-                            });
-                          }}
+                    return (
+                      <React.Fragment key={grp.voucherNumber}>
+                        <tr
                           style={{
-                            padding: '0.4rem 0.65rem',
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '6px',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            fontSize: '0.8rem',
-                            fontWeight: '600'
+                            borderBottom: isExpanded ? 'none' : '1px solid var(--border-color)',
+                            background: isExpanded ? 'rgba(225, 29, 72, 0.03)' : 'transparent',
+                            transition: 'background 0.2s'
                           }}
                         >
-                          <Printer size={14} /> Slip
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          <td style={{ padding: '0.9rem 0.6rem 0.9rem 1.2rem', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => toggleExpandVoucher(grp.voucherNumber)}
+                              title={isExpanded ? 'Collapse medicines breakdown' : 'Expand medicines breakdown'}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: isExpanded ? '#e11d48' : 'var(--text-muted)',
+                                padding: '2px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                            </button>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', fontWeight: '700', color: '#e11d48' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span>{grp.voucherNumber}</span>
+                              <span
+                                style={{
+                                  background: 'rgba(225, 29, 72, 0.1)',
+                                  color: '#e11d48',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '700',
+                                  padding: '0.1rem 0.4rem',
+                                  borderRadius: '4px'
+                                }}
+                              >
+                                {itemsCount} {itemsCount === 1 ? 'med' : 'meds'}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
+                            <div>{new Date(grp.createdAt).toLocaleDateString('en-IN')}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              {new Date(grp.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                            {grp.patientName}
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', maxWidth: '320px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {grp.items.slice(0, 2).map((item, iIdx) => (
+                                <div key={iIdx} style={{ fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.medicineName}</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--brand-teal)' }}>
+                                    ({item.batchNumber})
+                                  </span>
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    • {item.strips > 0 && item.looseQty > 0
+                                      ? `${item.strips} Str + ${item.looseQty} Tab`
+                                      : item.strips > 0
+                                      ? `${item.strips} Str`
+                                      : `${item.looseQty} Tab`}
+                                  </span>
+                                </div>
+                              ))}
+                              {itemsCount > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandVoucher(grp.voucherNumber)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#e11d48',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    padding: 0
+                                  }}
+                                >
+                                  +{itemsCount - 2} more medicine(s) (click to view)
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                              {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              ({grp.totalUnitsReturned} base units)
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '800', color: '#e11d48', fontSize: '0.98rem' }}>
+                            −₹{grp.totalRefundAmount.toFixed(2)}
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
+                            <span style={{ fontSize: '0.82rem' }}>{grp.reason}</span>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
+                            <span
+                              style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '999px',
+                                background: 'rgba(34, 197, 94, 0.15)',
+                                color: 'var(--accent-green)',
+                                fontSize: '0.74rem',
+                                fontWeight: '700',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}
+                            >
+                              <Check size={12} /> +{grp.totalUnitsReturned} Inwarded
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <button
+                                onClick={() => {
+                                  setViewingMultiReturnSlip({
+                                    voucherNumber: grp.voucherNumber,
+                                    createdAt: grp.createdAt,
+                                    patientName: grp.patientName,
+                                    reason: grp.reason,
+                                    totalRefundAmount: grp.totalRefundAmount,
+                                    totalUnitsAdded: grp.totalUnitsReturned,
+                                    createdByUser: grp.createdByUser,
+                                    items: grp.items.map(r => ({
+                                      medicineName: r.medicineName,
+                                      sku: r.sku,
+                                      batchNumber: r.batchNumber,
+                                      expiryDate: r.expiryDate || null,
+                                      unit: r.unit,
+                                      conversionFactor: r.conversionFactor,
+                                      strips: r.strips,
+                                      looseQty: r.looseQty,
+                                      unitsAdded: r.unitsReturned,
+                                      mrp: r.mrp,
+                                      refundAmount: r.refundAmount
+                                    }))
+                                  });
+                                }}
+                                style={{
+                                  padding: '0.4rem 0.65rem',
+                                  background: 'var(--bg-secondary)',
+                                  border: '1px solid var(--border-color)',
+                                  borderRadius: '6px',
+                                  color: 'var(--text-primary)',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                <Printer size={14} /> Slip
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Expandable Itemized Medicines Breakdown */}
+                        {isExpanded && (
+                          <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                            <td colSpan={10} style={{ padding: '0.8rem 1.2rem 1.2rem 3rem' }}>
+                              <div
+                                style={{
+                                  background: 'var(--card-bg)',
+                                  border: '1px solid var(--border-color)',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                                }}
+                              >
+                                <div style={{ padding: '0.5rem 0.8rem', background: 'rgba(225, 29, 72, 0.05)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#e11d48' }}>
+                                    Itemized Medicines Returned in Voucher {grp.voucherNumber} ({itemsCount} Medicines)
+                                  </span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    Logged by {grp.createdByUser}
+                                  </span>
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                  <thead>
+                                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', textAlign: 'left', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                                      <th style={{ padding: '0.5rem 0.8rem', width: '32px' }}>#</th>
+                                      <th style={{ padding: '0.5rem 0.8rem' }}>Medicine Name</th>
+                                      <th style={{ padding: '0.5rem 0.8rem' }}>Batch #</th>
+                                      <th style={{ padding: '0.5rem 0.8rem' }}>Expiry</th>
+                                      <th style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>Return Packaging</th>
+                                      <th style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>Units Added to Stock</th>
+                                      <th style={{ padding: '0.5rem 0.8rem', textAlign: 'right' }}>MRP / Unit</th>
+                                      <th style={{ padding: '0.5rem 0.8rem', textAlign: 'right' }}>Line Refund (₹)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {grp.items.map((itm, i) => (
+                                      <tr key={itm.id || i} style={{ borderBottom: i === grp.items.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                        <td style={{ padding: '0.5rem 0.8rem', color: 'var(--text-muted)' }}>{i + 1}</td>
+                                        <td style={{ padding: '0.5rem 0.8rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                          {itm.medicineName}
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SKU: {itm.sku}</div>
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', fontFamily: 'monospace', fontWeight: '600' }}>
+                                          {itm.batchNumber}
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', color: 'var(--text-secondary)' }}>
+                                          {itm.expiryDate || 'N/A'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', fontWeight: '600' }}>
+                                          {itm.strips > 0 && itm.looseQty > 0
+                                            ? `${itm.strips} Str + ${itm.looseQty} Tab`
+                                            : itm.strips > 0
+                                            ? `${itm.strips} Strip(s)`
+                                            : `${itm.looseQty} Tab(s)`}
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', color: 'var(--accent-green)', fontWeight: '700' }}>
+                                          +{itm.unitsReturned} {itm.unit || 'units'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                          ₹{itm.mrp.toFixed(2)}
+                                        </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', fontWeight: '700', color: '#e11d48' }}>
+                                          −₹{itm.refundAmount.toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr style={{ background: 'var(--bg-secondary)', fontWeight: '700', borderTop: '1px solid var(--border-color)' }}>
+                                      <td colSpan={5} style={{ padding: '0.5rem 0.8rem', textAlign: 'right' }}>Total Voucher Inward & Refund:</td>
+                                      <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', color: 'var(--accent-green)' }}>
+                                        +{grp.totalUnitsReturned} units
+                                      </td>
+                                      <td></td>
+                                      <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', color: '#e11d48', fontSize: '0.9rem' }}>
+                                        −₹{grp.totalRefundAmount.toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
