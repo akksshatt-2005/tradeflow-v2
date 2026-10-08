@@ -397,32 +397,6 @@ export default function Sales() {
     }
   };
 
-  if (showPOS) {
-    return (
-      <ErrorBoundary
-        fallbackTitle="POS Billing Terminal Encountered An Issue"
-        onReset={() => {
-          setShowPOS(false);
-          setEditingInvoiceId(null);
-          fetchSalesData();
-        }}
-      >
-        <POSBilling
-          editingInvoiceId={editingInvoiceId}
-          onBack={() => {
-            setShowPOS(false);
-            setEditingInvoiceId(null);
-            fetchSalesData();
-          }}
-          onInvoiceCreated={() => {
-            setEditingInvoiceId(null);
-            fetchSalesData();
-          }}
-        />
-      </ErrorBoundary>
-    );
-  }
-
   // Filter and sort invoices
   const filteredInvoices = [...invoices]
     .sort((a, b) => {
@@ -492,6 +466,32 @@ export default function Sales() {
   const totalReturnsVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
   const netSalesVal = Math.max(0, grossSalesVal - totalReturnsVal);
   const totalReceivedVal = activeInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+
+  if (showPOS) {
+    return (
+      <ErrorBoundary
+        fallbackTitle="POS Billing Terminal Encountered An Issue"
+        onReset={() => {
+          setShowPOS(false);
+          setEditingInvoiceId(null);
+          fetchSalesData();
+        }}
+      >
+        <POSBilling
+          editingInvoiceId={editingInvoiceId}
+          onBack={() => {
+            setShowPOS(false);
+            setEditingInvoiceId(null);
+            fetchSalesData();
+          }}
+          onInvoiceCreated={() => {
+            setEditingInvoiceId(null);
+            fetchSalesData();
+          }}
+        />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <div className="sales-container" style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
