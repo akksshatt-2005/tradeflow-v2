@@ -24,6 +24,7 @@ model User {
   createdPurchases   Purchase[]
   createdInvoices    Invoice[]
   createdReturns     PurchaseReturn[]
+  createdSettlements SupplierSettlement[]
 
   @@map("users")
 }
@@ -51,6 +52,7 @@ model Company {
   purchases       Purchase[]
   purchaseReturns PurchaseReturn[]
   invoices        Invoice[]
+  settlements     SupplierSettlement[]
 
   @@map("companies")
 }
@@ -220,10 +222,11 @@ model Party {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   purchases       Purchase[]
   purchaseReturns PurchaseReturn[]
   invoices        Invoice[]
+  settlements     SupplierSettlement[]
 
   @@unique([companyId, name, type])
   @@index([companyId, type])
@@ -465,3 +468,43 @@ model PurchaseReturnItem {
   @@index([batchId])
   @@map("purchase_return_items")
 }
+
+// 18. Supplier & Manufacturer Pay-on-Sale Settlements
+model SupplierSettlement {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  settlementNumber String   @map("settlement_number")
+  manufacturer     String?
+  supplierId       String?  @map("supplier_id")
+  periodStartDate  DateTime @map("period_start_date")
+  periodEndDate    DateTime @map("period_end_date")
+  grossSoldUnits   Int      @default(0) @map("gross_sold_units")
+  returnedUnits    Int      @default(0) @map("returned_units")
+  netSoldUnits     Int      @default(0) @map("net_sold_units")
+  grossPayableCost Decimal  @default(0.0) @map("gross_payable_cost") @db.Decimal(12, 2)
+  returnDeduction  Decimal  @default(0.0) @map("return_deduction") @db.Decimal(12, 2)
+  netPayableAmount Decimal  @default(0.0) @map("net_payable_amount") @db.Decimal(12, 2)
+  retailSalesValue Decimal  @default(0.0) @map("retail_sales_value") @db.Decimal(12, 2)
+  realizedMargin   Decimal  @default(0.0) @map("realized_margin") @db.Decimal(12, 2)
+  paidAmount       Decimal  @default(0.0) @map("paid_amount") @db.Decimal(12, 2)
+  paymentMode      String   @default("BANK_TRANSFER") @map("payment_mode")
+  paymentRef       String?  @map("payment_ref")
+  status           String   @default("SETTLED")
+  settlementDate   DateTime @default(now()) @map("settlement_date")
+  itemDetails      Json?    @map("item_details")
+  notes            String?
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Party?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  creator  User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, settlementNumber])
+  @@index([companyId, settlementDate])
+  @@index([companyId, manufacturer])
+  @@index([companyId, supplierId])
+  @@map("supplier_settlements")
+}
+

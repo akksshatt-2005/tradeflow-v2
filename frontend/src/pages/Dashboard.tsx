@@ -7,6 +7,7 @@ import Parties from './Parties';
 import Purchases from './Purchases';
 import Sales from './Sales';
 import CreditNotes from './CreditNotes';
+import Settlements from './Settlements';
 import MultiPatientReturnModal from '../components/MultiPatientReturnModal';
 import {
   Building2,
@@ -28,6 +29,7 @@ import {
   Truck,
   ShoppingCart,
   RotateCcw,
+  Handshake,
   Search,
   X,
   IndianRupee,
@@ -87,7 +89,7 @@ interface SupplierReturnItem {
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
@@ -123,6 +125,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     { id: 'batches', label: 'Batches & Expiry', icon: Layers },
     { id: 'parties', label: 'Suppliers & Clients', icon: Users },
     { id: 'credit-notes', label: 'Credit Notes (CN)', icon: RotateCcw },
+    { id: 'settlements', label: 'Supplier Settlements', icon: Handshake },
   ];
 
   useEffect(() => {
@@ -1132,6 +1135,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           {activeTab === 'batches' && <Batches />}
           {activeTab === 'parties' && <Parties />}
           {activeTab === 'credit-notes' && <CreditNotes />}
+          {activeTab === 'settlements' && <Settlements />}
         </main>
       </div>
 
