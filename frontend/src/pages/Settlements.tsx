@@ -143,6 +143,9 @@ export default function Settlements() {
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
+  // Deduct Returns Toggle (default false so test returns don't corrupt clean sales)
+  const [deductReturns, setDeductReturns] = useState<boolean>(false);
+
   // Live Calculation State
   const [summary, setSummary] = useState<SettlementSummary | null>(null);
   const [items, setItems] = useState<BatchSettlementItem[]>([]);
@@ -284,6 +287,7 @@ export default function Settlements() {
       const queryParams = new URLSearchParams();
       queryParams.set('startDate', computedDateRange.startDate);
       queryParams.set('endDate', computedDateRange.endDate);
+      queryParams.set('deductReturns', deductReturns ? 'true' : 'false');
 
       if (selectedManufacturer.trim()) {
         queryParams.set('manufacturer', selectedManufacturer.trim());
@@ -313,7 +317,7 @@ export default function Settlements() {
     if (activeCompany && activeTab === 'calculate') {
       calculateSettlement();
     }
-  }, [activeCompany?.id, selectedManufacturer, selectedSupplierId, computedDateRange, activeTab]);
+  }, [activeCompany?.id, selectedManufacturer, selectedSupplierId, computedDateRange, deductReturns, activeTab]);
 
   // Filter items in table by local search
   const filteredItems = useMemo(() => {
@@ -881,33 +885,28 @@ export default function Settlements() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {/* Deduct Returns Toggle */}
                 <button
-                  onClick={async () => {
-                    if (!window.confirm('Do you want to reset/clear old invalid/test customer returns from the audit ledger?')) return;
-                    try {
-                      const res = await api.post<any>('/api/settlements/purge-invalid-returns', {}, { companyId: activeCompany?.id });
-                      alert(res.message || 'Invalid returns cleared successfully.');
-                      calculateSettlement();
-                    } catch (e: any) {
-                      alert(e.message || 'Failed to clear returns');
-                    }
-                  }}
-                  title="Purge old invalid test return records from the database"
+                  type="button"
+                  onClick={() => setDeductReturns(!deductReturns)}
                   style={{
-                    background: '#fef2f2',
-                    border: '1px solid #fecaca',
-                    color: '#b91c1c',
-                    fontWeight: 600,
+                    background: deductReturns ? '#e0f2fe' : '#f1f5f9',
+                    border: deductReturns ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                    color: deductReturns ? '#0369a1' : '#64748b',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.35rem',
-                    fontSize: '0.78rem',
-                    padding: '0.3rem 0.6rem',
-                    borderRadius: '6px'
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Toggle whether customer returns should deduct from the payable payout"
                 >
-                  <RotateCcw size={13} /> Reset Test Returns
+                  <RotateCcw size={12} color={deductReturns ? '#0284c7' : '#94a3b8'} />
+                  Deduct Returns: <span style={{ color: deductReturns ? '#0284c7' : '#0f172a' }}>{deductReturns ? 'ON' : 'OFF'}</span>
                 </button>
 
                 <button

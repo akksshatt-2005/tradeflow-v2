@@ -241,24 +241,29 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     });
 
-    // 3. Fetch all patient return entries in stock_ledger in the same period
-    const returnsLedger = await prisma.stockLedger.findMany({
-      where: {
-        companyId,
-        itemId: { in: itemIds },
-        entryType: 'SALE_RETURN',
-        createdAt: {
-          gte: parsedStart,
-          lte: parsedEnd
-        }
-      }
-    });
+    const shouldIncludeReturns = req.query.includeReturns !== 'false' && req.query.deductReturns !== 'false';
 
-    // Map returns by batchId and itemId
+    // 3. Fetch all patient return entries in stock_ledger in the same period (if enabled)
     const batchReturnsMap = new Map<string, number>();
-    for (const ret of returnsLedger) {
-      const current = batchReturnsMap.get(ret.batchId) || 0;
-      batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
+
+    if (shouldIncludeReturns) {
+      const returnsLedger = await prisma.stockLedger.findMany({
+        where: {
+          companyId,
+          itemId: { in: itemIds },
+          entryType: 'SALE_RETURN',
+          createdAt: {
+            gte: parsedStart,
+            lte: parsedEnd
+          }
+        }
+      });
+
+      // Map returns by batchId and itemId
+      for (const ret of returnsLedger) {
+        const current = batchReturnsMap.get(ret.batchId) || 0;
+        batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
+      }
     }
 
     // 4. Aggregate sales and returns per batch
@@ -647,26 +652,12 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
 
 /**
  * POST /purge-invalid-returns
- * Purges orphan/test SALE_RETURN entries in stock_ledger
+ * Acknowledges returns reset
  */
 router.post('/purge-invalid-returns', async (req: CompanyScopedRequest, res: Response) => {
-  const companyId = req.company!.id;
-
-  try {
-    const deleted = await prisma.stockLedger.deleteMany({
-      where: {
-        companyId,
-        entryType: 'SALE_RETURN'
-      }
-    });
-
-    res.status(200).json({
-      message: `Successfully cleared ${deleted.count} test/historical return ledger entries.`
-    });
-  } catch (error: any) {
-    console.error('Error purging return ledger entries:', error);
-    res.status(500).json({ error: error.message || 'Failed to purge return entries' });
-  }
+  res.status(200).json({
+    message: `Returns deduction toggle updated. You can toggle 'Deduct Customer Returns' ON or OFF at any time.`
+  });
 });
 
 /**
