@@ -356,54 +356,7 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     }
 
-    // Also include any batches that had returns but 0 sales in this window (e.g. return vouchers)
-    for (const [bId, retUnits] of batchReturnsMap.entries()) {
-      if (!batchAggMap.has(bId) && retUnits > 0) {
-        const b = batchMap.get(bId);
-        if (b) {
-          const factor = b.item.conversionFactor || 1;
-          const ptr = Number(b.ptr || 0);
-          const mrp = Number(b.mrp || 0);
-          const unitCostPrice = factor > 0 ? ptr / factor : ptr;
-          const unitRetailPrice = factor > 0 ? mrp / factor : mrp;
-
-          batchAggMap.set(bId, {
-            batchId: bId,
-            itemId: b.itemId,
-            medicineName: b.item.name,
-            genericName: b.item.genericName || null,
-            manufacturer: b.item.manufacturer || null,
-            sku: b.item.sku,
-            batchNumber: b.batchNumber,
-            expiryDate: b.expiryDate ? b.expiryDate.toISOString().split('T')[0] : null,
-            unit: b.item.unit || 'STRIP',
-            conversionFactor: factor,
-            ptr,
-            mrp,
-            unitCostPrice,
-            unitRetailPrice,
-            grossSoldUnits: 0,
-            grossSoldStrips: 0,
-            grossSoldLoose: 0,
-            returnedUnits: retUnits,
-            returnedStrips: Math.floor(retUnits / factor),
-            returnedLoose: retUnits % factor,
-            netSoldUnits: 0,
-            netSoldStrips: 0,
-            netSoldLoose: 0,
-            grossCostPayable: 0,
-            returnCostDeduction: Math.round((retUnits * unitCostPrice) * 100) / 100,
-            netPayableAmount: 0,
-            grossRetailAmount: 0,
-            netRetailAmount: 0,
-            marginAmount: 0,
-            invoicesCount: 0
-          });
-        }
-      }
-    }
-
-    // Finalize all batch math
+    // Finalize all batch math - Only settle batches that had actual sales
     const resultItems: BatchSettlementAgg[] = [];
     let totalGrossUnits = 0;
     let totalReturnedUnits = 0;
@@ -414,8 +367,8 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
     let totalRetailSales = 0;
 
     for (const agg of batchAggMap.values()) {
-      // Include batches with sales or returns
-      if (agg.grossSoldUnits <= 0 && agg.returnedUnits <= 0) {
+      // If a medicine had 0 sales in this window, nothing was sold so nothing is payable or deducted
+      if (agg.grossSoldUnits <= 0) {
         continue;
       }
 
@@ -426,24 +379,27 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
 
       agg.grossCostPayable = Math.round((agg.grossSoldUnits * agg.unitCostPrice) * 100) / 100;
 
-      agg.returnedStrips = Math.floor(agg.returnedUnits / factor);
-      agg.returnedLoose = agg.returnedUnits % factor;
-      agg.returnCostDeduction = Math.round((agg.returnedUnits * agg.unitCostPrice) * 100) / 100;
+      // Deduct returns against actual sales of this medicine in this timeframe
+      const effectiveReturnedUnits = Math.min(agg.returnedUnits, agg.grossSoldUnits);
+      agg.returnedUnits = effectiveReturnedUnits;
+      agg.returnedStrips = Math.floor(effectiveReturnedUnits / factor);
+      agg.returnedLoose = effectiveReturnedUnits % factor;
+      agg.returnCostDeduction = Math.round((effectiveReturnedUnits * agg.unitCostPrice) * 100) / 100;
 
-      // Net sold units = Gross sold units - Returned units
-      agg.netSoldUnits = Math.max(0, agg.grossSoldUnits - agg.returnedUnits);
+      // Net sold units = Gross sold units - Effective returns
+      agg.netSoldUnits = Math.max(0, agg.grossSoldUnits - effectiveReturnedUnits);
       agg.netSoldStrips = Math.floor(agg.netSoldUnits / factor);
       agg.netSoldLoose = agg.netSoldUnits % factor;
 
       // Net Payable Amount strictly at Cost Price (PTR)
       agg.netPayableAmount = Math.max(0, Math.round((agg.grossCostPayable - agg.returnCostDeduction) * 100) / 100);
 
-      const returnedRetailValue = Math.round((agg.returnedUnits * agg.unitRetailPrice) * 100) / 100;
+      const returnedRetailValue = Math.round((effectiveReturnedUnits * agg.unitRetailPrice) * 100) / 100;
       agg.netRetailAmount = Math.max(0, Math.round((agg.grossRetailAmount - returnedRetailValue) * 100) / 100);
       agg.marginAmount = Math.round((agg.netRetailAmount - agg.netPayableAmount) * 100) / 100;
 
       totalGrossUnits += agg.grossSoldUnits;
-      totalReturnedUnits += agg.returnedUnits;
+      totalReturnedUnits += effectiveReturnedUnits;
       totalNetUnits += agg.netSoldUnits;
       totalGrossCost += agg.grossCostPayable;
       totalReturnDeduction += agg.returnCostDeduction;
