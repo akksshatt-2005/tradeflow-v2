@@ -241,26 +241,38 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     });
 
-    const shouldIncludeReturns = req.query.includeReturns !== 'false' && req.query.deductReturns !== 'false';
-
-    // 3. Fetch all patient return entries in stock_ledger in the same period (if enabled)
-    const batchReturnsMap = new Map<string, number>();
-
-    if (shouldIncludeReturns) {
-      const returnsLedger = await prisma.stockLedger.findMany({
-        where: {
-          companyId,
-          itemId: { in: itemIds },
-          entryType: 'SALE_RETURN',
-          createdAt: {
-            gte: parsedStart,
-            lte: parsedEnd
-          }
+    // 3. Fetch only verified returns tied to real sales invoices in this company
+    const allInvoicesInPeriod = await prisma.invoice.findMany({
+      where: {
+        companyId,
+        invoiceDate: {
+          gte: parsedStart,
+          lte: parsedEnd
         }
-      });
+      },
+      select: { id: true, invoiceNumber: true }
+    });
 
-      // Map returns by batchId and itemId
-      for (const ret of returnsLedger) {
+    const validInvoiceIds = new Set(allInvoicesInPeriod.map(i => i.id));
+    const validInvoiceNumbers = new Set(allInvoicesInPeriod.map(i => i.invoiceNumber));
+
+    const returnsLedger = await prisma.stockLedger.findMany({
+      where: {
+        companyId,
+        itemId: { in: itemIds },
+        entryType: 'SALE_RETURN',
+        createdAt: {
+          gte: parsedStart,
+          lte: parsedEnd
+        }
+      }
+    });
+
+    // Only count verified returns referencing a real sales invoice
+    const batchReturnsMap = new Map<string, number>();
+    for (const ret of returnsLedger) {
+      const isRealReturn = ret.referenceId && (validInvoiceIds.has(ret.referenceId) || validInvoiceNumbers.has(ret.referenceId));
+      if (isRealReturn) {
         const current = batchReturnsMap.get(ret.batchId) || 0;
         batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
       }

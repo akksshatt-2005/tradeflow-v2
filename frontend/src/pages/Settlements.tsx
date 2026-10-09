@@ -885,30 +885,6 @@ export default function Settlements() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Deduct Returns Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setDeductReturns(!deductReturns)}
-                  style={{
-                    background: deductReturns ? '#e0f2fe' : '#f1f5f9',
-                    border: deductReturns ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    color: deductReturns ? '#0369a1' : '#64748b',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '20px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Toggle whether customer returns should deduct from the payable payout"
-                >
-                  <RotateCcw size={12} color={deductReturns ? '#0284c7' : '#94a3b8'} />
-                  Deduct Returns: <span style={{ color: deductReturns ? '#0284c7' : '#0f172a' }}>{deductReturns ? 'ON' : 'OFF'}</span>
-                </button>
-
                 <button
                   onClick={calculateSettlement}
                   disabled={loadingCalculation}
