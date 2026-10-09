@@ -241,8 +241,25 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     });
 
-    // 3. Batch sales aggregation from active invoices
+    // 3. Fetch all patient return entries in stock_ledger in the same period
+    const returnsLedger = await prisma.stockLedger.findMany({
+      where: {
+        companyId,
+        itemId: { in: itemIds },
+        entryType: 'SALE_RETURN',
+        createdAt: {
+          gte: parsedStart,
+          lte: parsedEnd
+        }
+      }
+    });
+
+    // Map returns by batchId
     const batchReturnsMap = new Map<string, number>();
+    for (const ret of returnsLedger) {
+      const current = batchReturnsMap.get(ret.batchId) || 0;
+      batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
+    }
 
     // 4. Aggregate sales and returns per batch
     interface BatchSettlementAgg {
@@ -339,7 +356,7 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     }
 
-    // Also include any batches that had returns but 0 sales in this window
+    // Also include any batches that had returns but 0 sales in this window (e.g. return vouchers)
     for (const [bId, retUnits] of batchReturnsMap.entries()) {
       if (!batchAggMap.has(bId) && retUnits > 0) {
         const b = batchMap.get(bId);
@@ -386,7 +403,7 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     }
 
-    // Finalize all batch math - Ensure no negative sold units or orphan return deductions
+    // Finalize all batch math
     const resultItems: BatchSettlementAgg[] = [];
     let totalGrossUnits = 0;
     let totalReturnedUnits = 0;
@@ -397,8 +414,8 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
     let totalRetailSales = 0;
 
     for (const agg of batchAggMap.values()) {
-      // Only include batches with sales in this settlement window
-      if (agg.grossSoldUnits <= 0) {
+      // Include batches with sales or returns
+      if (agg.grossSoldUnits <= 0 && agg.returnedUnits <= 0) {
         continue;
       }
 
@@ -409,28 +426,24 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
 
       agg.grossCostPayable = Math.round((agg.grossSoldUnits * agg.unitCostPrice) * 100) / 100;
 
-      // Cap return deduction to not exceed gross units sold in this billing window
-      const effectiveReturnedUnits = Math.min(agg.returnedUnits, agg.grossSoldUnits);
-      agg.returnedUnits = effectiveReturnedUnits;
-      agg.returnedStrips = Math.floor(effectiveReturnedUnits / factor);
-      agg.returnedLoose = effectiveReturnedUnits % factor;
+      agg.returnedStrips = Math.floor(agg.returnedUnits / factor);
+      agg.returnedLoose = agg.returnedUnits % factor;
+      agg.returnCostDeduction = Math.round((agg.returnedUnits * agg.unitCostPrice) * 100) / 100;
 
-      agg.returnCostDeduction = Math.round((effectiveReturnedUnits * agg.unitCostPrice) * 100) / 100;
-
-      // Net sold units cannot be negative
-      agg.netSoldUnits = Math.max(0, agg.grossSoldUnits - effectiveReturnedUnits);
+      // Net sold units = Gross sold units - Returned units
+      agg.netSoldUnits = Math.max(0, agg.grossSoldUnits - agg.returnedUnits);
       agg.netSoldStrips = Math.floor(agg.netSoldUnits / factor);
       agg.netSoldLoose = agg.netSoldUnits % factor;
 
       // Net Payable Amount strictly at Cost Price (PTR)
       agg.netPayableAmount = Math.max(0, Math.round((agg.grossCostPayable - agg.returnCostDeduction) * 100) / 100);
 
-      const returnedRetailValue = Math.round((effectiveReturnedUnits * agg.unitRetailPrice) * 100) / 100;
+      const returnedRetailValue = Math.round((agg.returnedUnits * agg.unitRetailPrice) * 100) / 100;
       agg.netRetailAmount = Math.max(0, Math.round((agg.grossRetailAmount - returnedRetailValue) * 100) / 100);
       agg.marginAmount = Math.round((agg.netRetailAmount - agg.netPayableAmount) * 100) / 100;
 
       totalGrossUnits += agg.grossSoldUnits;
-      totalReturnedUnits += effectiveReturnedUnits;
+      totalReturnedUnits += agg.returnedUnits;
       totalNetUnits += agg.netSoldUnits;
       totalGrossCost += agg.grossCostPayable;
       totalReturnDeduction += agg.returnCostDeduction;
