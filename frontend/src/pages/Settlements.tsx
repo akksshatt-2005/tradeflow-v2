@@ -1,3 +1,4 @@
+// TradeFlow v2.0 - Supplier Settlements Engine
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
