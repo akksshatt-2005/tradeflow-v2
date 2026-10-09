@@ -880,25 +880,55 @@ export default function Settlements() {
                   </>
                 )}
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Do you want to reset/clear old invalid/test customer returns from the audit ledger?')) return;
+                    try {
+                      const res = await api.post<any>('/api/settlements/purge-invalid-returns', {}, { companyId: activeCompany?.id });
+                      alert(res.message || 'Invalid returns cleared successfully.');
+                      calculateSettlement();
+                    } catch (e: any) {
+                      alert(e.message || 'Failed to clear returns');
+                    }
+                  }}
+                  title="Purge old invalid test return records from the database"
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.78rem',
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <RotateCcw size={13} /> Reset Test Returns
+                </button>
 
-              <button
-                onClick={calculateSettlement}
-                disabled={loadingCalculation}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#0284c7',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.82rem'
-                }}
-              >
-                <RefreshCw size={14} className={loadingCalculation ? 'animate-spin' : ''} />
-                {loadingCalculation ? 'Re-calculating...' : 'Refresh Numbers'}
-              </button>
+                <button
+                  onClick={calculateSettlement}
+                  disabled={loadingCalculation}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#0284c7',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.82rem'
+                  }}
+                >
+                  <RefreshCw size={14} className={loadingCalculation ? 'animate-spin' : ''} />
+                  {loadingCalculation ? 'Re-calculating...' : 'Refresh Numbers'}
+                </button>
+              </div>
             </div>
           </div>
 
