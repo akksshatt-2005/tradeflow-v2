@@ -241,42 +241,8 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     });
 
-    // 3. Fetch only verified returns tied to real sales invoices in this company
-    const allInvoicesInPeriod = await prisma.invoice.findMany({
-      where: {
-        companyId,
-        invoiceDate: {
-          gte: parsedStart,
-          lte: parsedEnd
-        }
-      },
-      select: { id: true, invoiceNumber: true }
-    });
-
-    const validInvoiceIds = new Set(allInvoicesInPeriod.map(i => i.id));
-    const validInvoiceNumbers = new Set(allInvoicesInPeriod.map(i => i.invoiceNumber));
-
-    const returnsLedger = await prisma.stockLedger.findMany({
-      where: {
-        companyId,
-        itemId: { in: itemIds },
-        entryType: 'SALE_RETURN',
-        createdAt: {
-          gte: parsedStart,
-          lte: parsedEnd
-        }
-      }
-    });
-
-    // Only count verified returns referencing a real sales invoice
+    // 3. Batch sales aggregation from active invoices
     const batchReturnsMap = new Map<string, number>();
-    for (const ret of returnsLedger) {
-      const isRealReturn = ret.referenceId && (validInvoiceIds.has(ret.referenceId) || validInvoiceNumbers.has(ret.referenceId));
-      if (isRealReturn) {
-        const current = batchReturnsMap.get(ret.batchId) || 0;
-        batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
-      }
-    }
 
     // 4. Aggregate sales and returns per batch
     interface BatchSettlementAgg {
