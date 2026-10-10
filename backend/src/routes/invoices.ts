@@ -11,6 +11,51 @@ router.use(requireAuth);
 router.use(requireCompany);
 
 /**
+ * Helper: Find the next available non-colliding invoice number
+ */
+async function getNextAvailableInvoiceNumber(companyId: string): Promise<{ invoiceNumber: string; sequence: number }> {
+  const currentYear = new Date().getFullYear();
+  const prefix = `INV-${currentYear}-`;
+
+  // Find all invoices for this year to extract highest sequential number
+  const invoicesThisYear = await prisma.invoice.findMany({
+    where: {
+      companyId,
+      invoiceNumber: { startsWith: prefix }
+    },
+    select: { invoiceNumber: true }
+  });
+
+  let maxSeq = 0;
+  for (const inv of invoicesThisYear) {
+    const parts = inv.invoiceNumber.split('-');
+    if (parts.length >= 3) {
+      const num = parseInt(parts[2], 10);
+      if (!isNaN(num) && num > maxSeq) {
+        maxSeq = num;
+      }
+    }
+  }
+
+  // Next candidate sequence
+  let nextSeq = maxSeq + 1;
+  let candidate = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+
+  // Ensure candidate does not collide with ANY invoice in the database
+  while (await prisma.invoice.findFirst({
+    where: {
+      companyId,
+      invoiceNumber: candidate
+    }
+  })) {
+    nextSeq++;
+    candidate = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  }
+
+  return { invoiceNumber: candidate, sequence: nextSeq };
+}
+
+/**
  * GET /invoices/next-number
  * Compute the next sequential invoice number for this company
  */
@@ -18,16 +63,8 @@ router.get('/next-number', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
 
   try {
-    const count = await prisma.invoice.count({
-      where: { companyId }
-    });
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const nextSeq = String(count + 1).padStart(4, '0');
-    const invoiceNumber = `INV-${year}-${nextSeq}`;
-
-    res.status(200).json({ invoiceNumber, sequence: count + 1 });
+    const result = await getNextAvailableInvoiceNumber(companyId);
+    res.status(200).json(result);
   } catch (error: any) {
     console.error('Error generating next invoice number:', error);
     res.status(500).json({ error: 'Failed to generate invoice number' });
@@ -360,27 +397,33 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
   }
 
   try {
-    // Generate invoice number if not provided
+    // Generate invoice number if not provided, or auto-adjust on collision
     let finalInvoiceNumber = invoiceNumber ? String(invoiceNumber).trim().toUpperCase() : '';
     if (!finalInvoiceNumber) {
-      const count = await prisma.invoice.count({ where: { companyId } });
-      const year = new Date().getFullYear();
-      finalInvoiceNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
-    }
+      const nextData = await getNextAvailableInvoiceNumber(companyId);
+      finalInvoiceNumber = nextData.invoiceNumber;
+    } else {
+      // Check duplicate invoice number
+      const existing = await prisma.invoice.findUnique({
+        where: {
+          companyId_invoiceNumber: {
+            companyId,
+            invoiceNumber: finalInvoiceNumber
+          }
+        }
+      });
 
-    // Check duplicate invoice number
-    const existing = await prisma.invoice.findUnique({
-      where: {
-        companyId_invoiceNumber: {
-          companyId,
-          invoiceNumber: finalInvoiceNumber
+      if (existing) {
+        // If it matches standard format INV-YYYY-XXXX, auto-adjust to the next available number so sale is never blocked!
+        const autoPattern = /^INV-\d{4}-\d+$/i;
+        if (autoPattern.test(finalInvoiceNumber)) {
+          const nextData = await getNextAvailableInvoiceNumber(companyId);
+          finalInvoiceNumber = nextData.invoiceNumber;
+        } else {
+          res.status(409).json({ error: `Invoice number "${finalInvoiceNumber}" already exists in this company. Please specify a different invoice number.` });
+          return;
         }
       }
-    });
-
-    if (existing) {
-      res.status(409).json({ error: `Invoice number "${finalInvoiceNumber}" already exists in this company` });
-      return;
     }
 
     // Verify Party if supplied

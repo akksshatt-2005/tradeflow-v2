@@ -20,7 +20,9 @@ import {
   ChevronDown,
   ArrowRight,
   Pill,
-  Clock
+  Clock,
+  RefreshCw,
+  Edit3
 } from 'lucide-react';
 
 interface MedicineItem {
@@ -518,6 +520,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       });
 
       setCreatedInvoice(detailsRes.invoice);
+      setNextInvoiceNo(detailsRes.invoice.invoiceNumber);
       setShowPrintModal(true);
 
       if (onInvoiceCreated) {
@@ -525,7 +528,16 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       }
     } catch (err: any) {
       console.error('Invoice creation/update error:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to complete sale transaction');
+      const errMsg = err.response?.data?.error || err.message || 'Failed to complete sale transaction';
+      setError(errMsg);
+      // Auto-recover if invoice number already exists
+      if (errMsg.includes('already exists') && !editingInvoiceId) {
+        api.get<{ invoiceNumber: string }>('/api/invoices/next-number', { companyId: activeCompany?.id })
+          .then(res => {
+            if (res.invoiceNumber) setNextInvoiceNo(res.invoiceNumber);
+          })
+          .catch(() => {});
+      }
     } finally {
       setSubmitting(false);
     }
@@ -570,9 +582,68 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
 
         <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-          <div style={{ padding: '0.4rem 0.8rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', textAlign: 'right' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Bill No.</div>
-            <div style={{ fontWeight: '800', color: 'var(--brand-teal)', fontSize: '0.95rem' }}>{nextInvoiceNo}</div>
+          {/* Editable Bill Number with Auto-Adjust / Refresh */}
+          <div style={{
+            padding: '0.35rem 0.75rem',
+            background: 'var(--card-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            textAlign: 'left'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                Bill No.
+              </span>
+              {!editingInvoiceId && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await api.get<{ invoiceNumber: string }>('/api/invoices/next-number', { companyId: activeCompany?.id });
+                      if (res.invoiceNumber) setNextInvoiceNo(res.invoiceNumber);
+                    } catch (e) {
+                      console.error('Failed to refresh bill no:', e);
+                    }
+                  }}
+                  title="Auto-fetch next available unused bill number"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand-teal)',
+                    cursor: 'pointer',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.2rem',
+                    padding: 0
+                  }}
+                >
+                  <RefreshCw size={10} /> Auto
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <input
+                type="text"
+                value={nextInvoiceNo}
+                onChange={e => setNextInvoiceNo(e.target.value.toUpperCase())}
+                placeholder="INV-2026-0001"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px dashed var(--brand-teal)',
+                  color: 'var(--brand-teal)',
+                  fontWeight: '800',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  width: '135px',
+                  padding: '0 0 1px 0'
+                }}
+                title="Click to manually edit or change invoice number"
+              />
+              <Edit3 size={11} color="var(--brand-teal)" style={{ opacity: 0.6 }} />
+            </div>
           </div>
           <div style={{ padding: '0.4rem 0.8rem', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', textAlign: 'right' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Date</div>
