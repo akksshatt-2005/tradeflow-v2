@@ -1227,10 +1227,14 @@ export default function Settlements() {
                             '0'
                           )}
                         </td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 800, color: item.netSoldUnits < 0 ? '#b91c1c' : '#0f172a' }}>
                           <div>{item.netSoldUnits} units</div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
-                            {item.netSoldStrips} strips {item.netSoldLoose > 0 ? `+ ${item.netSoldLoose} loose` : ''}
+                          <div style={{ fontSize: '0.72rem', color: item.netSoldUnits < 0 ? '#b91c1c' : '#64748b', fontWeight: 500 }}>
+                            {item.netSoldUnits < 0 ? (
+                              `Return only (-${item.returnedUnits} base)`
+                            ) : (
+                              `${item.netSoldStrips} strips ${item.netSoldLoose > 0 ? `+ ${item.netSoldLoose} loose` : ''}`
+                            )}
                           </div>
                         </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
@@ -1242,8 +1246,8 @@ export default function Settlements() {
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                           <div style={{ fontWeight: 600 }}>₹{item.mrp.toFixed(2)}</div>
                         </td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 800, color: '#047857', fontSize: '0.95rem' }}>
-                          ₹{item.netPayableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 800, color: item.netPayableAmount < 0 ? '#b91c1c' : '#047857', fontSize: '0.95rem' }}>
+                          {item.netPayableAmount < 0 ? `-₹${Math.abs(item.netPayableAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${item.netPayableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </td>
                       </tr>
                     ))}
