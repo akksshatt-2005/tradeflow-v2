@@ -146,7 +146,7 @@ router.get('/manufacturers', async (req: CompanyScopedRequest, res: Response) =>
  */
 router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
-  const { manufacturer, supplierId, startDate, endDate } = req.query;
+  const { manufacturer, supplierId, startDate, endDate, deductReturns } = req.query;
 
   if (!startDate || !endDate) {
     res.status(400).json({ error: 'startDate and endDate parameters are required' });
@@ -162,6 +162,23 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
   }
 
   try {
+    // 0. Auto-clean / reclassify historical internal invoice edit/cancel reversals from SALE_RETURN to ADJUSTMENT
+    await prisma.stockLedger.updateMany({
+      where: {
+        companyId,
+        entryType: 'SALE_RETURN',
+        OR: [
+          { notes: { contains: 'Reversal for Cancelled Sales Invoice' } },
+          { notes: { contains: 'Reversal for Cancelled' } },
+          { notes: { contains: 'Reversal for Edited Sales Invoice' } },
+          { notes: { contains: 'Invoice Edit Revision' } }
+        ]
+      },
+      data: {
+        entryType: 'ADJUSTMENT'
+      }
+    }).catch(e => console.warn('Settlement ledger reclassification cleanup error:', e));
+
     const mfgFilter = typeof manufacturer === 'string' && manufacturer.trim() ? manufacturer.trim() : null;
     const suppFilter = typeof supplierId === 'string' && supplierId.trim() ? supplierId.trim() : null;
 
@@ -218,7 +235,7 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
-    // 2. Fetch all sales invoices within the date range
+    // 2. Fetch all active sales invoices within the date range
     const invoices = await prisma.invoice.findMany({
       where: {
         companyId,
@@ -241,24 +258,35 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     });
 
-    // 3. Fetch all patient return entries in stock_ledger in the same period
-    const returnsLedger = await prisma.stockLedger.findMany({
-      where: {
-        companyId,
-        itemId: { in: itemIds },
-        entryType: 'SALE_RETURN',
-        createdAt: {
-          gte: parsedStart,
-          lte: parsedEnd
-        }
-      }
-    });
-
-    // Map returns by batchId
+    // 3. Fetch patient return entries in stock_ledger in the same period (only if deductReturns is enabled)
+    // Only count genuine patient return vouchers (referenceId starting with 'RET-')
+    const shouldDeductReturns = deductReturns === 'true';
     const batchReturnsMap = new Map<string, number>();
-    for (const ret of returnsLedger) {
-      const current = batchReturnsMap.get(ret.batchId) || 0;
-      batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
+
+    if (shouldDeductReturns) {
+      const returnsLedger = await prisma.stockLedger.findMany({
+        where: {
+          companyId,
+          itemId: { in: itemIds },
+          entryType: 'SALE_RETURN',
+          referenceId: { startsWith: 'RET-' },
+          NOT: [
+            { notes: { contains: 'Reversal for Cancelled' } },
+            { notes: { contains: 'Reversal for Edited' } },
+            { notes: { contains: 'Invoice Edit' } }
+          ],
+          createdAt: {
+            gte: parsedStart,
+            lte: parsedEnd
+          }
+        }
+      });
+
+      // Map genuine return vouchers by batchId
+      for (const ret of returnsLedger) {
+        const current = batchReturnsMap.get(ret.batchId) || 0;
+        batchReturnsMap.set(ret.batchId, current + Math.max(0, ret.quantity));
+      }
     }
 
     // 4. Aggregate sales and returns per batch
@@ -305,7 +333,8 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
         const b = invItem.batch;
         const itm = invItem.item;
 
-        const ptr = Number(b?.ptr || 0);
+        const rawPtr = Number(b?.ptr || 0);
+        const ptr = rawPtr > 0 ? rawPtr : (Number(b?.pts || 0) > 0 ? Number(b?.pts) : 0);
         const mrp = Number(b?.mrp || invItem.mrp || 0);
         const unitCostPrice = factor > 0 ? ptr / factor : ptr;
         const unitRetailPrice = factor > 0 ? mrp / factor : mrp;

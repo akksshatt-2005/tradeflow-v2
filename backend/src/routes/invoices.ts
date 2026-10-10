@@ -1232,7 +1232,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
             companyId,
             itemId: invItem.itemId,
             batchId: invItem.batchId,
-            entryType: 'SALE_RETURN',
+            entryType: 'ADJUSTMENT',
             quantity: returnedUnits, // Positive restores stock
             unitPrice: invItem.unitPrice,
             referenceId: invoice.id,
@@ -1316,7 +1316,7 @@ router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
             companyId,
             itemId: invItem.itemId,
             batchId: invItem.batchId,
-            entryType: 'SALE_RETURN',
+            entryType: 'ADJUSTMENT',
             quantity: returnedUnits,
             unitPrice: invItem.unitPrice,
             referenceId: invoice.id,

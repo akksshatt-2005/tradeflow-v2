@@ -886,6 +886,30 @@ export default function Settlements() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {/* Deduct Patient Returns Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setDeductReturns(!deductReturns)}
+                  style={{
+                    background: deductReturns ? '#e0f2fe' : '#f8fafc',
+                    border: deductReturns ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                    color: deductReturns ? '#0369a1' : '#64748b',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Toggle whether verified patient return vouchers should deduct from the pay-on-sale payout"
+                >
+                  <RotateCcw size={12} color={deductReturns ? '#0284c7' : '#94a3b8'} />
+                  Deduct Patient Returns: <span style={{ color: deductReturns ? '#0284c7' : '#0f172a' }}>{deductReturns ? 'ON' : 'OFF'}</span>
+                </button>
+
                 <button
                   onClick={calculateSettlement}
                   disabled={loadingCalculation}
