@@ -781,7 +781,7 @@ export default function Parties() {
               cursor: 'pointer'
             }}
           >
-            <Plus size={16} /> + Supplier Ledger
+            <Plus size={16} /> Supplier Ledger
           </button>
           <button
             onClick={() => handleOpenCreateModal('customer')}
@@ -799,7 +799,7 @@ export default function Parties() {
               cursor: 'pointer'
             }}
           >
-            <Plus size={16} /> + Customer Ledger
+            <Plus size={16} /> Customer Ledger
           </button>
         </div>
       </div>

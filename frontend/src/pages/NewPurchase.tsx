@@ -886,7 +886,7 @@ export default function NewPurchase({
               fontSize: '0.85rem'
             }}
           >
-            <PlusCircle size={15} /> + Quick Add Medicine (F4)
+            <PlusCircle size={15} /> Quick Add Medicine (F4)
           </button>
 
           <button

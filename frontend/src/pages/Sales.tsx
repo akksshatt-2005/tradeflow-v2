@@ -588,7 +588,7 @@ export default function Sales() {
             }}
             title="Return 1 or multiple medicines brought back by a patient and issue refund / credit note"
           >
-            <RotateCcw size={17} /> + Patient Return
+            <RotateCcw size={17} /> Patient Return
           </button>
 
           {/* New Sale Button */}
@@ -1145,7 +1145,7 @@ export default function Sales() {
                 cursor: 'pointer'
               }}
             >
-              <Plus size={15} /> + Log Patient Return
+              <Plus size={15} /> Log Patient Return
             </button>
           </div>
 

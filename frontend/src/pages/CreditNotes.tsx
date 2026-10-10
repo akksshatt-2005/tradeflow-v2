@@ -472,7 +472,7 @@ export default function CreditNotes() {
             boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
           }}
         >
-          <Plus size={16} /> + Create New CN (Supplier Return)
+          <Plus size={16} /> Create New CN (Supplier Return)
         </button>
       </div>
 
