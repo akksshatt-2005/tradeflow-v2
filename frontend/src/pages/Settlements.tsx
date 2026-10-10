@@ -214,10 +214,7 @@ export default function Settlements() {
       setManufacturers(res.manufacturers || []);
       setSuppliers(res.suppliers || []);
 
-      // Auto-select first manufacturer if available and none selected
-      if (!selectedManufacturer && res.manufacturers && res.manufacturers.length > 0) {
-        setSelectedManufacturer(res.manufacturers[0]);
-      }
+      // Manufacturers & suppliers loaded
     } catch (err: any) {
       console.error('Failed to load manufacturers/suppliers:', err);
     } finally {
@@ -290,7 +287,7 @@ export default function Settlements() {
       queryParams.set('endDate', computedDateRange.endDate);
       queryParams.set('deductReturns', deductReturns ? 'true' : 'false');
 
-      if (selectedManufacturer.trim()) {
+      if (selectedManufacturer && selectedManufacturer.trim() && !selectedManufacturer.toLowerCase().includes('all manufacturer')) {
         queryParams.set('manufacturer', selectedManufacturer.trim());
       }
       if (selectedSupplierId) {
@@ -719,33 +716,58 @@ export default function Settlements() {
               
               {/* Manufacturer Selector */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  1. Select Manufacturer
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    1. Select Manufacturer
+                  </label>
+                  {selectedManufacturer ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedManufacturer('')}
+                      style={{
+                        background: '#e0f2fe',
+                        border: '1px solid #7dd3fc',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        color: '#0369a1',
+                        cursor: 'pointer',
+                        padding: '0.12rem 0.5rem',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title="View total sale across all manufacturers combined"
+                    >
+                      Show All Manufacturers
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '0.1rem 0.45rem', borderRadius: '4px' }}>
+                      Viewing All (Grand Total)
+                    </span>
+                  )}
+                </div>
                 <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    list="mfg-list"
+                  <select
                     value={selectedManufacturer}
                     onChange={(e) => setSelectedManufacturer(e.target.value)}
-                    placeholder="Search or pick manufacturer (e.g., Cipla, Sun Pharma)..."
                     style={{
                       width: '100%',
                       padding: '0.6rem 0.85rem',
                       borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
+                      border: selectedManufacturer ? '1px solid #0284c7' : '1px solid #10b981',
                       fontSize: '0.875rem',
                       outline: 'none',
-                      background: '#f8fafc',
-                      color: '#0f172a',
-                      fontWeight: 600
+                      background: selectedManufacturer ? '#f8fafc' : '#f0fdf4',
+                      color: selectedManufacturer ? '#0f172a' : '#065f46',
+                      fontWeight: 700
                     }}
-                  />
-                  <datalist id="mfg-list">
+                  >
+                    <option value="">🌐 -- All Manufacturers (Combined Grand Total) --</option>
                     {manufacturers.map((m, idx) => (
-                      <option key={idx} value={m} />
+                      <option key={idx} value={m}>
+                        {m}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
               </div>
 
@@ -877,13 +899,11 @@ export default function Settlements() {
                 }}>
                   {computedDateRange.displayLabel}
                 </span>
-                {selectedManufacturer && (
-                  <>
-                    <span>•</span>
-                    <span style={{ fontWeight: 600, color: '#334155' }}>Manufacturer:</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedManufacturer}</span>
-                  </>
-                )}
+                <span>•</span>
+                <span style={{ fontWeight: 600, color: '#334155' }}>Manufacturer:</span>
+                <span style={{ fontWeight: 700, color: selectedManufacturer ? '#0f172a' : '#059669' }}>
+                  {selectedManufacturer ? selectedManufacturer : 'All Manufacturers (Grand Total)'}
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 {/* Deduct Patient Returns Toggle */}
@@ -953,7 +973,7 @@ export default function Settlements() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#a7f3d0', fontWeight: 700 }}>
-                      Net Payable to Manufacturer
+                      {selectedManufacturer ? `Net Payable to ${selectedManufacturer}` : 'Net Payable to All Manufacturers'}
                     </div>
                     <div style={{ fontSize: '1.85rem', fontWeight: 800, marginTop: '0.3rem', letterSpacing: '-0.02em' }}>
                       ₹{summary.netPayableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1160,6 +1180,19 @@ export default function Settlements() {
                         <td style={{ padding: '0.75rem 1rem' }}>
                           <div style={{ fontWeight: 700, color: '#0f172a' }}>{item.medicineName}</div>
                           <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            {item.manufacturer && (
+                              <span style={{
+                                fontWeight: 700,
+                                color: '#0284c7',
+                                background: '#e0f2fe',
+                                padding: '0.1rem 0.35rem',
+                                borderRadius: '4px',
+                                marginRight: '0.4rem',
+                                fontSize: '0.7rem'
+                              }}>
+                                {item.manufacturer}
+                              </span>
+                            )}
                             {item.genericName || 'Formula'} • {item.unit} (Pack of {item.conversionFactor})
                           </div>
                         </td>

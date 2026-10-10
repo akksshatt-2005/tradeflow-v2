@@ -179,7 +179,8 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
       }
     }).catch(e => console.warn('Settlement ledger reclassification cleanup error:', e));
 
-    const mfgFilter = typeof manufacturer === 'string' && manufacturer.trim() ? manufacturer.trim() : null;
+    const mfgTrimmed = typeof manufacturer === 'string' ? manufacturer.trim() : '';
+    const mfgFilter = mfgTrimmed && !mfgTrimmed.toLowerCase().includes('all manufacturer') && mfgTrimmed.toUpperCase() !== 'ALL' ? mfgTrimmed : null;
     const suppFilter = typeof supplierId === 'string' && supplierId.trim() ? supplierId.trim() : null;
 
     // 1. Fetch relevant items matching the manufacturer or purchased from supplier
