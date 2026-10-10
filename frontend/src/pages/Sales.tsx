@@ -90,6 +90,46 @@ export interface PatientReturnItem {
   createdByUser: string;
 }
 
+function formatInwardUnits(itm: {
+  unitsReturned: number;
+  strips: number;
+  looseQty: number;
+  conversionFactor?: number;
+  unit?: string;
+  medicineName?: string;
+}) {
+  const factor = itm.conversionFactor || 1;
+  const unitUpper = (itm.unit || '').toUpperCase();
+  const nameUpper = (itm.medicineName || '').toUpperCase();
+
+  const isCap = unitUpper.includes('CAP') || nameUpper.includes('CAP');
+  const isTab = unitUpper.includes('TAB') || nameUpper.includes('TAB');
+
+  let baseUnitLabel = 'units';
+  if (isCap) {
+    baseUnitLabel = 'Cap';
+  } else if (isTab || factor > 1) {
+    baseUnitLabel = 'Tab';
+  } else if (itm.unit) {
+    baseUnitLabel = itm.unit;
+  }
+
+  // If item comes in strips/packs of multiple tablets/capsules
+  if (factor > 1) {
+    if (itm.strips > 0 && itm.looseQty > 0) {
+      return `+${itm.unitsReturned} ${baseUnitLabel}s (${itm.strips} Str + ${itm.looseQty} ${baseUnitLabel})`;
+    }
+    if (itm.strips > 0) {
+      return `+${itm.unitsReturned} ${baseUnitLabel}s (${itm.strips} ${itm.strips === 1 ? 'Strip' : 'Strips'})`;
+    }
+    // Only loose tablets returned
+    return `+${itm.looseQty || itm.unitsReturned} ${baseUnitLabel}(s)`;
+  }
+
+  // Factor is 1 (bottles, syrups, injections, single packs)
+  return `+${itm.unitsReturned} ${itm.unit || 'units'}`;
+}
+
 export interface GroupedPatientReturn {
   voucherNumber: string;
   createdAt: string;
@@ -1368,7 +1408,7 @@ export default function Sales() {
                                             : `${itm.looseQty} Tab(s)`}
                                         </td>
                                         <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', color: 'var(--accent-green)', fontWeight: '700' }}>
-                                          +{itm.unitsReturned} {itm.unit || 'units'}
+                                          {formatInwardUnits(itm)}
                                         </td>
                                         <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
                                           ₹{itm.mrp.toFixed(2)}
