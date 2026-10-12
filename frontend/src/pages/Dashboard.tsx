@@ -665,22 +665,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     {activeCompany?.name}
                   </h1>
-                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
-                    Logged in as <strong style={{ color: '#38bdf8' }}>{user?.username}</strong> ({activeCompany?.role.toUpperCase()}) • Fast POS, Smart FEFO Inventory & Returns
-                  </p>
-
-                  {/* Active Store Ticker Chips */}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#86efac', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      🟢 Live Inventory Sync
-                    </span>
-                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#fef08a', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      🎁 10% Scheme Active (&gt; ₹500)
-                    </span>
-                    <span style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '6px', fontSize: '11.5px', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      👨‍⚕️ Default: Dr. Priyadarshi Srivastava (UPMC 59048)
-                    </span>
-                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', zIndex: 2, flexWrap: 'wrap' }}>
