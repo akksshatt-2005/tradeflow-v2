@@ -718,30 +718,27 @@ export default function Sales() {
             True Revenue (Gross − Returns)
           </div>
 
-          {/* User Requested: Total Profit Box (MRP - Purchase Price) */}
+          {/* Total Profit */}
           <div style={{
             marginTop: '0.85rem',
             paddingTop: '0.75rem',
             borderTop: '1px dashed rgba(16, 185, 129, 0.45)',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '0.25rem'
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'nowrap'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                💰 Total Est. Profit:
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065f46', whiteSpace: 'nowrap' }}>
+              Total Est. Profit:
+            </span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857', whiteSpace: 'nowrap' }}>
+              ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            {profitMarginPct > 0 && (
+              <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                {profitMarginPct.toFixed(1)}% margin
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857' }}>
-                  ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                {profitMarginPct > 0 && (
-                  <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 7px', borderRadius: '4px', fontWeight: 800, fontSize: '0.72rem' }}>
-                    {profitMarginPct.toFixed(1)}% margin
-                  </span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -1232,11 +1229,7 @@ export default function Sales() {
                     <th style={{ padding: '0.9rem 1.2rem' }}>Voucher / Slip #</th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Date & Time</th>
                     <th style={{ padding: '0.9rem 1.2rem' }}>Patient Name</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Returned Medicines</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Total Items / Qty</th>
                     <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Refund Amount (₹)</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Return Reason</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Stock Status</th>
                     <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
@@ -1299,73 +1292,8 @@ export default function Sales() {
                           <td style={{ padding: '0.9rem 1.2rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                             {grp.patientName}
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', maxWidth: '320px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              {grp.items.slice(0, 2).map((item, iIdx) => (
-                                <div key={iIdx} style={{ fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.medicineName}</span>
-                                  <span style={{ fontSize: '0.72rem', color: 'var(--brand-teal)' }}>
-                                    ({item.batchNumber})
-                                  </span>
-                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                    • {item.strips > 0 && item.looseQty > 0
-                                      ? `${item.strips} Str + ${item.looseQty} Tab`
-                                      : item.strips > 0
-                                      ? `${item.strips} Str`
-                                      : `${item.looseQty} Tab`}
-                                  </span>
-                                </div>
-                              ))}
-                              {itemsCount > 2 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleExpandVoucher(grp.voucherNumber)}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#e11d48',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    padding: 0
-                                  }}
-                                >
-                                  +{itemsCount - 2} more medicine(s) (click to view)
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                              {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                              ({grp.totalUnitsReturned} base units)
-                            </div>
-                          </td>
                           <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '800', color: '#e11d48', fontSize: '0.98rem' }}>
                             −₹{grp.totalRefundAmount.toFixed(2)}
-                          </td>
-                          <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)', maxWidth: '200px' }}>
-                            <span style={{ fontSize: '0.82rem' }}>{grp.reason}</span>
-                          </td>
-                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                            <span
-                              style={{
-                                padding: '0.2rem 0.55rem',
-                                borderRadius: '999px',
-                                background: 'rgba(34, 197, 94, 0.15)',
-                                color: 'var(--accent-green)',
-                                fontSize: '0.74rem',
-                                fontWeight: '700',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem'
-                              }}
-                            >
-                              <Check size={12} /> +{grp.totalUnitsReturned} Inwarded
-                            </span>
                           </td>
                           <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1417,7 +1345,7 @@ export default function Sales() {
                         {/* Expandable Itemized Medicines Breakdown */}
                         {isExpanded && (
                           <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                            <td colSpan={10} style={{ padding: '0.8rem 1.2rem 1.2rem 3rem' }}>
+                            <td colSpan={6} style={{ padding: '0.8rem 1.2rem 1.2rem 3rem' }}>
                               <div
                                 style={{
                                   background: 'var(--card-bg)',
@@ -1427,10 +1355,17 @@ export default function Sales() {
                                   boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
                                 }}
                               >
-                                <div style={{ padding: '0.5rem 0.8rem', background: 'rgba(225, 29, 72, 0.05)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#e11d48' }}>
-                                    Itemized Medicines Returned in Voucher {grp.voucherNumber} ({itemsCount} Medicines)
-                                  </span>
+                                <div style={{ padding: '0.5rem 0.8rem', background: 'rgba(225, 29, 72, 0.05)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#e11d48' }}>
+                                      Itemized Medicines Returned in Voucher {grp.voucherNumber} ({itemsCount} Medicines)
+                                    </span>
+                                    {grp.reason && (
+                                      <span style={{ fontSize: '0.74rem', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                                        Reason: <strong>{grp.reason}</strong>
+                                      </span>
+                                    )}
+                                  </div>
                                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                     Logged by {grp.createdByUser}
                                   </span>
