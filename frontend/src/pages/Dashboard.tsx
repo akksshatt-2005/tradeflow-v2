@@ -511,19 +511,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         </div>
       </aside>
 
-      {/* Floating Edge Arrow Tab when sidebar is closed */}
-      {!sidebarOpen && (
-        <button
-          onClick={toggleSidebar}
-          className="sidebar-floating-edge-tab"
-          title="Open navigation sidebar [Ctrl+B]"
-          aria-label="Open sidebar"
-        >
-          <ChevronRight size={18} />
-          <span>Menu</span>
-        </button>
-      )}
-
       {/* Main Content Layout */}
       <div className="main-wrapper">
         {/* Top Navbar */}

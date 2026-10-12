@@ -109,47 +109,6 @@ body {
   border: none !important;
 }
 
-/* Floating Edge Tab when sidebar is closed */
-.sidebar-floating-edge-tab {
-  position: fixed;
-  left: 0;
-  top: 72px;
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: linear-gradient(135deg, #06241b 0%, #0d3829 100%);
-  color: #34d399;
-  border: 1px solid #10b981;
-  border-left: none;
-  border-radius: 0 8px 8px 0;
-  padding: 7px 12px 7px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 10px rgba(16, 185, 129, 0.3);
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  animation: floatingTabSlideIn 0.25s ease-out;
-}
-
-.sidebar-floating-edge-tab:hover {
-  background: #0a2e21;
-  color: #6ee7b7;
-  padding-left: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(16, 185, 129, 0.5);
-}
-
-@keyframes floatingTabSlideIn {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
 /* Close Arrow Trigger inside Sidebar Header */
 .sidebar-collapse-trigger {
   background: rgba(16, 185, 129, 0.12);
