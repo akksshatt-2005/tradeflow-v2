@@ -731,17 +731,16 @@ export default function Sales() {
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 💰 Total Est. Profit:
               </span>
-              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857' }}>
-                ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#065f46' }}>
-              <span>(MRP − Purchase Price / PTR)</span>
-              {profitMarginPct > 0 && (
-                <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 7px', borderRadius: '4px', fontWeight: 800 }}>
-                  {profitMarginPct.toFixed(1)}% margin
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857' }}>
+                  ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-              )}
+                {profitMarginPct > 0 && (
+                  <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 7px', borderRadius: '4px', fontWeight: 800, fontSize: '0.72rem' }}>
+                    {profitMarginPct.toFixed(1)}% margin
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1054,11 +1053,6 @@ export default function Sales() {
                       </td>
                       <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)' }}>
                         <div>₹{inv.grandTotal.toFixed(2)}</div>
-                        {inv.profitAmount !== undefined && inv.profitAmount > 0 && (
-                          <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600', marginTop: '2px' }}>
-                            Profit: +₹{inv.profitAmount.toFixed(2)}
-                          </div>
-                        )}
                       </td>
                       <td style={{
                         padding: '0.9rem 1.2rem',
