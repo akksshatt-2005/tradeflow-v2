@@ -67,18 +67,21 @@ export default function Medicines() {
   const [showAlertsOnly, setShowAlertsOnly] = useState(false);
   const [alertDetailItem, setAlertDetailItem] = useState<MedicineItem | null>(null);
 
+  const getEffectiveMinStock = (item: MedicineItem) => {
+    const rawMin = typeof item.minStockLevel === 'number' ? item.minStockLevel : (parseInt(String(item.minStockLevel)) || 0);
+    // Standard pharmacy low stock threshold: defaults to 10 strips (1 box) if not custom set
+    return rawMin > 0 ? rawMin : 10;
+  };
+
   const getMinStockInBaseUnits = (item: MedicineItem) => {
-    const minStrips = typeof item.minStockLevel === 'number' ? item.minStockLevel : (parseInt(String(item.minStockLevel)) || 0);
+    const minStrips = getEffectiveMinStock(item);
     const factor = item.conversionFactor && item.conversionFactor > 1 ? item.conversionFactor : 1;
     return minStrips * factor;
   };
 
   const isLowStockAlert = (item: MedicineItem) => {
     const minBase = getMinStockInBaseUnits(item);
-    if (minBase > 0) {
-      return item.totalStock <= minBase;
-    }
-    return item.totalStock <= 0;
+    return item.totalStock <= minBase;
   };
 
   const alertItems = items.filter(isLowStockAlert);
@@ -165,7 +168,7 @@ export default function Medicines() {
       'Tablets per Pack': item.conversionFactor,
       'In Stock (Packs)': item.totalStock,
       'Active Batches': item.activeBatchesCount,
-      'Min Alert Level': item.minStockLevel
+      'Min Alert Level': `${getEffectiveMinStock(item)} ${item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}`
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -563,7 +566,7 @@ export default function Medicines() {
     setEditUnit(item.unit || 'STRIP');
     const factor = item.conversionFactor || 1;
     setEditConversion(String(factor));
-    setEditMinStock(String(item.minStockLevel || 10));
+    setEditMinStock(String(getEffectiveMinStock(item)));
     setEditStockStrips(String(Math.floor(item.totalStock / factor)));
     setEditStockLoose(String(item.totalStock % factor));
     setShowEditModal(true);
@@ -1001,7 +1004,7 @@ export default function Medicines() {
                           gap: '3px'
                         }}>
                           <AlertTriangle size={10} color="#dc2626" />
-                          Min Alert: {item.minStockLevel || 0} {item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}
+                          Min Alert: {getEffectiveMinStock(item)} {item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}
                         </span>
                       </div>
                     )}
@@ -1068,7 +1071,7 @@ export default function Medicines() {
                             gap: '4px',
                             boxShadow: '0 1px 3px rgba(220, 38, 38, 0.15)'
                           }}
-                          title={`⚠️ Low Stock Alert: Current stock (${item.conversionFactor > 1 ? (item.totalStock / item.conversionFactor).toFixed(1) + ' Strips' : item.totalStock}) is at or below Min Alert Level (${item.minStockLevel || 0} ${item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}). Click for details.`}
+                          title={`⚠️ Low Stock Alert: Current stock (${item.conversionFactor > 1 ? (item.totalStock / item.conversionFactor).toFixed(1) + ' Strips' : item.totalStock}) is at or below Min Alert Level (${getEffectiveMinStock(item)} ${item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}). Click for details.`}
                         >
                           <AlertTriangle size={12} color="#dc2626" />
                           <span>Stock Alert</span>
@@ -1190,11 +1193,11 @@ export default function Medicines() {
                 <div style={{ textAlign: 'center', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>MIN ALERT LEVEL</div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                    {alertDetailItem.minStockLevel || 0} {alertDetailItem.conversionFactor > 1 ? 'Strips' : (alertDetailItem.unit || 'Units')}
+                    {getEffectiveMinStock(alertDetailItem)} {alertDetailItem.conversionFactor > 1 ? 'Strips' : (alertDetailItem.unit || 'Units')}
                   </div>
                   <div style={{ fontSize: '10px', color: '#64748b' }}>
                     {alertDetailItem.conversionFactor > 1 
-                      ? `(${ (alertDetailItem.minStockLevel || 0) * alertDetailItem.conversionFactor } Tablets)`
+                      ? `(${ getEffectiveMinStock(alertDetailItem) * alertDetailItem.conversionFactor } Tablets)`
                       : 'Threshold Level'}
                   </div>
                 </div>
@@ -1203,8 +1206,8 @@ export default function Medicines() {
                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>SHORTFALL DEFICIT</div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#e11d48', marginTop: '4px' }}>
                     {alertDetailItem.conversionFactor > 1 
-                      ? `${(Math.min(0, alertDetailItem.totalStock - ((alertDetailItem.minStockLevel || 0) * alertDetailItem.conversionFactor)) / alertDetailItem.conversionFactor).toFixed(1)} Str`
-                      : `${Math.min(0, alertDetailItem.totalStock - (alertDetailItem.minStockLevel || 0))} ${alertDetailItem.unit || 'Units'}`}
+                      ? `${(Math.min(0, alertDetailItem.totalStock - (getEffectiveMinStock(alertDetailItem) * alertDetailItem.conversionFactor)) / alertDetailItem.conversionFactor).toFixed(1)} Str`
+                      : `${Math.min(0, alertDetailItem.totalStock - getEffectiveMinStock(alertDetailItem))} ${alertDetailItem.unit || 'Units'}`}
                   </div>
                   <div style={{ fontSize: '10px', color: '#e11d48', fontWeight: 600 }}>Below Min Threshold</div>
                 </div>

@@ -161,7 +161,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           gstRate: gstRate !== undefined ? Number(gstRate) : 5.0,
           unit: unit ? String(unit).trim().toUpperCase() : 'STRIP',
           conversionFactor: conversionFactor ? Math.max(1, parseInt(conversionFactor)) : 1,
-          minStockLevel: minStockLevel ? Math.max(0, parseInt(minStockLevel)) : 0
+          minStockLevel: minStockLevel ? Math.max(0, parseInt(minStockLevel)) : 10
         }
       });
 
@@ -309,7 +309,7 @@ router.post('/bulk-import', async (req: CompanyScopedRequest, res: Response) => 
         gstRate: raw.gstRate !== undefined ? Number(raw.gstRate) : 5.0,
         unit,
         conversionFactor: factor > 0 ? factor : 1,
-        minStockLevel: raw.minStockLevel ? Math.max(0, parseInt(raw.minStockLevel)) : 0
+        minStockLevel: raw.minStockLevel ? Math.max(0, parseInt(raw.minStockLevel)) : 10
       };
 
       createdItems.push(newItemData);
