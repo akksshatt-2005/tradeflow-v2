@@ -194,7 +194,27 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
           party: { select: { id: true, name: true, mailTo: true, phone: true, gstin: true } },
           creator: { select: { username: true } },
           items: {
-            select: { id: true }
+            select: {
+              id: true,
+              quantity: true,
+              strips: true,
+              looseQty: true,
+              unitPrice: true,
+              mrp: true,
+              totalAmount: true,
+              batch: {
+                select: {
+                  ptr: true,
+                  mrp: true,
+                  pts: true
+                }
+              },
+              item: {
+                select: {
+                  conversionFactor: true
+                }
+              }
+            }
           }
         },
         orderBy: [
@@ -210,6 +230,28 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
       const totalAmt = Number(inv.grandTotal);
       const paidAmt = Number(inv.paidAmount);
       const balAmt = Math.max(0, totalAmt - paidAmt);
+
+      let invoiceCost = 0;
+      let invoiceMrpVal = 0;
+
+      for (const itm of inv.items) {
+        const factor = itm.item?.conversionFactor || 1;
+        const ptr = Number(itm.batch?.ptr || itm.batch?.pts || 0);
+        const itmMrp = Number(itm.mrp || itm.batch?.mrp || itm.unitPrice || 0);
+
+        if (itm.strips > 0 || itm.looseQty > 0) {
+          invoiceCost += (itm.strips * ptr) + (itm.looseQty * (ptr / factor));
+          invoiceMrpVal += (itm.strips * itmMrp) + (itm.looseQty * (itmMrp / factor));
+        } else {
+          invoiceCost += itm.quantity * (ptr / factor);
+          invoiceMrpVal += itm.quantity * (itmMrp / factor);
+        }
+      }
+
+      // Profit = MRP/Selling Price - Purchase Cost
+      const finalCost = Math.round(invoiceCost * 100) / 100;
+      const finalMrp = Math.round(invoiceMrpVal * 100) / 100;
+      const finalProfit = Math.max(0, Math.round((finalMrp - finalCost) * 100) / 100);
 
       return {
         id: inv.id,
@@ -231,6 +273,9 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
         party: inv.party,
         createdByUser: inv.creator.username,
         itemsCount: inv.items.length,
+        costAmount: finalCost,
+        mrpTotal: finalMrp,
+        profitAmount: finalProfit,
         createdAt: inv.createdAt.toISOString()
       };
     });

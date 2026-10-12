@@ -62,6 +62,9 @@ interface InvoiceListItem {
   } | null;
   createdByUser: string;
   itemsCount: number;
+  costAmount?: number;
+  mrpTotal?: number;
+  profitAmount?: number;
   createdAt: string;
 }
 
@@ -78,6 +81,7 @@ export interface PatientReturnItem {
   batchNumber: string;
   expiryDate?: string | null;
   mrp: number;
+  ptr?: number;
   pts: number;
   currentStock: number;
   unitsReturned: number;
@@ -334,11 +338,27 @@ export default function Sales() {
     const netVal = Math.max(0, grossVal - returnVal);
     const receivedVal = activeInvs.reduce((sum, inv) => sum + inv.paidAmount, 0);
 
+    const grossCost = activeInvs.reduce((sum, inv) => sum + (inv.costAmount || 0), 0);
+    const retCost = patientReturns.reduce((sum, ret) => {
+      const factor = ret.conversionFactor || 1;
+      const ptr = ret.ptr || 0;
+      const cost = (ret.strips > 0 || ret.looseQty > 0)
+        ? (ret.strips * ptr) + (ret.looseQty * (ptr / factor))
+        : (ret.unitsReturned * (ptr / factor));
+      return sum + cost;
+    }, 0);
+    const netCost = Math.max(0, grossCost - retCost);
+    const netProfit = Math.max(0, netVal - netCost);
+    const marginPct = netVal > 0 ? ((netProfit / netVal) * 100).toFixed(1) : '0.0';
+
     const summaryData = [
       { 'Metric': 'Selected Period', 'Value': getDateRangeForPeriod(period, customStartDate, customEndDate).label },
       { 'Metric': 'Gross Invoiced Sales (A)', 'Value': `₹${grossVal.toFixed(2)}` },
       { 'Metric': 'Patient Returns / Refunds (B)', 'Value': `-₹${returnVal.toFixed(2)}` },
       { 'Metric': 'NET REALIZED SALES (A - B)', 'Value': `₹${netVal.toFixed(2)}` },
+      { 'Metric': 'Total Purchase Cost / Inward PTR', 'Value': `₹${netCost.toFixed(2)}` },
+      { 'Metric': 'TOTAL ESTIMATED PROFIT (MRP - Purchase Cost)', 'Value': `₹${netProfit.toFixed(2)}` },
+      { 'Metric': 'Profit Margin (%)', 'Value': `${marginPct}%` },
       { 'Metric': 'Collected Cash / UPI', 'Value': `₹${receivedVal.toFixed(2)}` },
       { 'Metric': 'Total Invoices Count', 'Value': activeInvs.length },
       { 'Metric': 'Total Return Vouchers Count', 'Value': groupedReturns.length },
@@ -506,6 +526,22 @@ export default function Sales() {
   const totalReturnsVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
   const netSalesVal = Math.max(0, grossSalesVal - totalReturnsVal);
   const totalReceivedVal = activeInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+
+  // Total Purchase Cost & Profit (MRP - Purchase Price / PTR minus returns)
+  const grossCostVal = activeInvoices.reduce((sum, inv) => sum + (inv.costAmount || 0), 0);
+  const returnedCostVal = patientReturns.reduce((sum, ret) => {
+    const factor = ret.conversionFactor || 1;
+    const ptr = ret.ptr || 0;
+    const cost = (ret.strips > 0 || ret.looseQty > 0)
+      ? (ret.strips * ptr) + (ret.looseQty * (ptr / factor))
+      : (ret.unitsReturned * (ptr / factor));
+    return sum + cost;
+  }, 0);
+  const netCostVal = Math.max(0, grossCostVal - returnedCostVal);
+
+  const grossProfitVal = activeInvoices.reduce((sum, inv) => sum + (inv.profitAmount || 0), 0);
+  const netProfitVal = Math.max(0, grossProfitVal - Math.max(0, totalReturnsVal - returnedCostVal));
+  const profitMarginPct = netSalesVal > 0 ? ((netProfitVal / netSalesVal) * 100) : 0;
 
   if (showPOS) {
     return (
@@ -680,6 +716,33 @@ export default function Sales() {
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.25rem', fontWeight: '600' }}>
             True Revenue (Gross − Returns)
+          </div>
+
+          {/* User Requested: Total Profit Box (MRP - Purchase Price) */}
+          <div style={{
+            marginTop: '0.85rem',
+            paddingTop: '0.75rem',
+            borderTop: '1px dashed rgba(16, 185, 129, 0.45)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                💰 Total Est. Profit:
+              </span>
+              <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857' }}>
+                ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#065f46' }}>
+              <span>(MRP − Purchase Price / PTR)</span>
+              {profitMarginPct > 0 && (
+                <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 7px', borderRadius: '4px', fontWeight: 800 }}>
+                  {profitMarginPct.toFixed(1)}% margin
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -990,7 +1053,12 @@ export default function Sales() {
                         </span>
                       </td>
                       <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)' }}>
-                        ₹{inv.grandTotal.toFixed(2)}
+                        <div>₹{inv.grandTotal.toFixed(2)}</div>
+                        {inv.profitAmount !== undefined && inv.profitAmount > 0 && (
+                          <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600', marginTop: '2px' }}>
+                            Profit: +₹{inv.profitAmount.toFixed(2)}
+                          </div>
+                        )}
                       </td>
                       <td style={{
                         padding: '0.9rem 1.2rem',

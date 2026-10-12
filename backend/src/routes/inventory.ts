@@ -224,7 +224,7 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
       where: whereClause,
       include: {
         item: { select: { id: true, name: true, sku: true, unit: true, conversionFactor: true } },
-        batch: { select: { id: true, batchNumber: true, expiryDate: true, mrp: true, pts: true, currentStock: true } },
+        batch: { select: { id: true, batchNumber: true, expiryDate: true, mrp: true, ptr: true, pts: true, currentStock: true } },
         user: {
           select: { id: true, username: true }
         }
@@ -309,6 +309,7 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
         batchNumber: l.batch?.batchNumber || 'N/A',
         expiryDate: l.batch?.expiryDate ? l.batch.expiryDate.toISOString().split('T')[0] : null,
         mrp: Number(l.batch?.mrp || 0),
+        ptr: Number(l.batch?.ptr || l.batch?.pts || 0),
         pts: Number(l.batch?.pts || 0),
         currentStock: l.batch?.currentStock ?? 0,
         unitsReturned: units,
