@@ -63,6 +63,22 @@ export default function Medicines() {
   const [selectedItemForBatch, setSelectedItemForBatch] = useState<MedicineItem | null>(null);
   const [viewingItemBatches, setViewingItemBatches] = useState<MedicineItem | null>(null);
 
+  // Low Stock Alert Filter & Modal State
+  const [showAlertsOnly, setShowAlertsOnly] = useState(false);
+  const [alertDetailItem, setAlertDetailItem] = useState<MedicineItem | null>(null);
+
+  const isLowStockAlert = (item: MedicineItem) => {
+    const min = typeof item.minStockLevel === 'number' ? item.minStockLevel : (parseInt(String(item.minStockLevel)) || 0);
+    if (min > 0) {
+      return item.totalStock <= min;
+    }
+    return item.totalStock <= 0;
+  };
+
+  const alertItems = items.filter(isLowStockAlert);
+  const alertCount = alertItems.length;
+  const displayedItems = showAlertsOnly ? alertItems : items;
+
   // Form State: Add Medicine
   const [newItemName, setNewItemName] = useState('');
   const [newItemSku, setNewItemSku] = useState('');
@@ -624,6 +640,36 @@ export default function Medicines() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
+            onClick={() => setShowAlertsOnly((prev) => !prev)}
+            className="btn"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#fef2f2' : '#f8fafc'),
+              color: showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#475569'),
+              border: `1px solid ${showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#fca5a5' : '#cbd5e1')}`,
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            title={showAlertsOnly ? 'Click to view all medicines' : 'Click to view only low stock alert medicines'}
+          >
+            <AlertTriangle size={15} color={showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#64748b')} />
+            <span>{showAlertsOnly ? 'Showing Alerts Only' : 'Stock Alerts'}</span>
+            <span style={{
+              background: showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#e2e8f0'),
+              color: showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#ffffff' : '#475569'),
+              fontSize: '11px',
+              fontWeight: '700',
+              padding: '1px 6px',
+              borderRadius: '10px'
+            }}>
+              {alertCount}
+            </span>
+          </button>
+          <button
             onClick={handleExportMedicines}
             className="btn btn-secondary"
             style={{
@@ -698,22 +744,132 @@ export default function Medicines() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '16px',
+        flexWrap: 'wrap',
+        gap: '12px',
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
       }}>
-        <div className="search-box" style={{ maxWidth: '480px' }}>
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search by brand name, generic composition, SKU, or manufacturer..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '320px', flexWrap: 'wrap' }}>
+          <div className="search-box" style={{ flex: 1, minWidth: '240px', maxWidth: '420px' }}>
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search by brand name, generic composition, SKU, or manufacturer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Quick Filter Buttons: All Medicines vs Alert Medicines Only */}
+          <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={() => setShowAlertsOnly(false)}
+              style={{
+                border: 'none',
+                background: !showAlertsOnly ? '#ffffff' : 'transparent',
+                color: !showAlertsOnly ? '#0f172a' : '#64748b',
+                fontWeight: !showAlertsOnly ? 600 : 500,
+                fontSize: '12px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                boxShadow: !showAlertsOnly ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Package size={14} />
+              <span>All Medicines ({items.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAlertsOnly(true)}
+              style={{
+                border: showAlertsOnly ? '1px solid #f87171' : 'none',
+                background: showAlertsOnly ? '#fef2f2' : (alertCount > 0 ? '#ffffff' : 'transparent'),
+                color: showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#dc2626' : '#64748b'),
+                fontWeight: showAlertsOnly || alertCount > 0 ? 600 : 500,
+                fontSize: '12px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                boxShadow: showAlertsOnly ? '0 1px 3px rgba(220,38,38,0.15)' : (alertCount > 0 && !showAlertsOnly ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'),
+                transition: 'all 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Show only medicines where stock is at or below minimum alert level"
+            >
+              <AlertTriangle size={14} color={alertCount > 0 || showAlertsOnly ? '#dc2626' : '#64748b'} />
+              <span>Alert Medicines Only</span>
+              {alertCount > 0 && (
+                <span style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  lineHeight: '1.4'
+                }}>
+                  {alertCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+
         <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap' }}>
-          Total Medicines: <strong style={{ color: '#0f172a' }}>{items.length}</strong>
+          {showAlertsOnly ? (
+            <span>Showing <strong style={{ color: '#dc2626' }}>{displayedItems.length}</strong> Low Stock Alerts</span>
+          ) : (
+            <span>Total Medicines: <strong style={{ color: '#0f172a' }}>{items.length}</strong></span>
+          )}
         </div>
       </div>
+
+      {/* Alert Filter Banner */}
+      {showAlertsOnly && (
+        <div style={{
+          background: '#fff1f2',
+          border: '1px solid #fecdd3',
+          padding: '10px 16px',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          fontSize: '13px',
+          color: '#9f1239'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={16} color="#e11d48" />
+            <span>
+              Filtering by <strong>Low Stock Alert</strong>: Showing {displayedItems.length} medicine{displayedItems.length !== 1 ? 's' : ''} currently at or below their Minimum Alert Stock Level.
+            </span>
+          </div>
+          <button
+            onClick={() => setShowAlertsOnly(false)}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #fca5a5',
+              color: '#dc2626',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Show All Medicines ({items.length})
+          </button>
+        </div>
+      )}
 
       {error && (
         <div style={{
@@ -754,22 +910,41 @@ export default function Medicines() {
                   Loading medicines...
                 </td>
               </tr>
-            ) : items.length === 0 ? (
+            ) : displayedItems.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <Package size={36} style={{ color: '#cbd5e1', marginBottom: '8px' }} />
-                  <div>No medicines found in catalog.</div>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="btn btn-secondary"
-                    style={{ marginTop: '12px', fontSize: '12px' }}
-                  >
-                    + Add Your First Medicine
-                  </button>
+                  {showAlertsOnly ? (
+                    <div>
+                      <CheckCircle2 size={36} style={{ color: '#16a34a', marginBottom: '8px' }} />
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>No Stock Alerts!</div>
+                      <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 12px 0' }}>
+                        All medicines in your catalog are currently above their minimum alert stock levels.
+                      </p>
+                      <button
+                        onClick={() => setShowAlertsOnly(false)}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '12px' }}
+                      >
+                        Show All Medicines ({items.length})
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Package size={36} style={{ color: '#cbd5e1', marginBottom: '8px' }} />
+                      <div>No medicines found in catalog.</div>
+                      <button
+                        onClick={() => setShowAddModal(true)}
+                        className="btn btn-secondary"
+                        style={{ marginTop: '12px', fontSize: '12px' }}
+                      >
+                        + Add Your First Medicine
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (
-              items.map((item) => (
+              displayedItems.map((item) => (
                 <tr
                   key={item.id}
                   style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s' }}
@@ -811,7 +986,7 @@ export default function Medicines() {
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <div style={{
                       fontWeight: 700,
-                      color: item.totalStock <= item.minStockLevel ? 'var(--status-danger)' : 'var(--status-success)',
+                      color: isLowStockAlert(item) ? 'var(--status-danger)' : 'var(--status-success)',
                       fontSize: '13px'
                     }}>
                       {item.conversionFactor > 1 ? (
@@ -835,59 +1010,305 @@ export default function Medicines() {
                       {item.activeBatchesCount} active batch{item.activeBatchesCount !== 1 ? 'es' : ''}
                       {item.conversionFactor > 1 && ` • (${item.totalStock} Total Tabs)`}
                     </div>
+                    {isLowStockAlert(item) && (
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <AlertTriangle size={10} color="#dc2626" />
+                          Min Alert: {item.minStockLevel || 0}
+                        </span>
+                      </div>
+                    )}
                   </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedItemForBatch(item);
+                          setShowBatchModal(true);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 7px', fontSize: '11px' }}
+                        title="Add Batch / Opening Stock"
+                      >
+                        + Batch
+                      </button>
+                      <button
+                        onClick={() => setViewingItemBatches(item)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 7px', fontSize: '11px' }}
+                        title="View Batches"
+                      >
+                        <Layers size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleOpenEditModal(item)}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 7px', fontSize: '11px', color: '#0284c7' }}
+                        title="Edit Medicine Details"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMedicine(item)}
+                        className="btn"
+                        style={{
+                          padding: '4px 7px',
+                          fontSize: '11px',
+                          background: '#fef2f2',
+                          color: '#b91c1c',
+                          border: '1px solid #fecaca',
+                          cursor: 'pointer'
+                        }}
+                        title="Delete Medicine"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                      {isLowStockAlert(item) && (
                         <button
-                          onClick={() => {
-                            setSelectedItemForBatch(item);
-                            setShowBatchModal(true);
-                          }}
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 7px', fontSize: '11px' }}
-                          title="Add Batch / Opening Stock"
-                        >
-                          + Batch
-                        </button>
-                        <button
-                          onClick={() => setViewingItemBatches(item)}
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 7px', fontSize: '11px' }}
-                          title="View Batches"
-                        >
-                          <Layers size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditModal(item)}
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 7px', fontSize: '11px', color: '#0284c7' }}
-                          title="Edit Medicine Details"
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMedicine(item)}
+                          onClick={() => setAlertDetailItem(item)}
                           className="btn"
                           style={{
-                            padding: '4px 7px',
+                            padding: '4px 8px',
                             fontSize: '11px',
+                            fontWeight: 700,
                             background: '#fef2f2',
-                            color: '#b91c1c',
-                            border: '1px solid #fecaca',
-                            cursor: 'pointer'
+                            color: '#dc2626',
+                            border: '1px solid #f87171',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 1px 3px rgba(220, 38, 38, 0.15)'
                           }}
-                          title="Delete Medicine"
+                          title={`⚠️ Low Stock Alert: Current stock (${item.totalStock}) is at or below Min Alert Level (${item.minStockLevel || 0}). Click for details.`}
                         >
-                          <Trash2 size={13} />
+                          <AlertTriangle size={12} color="#dc2626" />
+                          <span>Stock Alert</span>
                         </button>
-                      </div>
-                    </td>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Modal: Low Stock Alert Detail */}
+      {alertDetailItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #fecdd3',
+              background: '#fff1f2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  background: '#fecaca',
+                  color: '#dc2626',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#9f1239' }}>
+                    Low Stock Alert Notification
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#be123c', marginTop: '2px' }}>
+                    SKU: <strong>{alertDetailItem.sku}</strong> • {alertDetailItem.unit || 'Units'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setAlertDetailItem(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9f1239' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
+                  {alertDetailItem.name}
+                </div>
+                {alertDetailItem.genericName && (
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    Composition: {alertDetailItem.genericName}
+                  </div>
+                )}
+                {alertDetailItem.manufacturer && (
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    Manufacturer: {alertDetailItem.manufacturer}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Comparison Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '10px',
+                background: '#f8fafc',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>CURRENT STOCK</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>
+                    {alertDetailItem.totalStock}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>
+                    {alertDetailItem.conversionFactor > 1 
+                      ? `${Math.floor(alertDetailItem.totalStock / alertDetailItem.conversionFactor)} Strips`
+                      : `${alertDetailItem.unit || 'Units'}`}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>MIN ALERT LEVEL</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                    {alertDetailItem.minStockLevel || 0}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>Threshold Level</div>
+                </div>
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>SHORTFALL DEFICIT</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#e11d48', marginTop: '4px' }}>
+                    {Math.min(0, alertDetailItem.totalStock - (alertDetailItem.minStockLevel || 0))}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#e11d48', fontWeight: 600 }}>Units Below Min</div>
+                </div>
+              </div>
+
+              {/* Batches Overview */}
+              <div style={{
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px'
+              }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Active Batches in Inventory</span>
+                  <span style={{ color: '#64748b' }}>{alertDetailItem.activeBatchesCount} batch(es)</span>
+                </div>
+                {alertDetailItem.batches && alertDetailItem.batches.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {alertDetailItem.batches.map(b => (
+                      <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '6px 8px', background: '#f8fafc', borderRadius: '4px' }}>
+                        <div>
+                          <strong>{b.batchNumber}</strong>
+                          <span style={{ color: '#64748b', marginLeft: '6px' }}>Exp: {new Date(b.expiryDate).toLocaleDateString()}</span>
+                        </div>
+                        <div style={{ fontWeight: 600, color: b.currentStock <= 0 ? '#dc2626' : '#0f172a' }}>
+                          {b.currentStock} {alertDetailItem.unit || 'units'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#dc2626', fontStyle: 'italic' }}>
+                    ⚠️ No active batches in stock. Needs immediate procurement or batch entry.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div style={{
+              padding: '12px 20px',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <button
+                type="button"
+                onClick={() => setAlertDetailItem(null)}
+                className="btn btn-secondary"
+                style={{ fontSize: '12px' }}
+              >
+                Close
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const item = alertDetailItem;
+                    setAlertDetailItem(null);
+                    handleOpenEditModal(item);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '12px', color: '#0284c7' }}
+                >
+                  <Edit2 size={13} style={{ marginRight: '4px' }} />
+                  Edit Min Level
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const item = alertDetailItem;
+                    setAlertDetailItem(null);
+                    setSelectedItemForBatch(item);
+                    setShowBatchModal(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{ fontSize: '12px', background: '#16a34a', borderColor: '#16a34a' }}
+                >
+                  <Plus size={13} style={{ marginRight: '4px' }} />
+                  Restock (+ Batch)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Add Medicine */}
       {showAddModal && (
