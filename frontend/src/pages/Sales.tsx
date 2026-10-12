@@ -708,7 +708,7 @@ export default function Sales() {
           position: 'relative'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--accent-green)', fontSize: '0.85rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            <span>⭐ Net Counter Sales</span>
+            <span>Net Counter Sales</span>
             <TrendingUp size={19} style={{ color: 'var(--accent-green)' }} />
           </div>
           <div style={{ fontSize: '1.65rem', fontWeight: '900', color: 'var(--accent-green)', marginTop: '0.35rem', letterSpacing: '-0.02em' }}>
@@ -720,25 +720,26 @@ export default function Sales() {
 
           {/* Total Profit */}
           <div style={{
-            marginTop: '0.85rem',
-            paddingTop: '0.75rem',
+            marginTop: '0.75rem',
+            paddingTop: '0.65rem',
             borderTop: '1px dashed rgba(16, 185, 129, 0.45)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            flexWrap: 'nowrap'
+            justifyContent: 'space-between',
+            fontSize: '0.78rem',
+            color: '#065f46'
           }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065f46', whiteSpace: 'nowrap' }}>
-              Total Est. Profit:
-            </span>
-            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: '#047857', whiteSpace: 'nowrap' }}>
-              ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            {profitMarginPct > 0 && (
-              <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                {profitMarginPct.toFixed(1)}% margin
-              </span>
-            )}
+            <span style={{ fontWeight: 600 }}>Est. Profit:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <strong style={{ fontSize: '0.95rem', color: '#047857' }}>
+                ₹{netProfitVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </strong>
+              {profitMarginPct > 0 && (
+                <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem' }}>
+                  ({profitMarginPct.toFixed(1)}%)
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -996,74 +997,71 @@ export default function Sales() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Invoice No.</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Date & Time</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Customer / Doctor</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Items</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Mode</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Total (₹)</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Balance Due (₹)</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Actions</th>
+                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Invoice No.</th>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Date</th>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Customer / Doctor</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'center' }}>Items</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'center' }}>Mode</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'right' }}>Total (₹)</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'right' }}>Balance Due (₹)</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredInvoices.map(inv => (
-                    <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.9rem 1.2rem', fontWeight: '700', color: 'var(--brand-teal)' }}>
+                    <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', fontWeight: '700', color: 'var(--brand-teal)', whiteSpace: 'nowrap' }}>
                         {inv.invoiceNumber}
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                         {new Date(inv.invoiceDate).toLocaleDateString('en-IN')}
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem' }}>
-                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
                           {inv.customerName && inv.customerName !== 'Cash Customer' 
                             ? inv.customerName 
                             : (inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
-                        </div>
-                        {inv.patientName && inv.patientName !== inv.customerName && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--brand-teal)', fontWeight: '500' }}>Patient: {inv.patientName}</div>
-                        )}
-                        {inv.party?.mailTo && inv.party?.name && inv.party.mailTo !== inv.party.name && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Legal: {inv.party.name}</div>
-                        )}
+                        </span>
                         {inv.doctorName && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{inv.doctorName.startsWith('Dr') ? inv.doctorName : `Dr. ${inv.doctorName}`}</div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                            • {inv.doctorName.startsWith('Dr') ? inv.doctorName : `Dr. ${inv.doctorName}`}
+                          </span>
                         )}
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
-                        {inv.itemsCount} medicines
+                      <td style={{ padding: '0.5rem 0.9rem', color: 'var(--text-secondary)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {inv.itemsCount} meds
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          padding: '0.2rem 0.5rem',
+                          padding: '0.15rem 0.45rem',
                           borderRadius: '4px',
                           background: 'var(--bg-secondary)',
-                          fontSize: '0.75rem',
+                          fontSize: '0.72rem',
                           fontWeight: '600',
                           color: 'var(--text-secondary)'
                         }}>
                           {inv.paymentMode}
                         </span>
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)' }}>
-                        <div>₹{inv.grandTotal.toFixed(2)}</div>
+                      <td style={{ padding: '0.5rem 0.9rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        ₹{inv.grandTotal.toFixed(2)}
                       </td>
                       <td style={{
-                        padding: '0.9rem 1.2rem',
+                        padding: '0.5rem 0.9rem',
                         textAlign: 'right',
                         fontWeight: '600',
-                        color: inv.balanceAmount > 0 ? 'var(--accent-red)' : 'var(--text-secondary)'
+                        color: inv.balanceAmount > 0 ? 'var(--accent-red)' : 'var(--text-secondary)',
+                        whiteSpace: 'nowrap'
                       }}>
                         {inv.balanceAmount > 0 ? `₹${inv.balanceAmount.toFixed(2)}` : '₹0.00'}
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          padding: '0.25rem 0.6rem',
+                          padding: '0.2rem 0.55rem',
                           borderRadius: '999px',
-                          fontSize: '0.75rem',
+                          fontSize: '0.72rem',
                           fontWeight: '700',
                           background: inv.status === 'PAID'
                             ? 'rgba(34, 197, 94, 0.15)'
@@ -1083,24 +1081,26 @@ export default function Sales() {
                           {inv.status}
                         </span>
                       </td>
-                      <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'center' }}>
+                      <td style={{ padding: '0.5rem 0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'center', alignItems: 'center' }}>
                           <button
                             onClick={() => handleViewInvoice(inv.id)}
                             style={{
-                              padding: '0.4rem 0.6rem',
+                              padding: '0.28rem 0.55rem',
                               background: 'var(--bg-secondary)',
                               border: '1px solid var(--border-color)',
-                              borderRadius: '6px',
+                              borderRadius: '5px',
                               color: 'var(--text-primary)',
                               cursor: 'pointer',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
-                              fontSize: '0.8rem'
+                              gap: '0.25rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
                             }}
+                            title="View Invoice"
                           >
-                            <Eye size={14} /> View
+                            <Eye size={13} /> View
                           </button>
                           {inv.status !== 'CANCELLED' && (
                             <button
@@ -1109,61 +1109,62 @@ export default function Sales() {
                                 setShowPOS(true);
                               }}
                               style={{
-                                padding: '0.4rem 0.6rem',
+                                padding: '0.28rem 0.55rem',
                                 background: 'rgba(59, 130, 246, 0.12)',
                                 border: '1px solid rgba(59, 130, 246, 0.3)',
-                                borderRadius: '6px',
+                                borderRadius: '5px',
                                 color: '#2563eb',
                                 cursor: 'pointer',
-                                display: 'flex',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.3rem',
-                                fontSize: '0.8rem',
+                                gap: '0.25rem',
+                                fontSize: '0.75rem',
                                 fontWeight: '600'
                               }}
                               title="Edit this invoice"
                             >
-                              <Edit2 size={14} /> Edit
+                              <Edit2 size={13} /> Edit
                             </button>
                           )}
                           {inv.status !== 'CANCELLED' && inv.balanceAmount > 0 && (
                             <button
                               onClick={() => handleOpenPayment(inv)}
                               style={{
-                                padding: '0.4rem 0.6rem',
+                                padding: '0.28rem 0.55rem',
                                 background: 'rgba(20, 184, 166, 0.15)',
                                 border: '1px solid var(--brand-teal)',
-                                borderRadius: '6px',
+                                borderRadius: '5px',
                                 color: 'var(--brand-teal)',
                                 cursor: 'pointer',
-                                display: 'flex',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.3rem',
-                                fontSize: '0.8rem',
+                                gap: '0.25rem',
+                                fontSize: '0.75rem',
                                 fontWeight: '600'
                               }}
+                              title="Settle balance due"
                             >
-                              <CreditCard size={14} /> Settle
+                              <CreditCard size={13} /> Settle
                             </button>
                           )}
                           <button
                             onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
                             style={{
-                              padding: '0.4rem 0.6rem',
+                              padding: '0.28rem 0.55rem',
                               background: 'rgba(239, 68, 68, 0.12)',
                               border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '6px',
+                              borderRadius: '5px',
                               color: '#ef4444',
                               cursor: 'pointer',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
-                              fontSize: '0.8rem',
+                              gap: '0.25rem',
+                              fontSize: '0.75rem',
                               fontWeight: '600'
                             }}
                             title={inv.status === 'CANCELLED' ? "Permanently delete cancelled invoice" : "Cancel invoice and reverse stock"}
                           >
-                            <Trash2 size={14} /> {inv.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
+                            <Trash2 size={13} /> {inv.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
                           </button>
                         </div>
                       </td>
@@ -1224,13 +1225,13 @@ export default function Sales() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                    <th style={{ padding: '0.9rem 1.2rem', width: '40px' }}></th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Voucher / Slip #</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Date & Time</th>
-                    <th style={{ padding: '0.9rem 1.2rem' }}>Patient Name</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'right' }}>Refund Amount (₹)</th>
-                    <th style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>Actions</th>
+                  <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                    <th style={{ padding: '0.6rem 0.9rem', width: '36px', textAlign: 'center' }}></th>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Voucher / Slip #</th>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Date</th>
+                    <th style={{ padding: '0.6rem 0.9rem' }}>Patient Name</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'right' }}>Refund Amount (₹)</th>
+                    <th style={{ padding: '0.6rem 0.9rem', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1244,10 +1245,11 @@ export default function Sales() {
                           style={{
                             borderBottom: isExpanded ? 'none' : '1px solid var(--border-color)',
                             background: isExpanded ? 'rgba(225, 29, 72, 0.03)' : 'transparent',
-                            transition: 'background 0.2s'
+                            transition: 'background 0.2s',
+                            whiteSpace: 'nowrap'
                           }}
                         >
-                          <td style={{ padding: '0.9rem 0.6rem 0.9rem 1.2rem', textAlign: 'center' }}>
+                          <td style={{ padding: '0.5rem 0.6rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <button
                               type="button"
                               onClick={() => toggleExpandVoucher(grp.voucherNumber)}
@@ -1263,11 +1265,11 @@ export default function Sales() {
                                 justifyContent: 'center'
                               }}
                             >
-                              {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                              {isExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
                             </button>
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', fontWeight: '700', color: '#e11d48' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <td style={{ padding: '0.5rem 0.9rem', fontWeight: '700', color: '#e11d48', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                               <span>{grp.voucherNumber}</span>
                               <span
                                 style={{
@@ -1283,19 +1285,16 @@ export default function Sales() {
                               </span>
                             </div>
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', color: 'var(--text-secondary)' }}>
-                            <div>{new Date(grp.createdAt).toLocaleDateString('en-IN')}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                              {new Date(grp.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
+                          <td style={{ padding: '0.5rem 0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {new Date(grp.createdAt).toLocaleDateString('en-IN')}
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          <td style={{ padding: '0.5rem 0.9rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                             {grp.patientName}
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'right', fontWeight: '800', color: '#e11d48', fontSize: '0.98rem' }}>
+                          <td style={{ padding: '0.5rem 0.9rem', textAlign: 'right', fontWeight: '800', color: '#e11d48', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
                             −₹{grp.totalRefundAmount.toFixed(2)}
                           </td>
-                          <td style={{ padding: '0.9rem 1.2rem', textAlign: 'center' }}>
+                          <td style={{ padding: '0.5rem 0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                               <button
                                 onClick={() => {
@@ -1323,20 +1322,20 @@ export default function Sales() {
                                   });
                                 }}
                                 style={{
-                                  padding: '0.4rem 0.65rem',
+                                  padding: '0.28rem 0.55rem',
                                   background: 'var(--bg-secondary)',
                                   border: '1px solid var(--border-color)',
-                                  borderRadius: '6px',
+                                  borderRadius: '5px',
                                   color: 'var(--text-primary)',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '0.35rem',
-                                  fontSize: '0.8rem',
+                                  gap: '0.25rem',
+                                  fontSize: '0.75rem',
                                   fontWeight: '600'
                                 }}
                               >
-                                <Printer size={14} /> Slip
+                                <Printer size={13} /> Slip
                               </button>
                             </div>
                           </td>
