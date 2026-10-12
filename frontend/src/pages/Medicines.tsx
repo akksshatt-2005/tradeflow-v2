@@ -67,10 +67,16 @@ export default function Medicines() {
   const [showAlertsOnly, setShowAlertsOnly] = useState(false);
   const [alertDetailItem, setAlertDetailItem] = useState<MedicineItem | null>(null);
 
+  const getMinStockInBaseUnits = (item: MedicineItem) => {
+    const minStrips = typeof item.minStockLevel === 'number' ? item.minStockLevel : (parseInt(String(item.minStockLevel)) || 0);
+    const factor = item.conversionFactor && item.conversionFactor > 1 ? item.conversionFactor : 1;
+    return minStrips * factor;
+  };
+
   const isLowStockAlert = (item: MedicineItem) => {
-    const min = typeof item.minStockLevel === 'number' ? item.minStockLevel : (parseInt(String(item.minStockLevel)) || 0);
-    if (min > 0) {
-      return item.totalStock <= min;
+    const minBase = getMinStockInBaseUnits(item);
+    if (minBase > 0) {
+      return item.totalStock <= minBase;
     }
     return item.totalStock <= 0;
   };
@@ -995,7 +1001,7 @@ export default function Medicines() {
                           gap: '3px'
                         }}>
                           <AlertTriangle size={10} color="#dc2626" />
-                          Min Alert: {item.minStockLevel || 0}
+                          Min Alert: {item.minStockLevel || 0} {item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}
                         </span>
                       </div>
                     )}
@@ -1062,7 +1068,7 @@ export default function Medicines() {
                             gap: '4px',
                             boxShadow: '0 1px 3px rgba(220, 38, 38, 0.15)'
                           }}
-                          title={`⚠️ Low Stock Alert: Current stock (${item.totalStock}) is at or below Min Alert Level (${item.minStockLevel || 0}). Click for details.`}
+                          title={`⚠️ Low Stock Alert: Current stock (${item.conversionFactor > 1 ? (item.totalStock / item.conversionFactor).toFixed(1) + ' Strips' : item.totalStock}) is at or below Min Alert Level (${item.minStockLevel || 0} ${item.conversionFactor > 1 ? 'Strips' : (item.unit || 'Units')}). Click for details.`}
                         >
                           <AlertTriangle size={12} color="#dc2626" />
                           <span>Stock Alert</span>
@@ -1170,29 +1176,37 @@ export default function Medicines() {
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>CURRENT STOCK</div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>
-                    {alertDetailItem.totalStock}
+                    {alertDetailItem.conversionFactor > 1 
+                      ? `${(alertDetailItem.totalStock / alertDetailItem.conversionFactor).toFixed(1)} Str`
+                      : `${alertDetailItem.totalStock} ${alertDetailItem.unit || 'Units'}`}
                   </div>
                   <div style={{ fontSize: '10px', color: '#64748b' }}>
                     {alertDetailItem.conversionFactor > 1 
-                      ? `${Math.floor(alertDetailItem.totalStock / alertDetailItem.conversionFactor)} Strips`
-                      : `${alertDetailItem.unit || 'Units'}`}
+                      ? `${alertDetailItem.totalStock} Total Tablets`
+                      : 'Available In Stock'}
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'center', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>MIN ALERT LEVEL</div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                    {alertDetailItem.minStockLevel || 0}
+                    {alertDetailItem.minStockLevel || 0} {alertDetailItem.conversionFactor > 1 ? 'Strips' : (alertDetailItem.unit || 'Units')}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#64748b' }}>Threshold Level</div>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>
+                    {alertDetailItem.conversionFactor > 1 
+                      ? `(${ (alertDetailItem.minStockLevel || 0) * alertDetailItem.conversionFactor } Tablets)`
+                      : 'Threshold Level'}
+                  </div>
                 </div>
 
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>SHORTFALL DEFICIT</div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#e11d48', marginTop: '4px' }}>
-                    {Math.min(0, alertDetailItem.totalStock - (alertDetailItem.minStockLevel || 0))}
+                    {alertDetailItem.conversionFactor > 1 
+                      ? `${(Math.min(0, alertDetailItem.totalStock - ((alertDetailItem.minStockLevel || 0) * alertDetailItem.conversionFactor)) / alertDetailItem.conversionFactor).toFixed(1)} Str`
+                      : `${Math.min(0, alertDetailItem.totalStock - (alertDetailItem.minStockLevel || 0))} ${alertDetailItem.unit || 'Units'}`}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#e11d48', fontWeight: 600 }}>Units Below Min</div>
+                  <div style={{ fontSize: '10px', color: '#e11d48', fontWeight: 600 }}>Below Min Threshold</div>
                 </div>
               </div>
 
@@ -1469,14 +1483,22 @@ export default function Medicines() {
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="label" style={{ fontSize: '11px' }}>Min Alert Stock Level</label>
+                    <label className="label" style={{ fontSize: '11px', fontWeight: 600 }}>
+                      Min Alert Stock Level (in {newItemUnit === 'STRIP' ? 'Strips' : (newItemUnit || 'Units')}s)
+                    </label>
                     <input
                       type="number"
                       min="0"
+                      placeholder="e.g. 10 strips"
                       value={newItemMinStock}
                       onChange={(e) => setNewItemMinStock(e.target.value)}
                       className="input"
                     />
+                    {parseInt(newItemConversion) > 1 && parseInt(newItemMinStock) > 0 && (
+                      <div style={{ fontSize: '10.5px', color: '#0284c7', marginTop: '3px' }}>
+                        Alerts when stock ≤ {parseInt(newItemMinStock)} Strips ({(parseInt(newItemMinStock) || 0) * (parseInt(newItemConversion) || 1)} Tablets)
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
@@ -2290,14 +2312,22 @@ export default function Medicines() {
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '11px' }}>Min Alert Stock Level</label>
+                    <label className="form-label" style={{ fontSize: '11px', fontWeight: 600 }}>
+                      Min Alert Stock Level (in {editUnit === 'STRIP' ? 'Strips' : (editUnit || 'Units')}s)
+                    </label>
                     <input
                       type="number"
                       min="0"
+                      placeholder="e.g. 10 strips"
                       value={editMinStock}
                       onChange={(e) => setEditMinStock(e.target.value)}
                       className="form-input"
                     />
+                    {parseInt(editConversion) > 1 && parseInt(editMinStock) > 0 && (
+                      <div style={{ fontSize: '10.5px', color: '#0284c7', marginTop: '3px' }}>
+                        Alerts when stock ≤ {parseInt(editMinStock)} Strips ({(parseInt(editMinStock) || 0) * (parseInt(editConversion) || 1)} Tablets)
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
