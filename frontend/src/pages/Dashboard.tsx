@@ -639,30 +639,40 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               
               {/* Premium Welcome Hero Banner */}
               <div style={{
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f766e 100%)',
-                color: '#ffffff',
+                background: 'linear-gradient(135deg, #ffffff 60%, #f0fdf4 100%)',
+                color: '#0f172a',
                 borderRadius: '14px',
-                padding: '24px 28px',
-                boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)',
+                padding: '20px 24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 16px -2px rgba(0, 0, 0, 0.04)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '16px',
-                position: 'relative',
-                overflow: 'hidden'
+                position: 'relative'
               }}>
                 <div style={{ zIndex: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{
+                      background: '#ecfdf5',
+                      color: '#047857',
+                      border: '1px solid #a7f3d0',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
                       🏥 Pharmacy Command Center
                     </span>
                     <span style={{ color: '#94a3b8', fontSize: '12px' }}>•</span>
-                    <span style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 500 }}>
+                    <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
                       {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
-                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
                     {activeCompany?.name}
                   </h1>
                 </div>
@@ -671,7 +681,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   <button
                     onClick={() => setActiveTab('sales')}
                     style={{
-                      background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
@@ -682,7 +692,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      boxShadow: '0 4px 14px rgba(20, 184, 166, 0.4)',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                       transition: 'transform 0.15s ease'
                     }}
                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -694,9 +704,9 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   <button
                     onClick={handleOpenReturnModal}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.12)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      background: '#ffffff',
+                      color: '#0f766e',
+                      border: '1px solid #99f6e4',
                       borderRadius: '8px',
                       padding: '10px 16px',
                       fontSize: '13px',
@@ -705,11 +715,11 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                       display: 'flex',
                       alignItems: 'center',
                       gap: '7px',
-                      backdropFilter: 'blur(4px)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       transition: 'background 0.15s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0fdfa'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#ffffff'}
                   >
                     <RotateCcw size={15} />
                     <span>↩️ Patient Return</span>
@@ -717,9 +727,9 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   <button
                     onClick={handleOpenSupplierReturnModal}
                     style={{
-                      background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-                      color: '#ffffff',
-                      border: 'none',
+                      background: '#ffffff',
+                      color: '#4338ca',
+                      border: '1px solid #c7d2fe',
                       borderRadius: '8px',
                       padding: '10px 16px',
                       fontSize: '13px',
@@ -728,11 +738,11 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                       display: 'flex',
                       alignItems: 'center',
                       gap: '7px',
-                      boxShadow: '0 4px 14px rgba(79, 70, 229, 0.4)',
-                      transition: 'transform 0.15s ease'
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      transition: 'background 0.15s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#ffffff'}
                   >
                     <Truck size={15} />
                     <span>🚚 Supplier Return (CN)</span>
