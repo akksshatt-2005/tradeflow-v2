@@ -611,54 +611,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Quick Patient Return Shortcut Button */}
-            <button
-              onClick={handleOpenReturnModal}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 13px',
-                background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '7px',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(13, 148, 136, 0.35)',
-                transition: 'all 0.15s ease'
-              }}
-              title="Quick Patient Return (Direct Stock Inward & Cash Refund)"
-            >
-              <RotateCcw size={14} />
-              <span>Patient Return</span>
-            </button>
-
-            {/* Supplier Return Shortcut Button */}
-            <button
-              onClick={handleOpenSupplierReturnModal}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 13px',
-                background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '7px',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
-                transition: 'all 0.15s ease'
-              }}
-              title="Supplier Return (Credit Note / Debit Note Outward Stock Debit)"
-            >
-              <Truck size={14} />
-              <span>Supplier Return (CN)</span>
-            </button>
-
             {/* User Pill */}
             <div style={{
               display: 'flex',
