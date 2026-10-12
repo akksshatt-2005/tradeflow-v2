@@ -640,36 +640,6 @@ export default function Medicines() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
-            onClick={() => setShowAlertsOnly((prev) => !prev)}
-            className="btn"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#fef2f2' : '#f8fafc'),
-              color: showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#475569'),
-              border: `1px solid ${showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#fca5a5' : '#cbd5e1')}`,
-              fontWeight: '600',
-              fontSize: '13px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            title={showAlertsOnly ? 'Click to view all medicines' : 'Click to view only low stock alert medicines'}
-          >
-            <AlertTriangle size={15} color={showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#64748b')} />
-            <span>{showAlertsOnly ? 'Showing Alerts Only' : 'Stock Alerts'}</span>
-            <span style={{
-              background: showAlertsOnly ? '#ffffff' : (alertCount > 0 ? '#dc2626' : '#e2e8f0'),
-              color: showAlertsOnly ? '#dc2626' : (alertCount > 0 ? '#ffffff' : '#475569'),
-              fontSize: '11px',
-              fontWeight: '700',
-              padding: '1px 6px',
-              borderRadius: '10px'
-            }}>
-              {alertCount}
-            </span>
-          </button>
-          <button
             onClick={handleExportMedicines}
             className="btn btn-secondary"
             style={{
