@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Boxes,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   LogOut,
   Plus,
   ShieldCheck,
@@ -92,6 +94,40 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // Collapsible Sidebar State (persisted in localStorage)
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('tradeflow_sidebar_open');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('tradeflow_sidebar_open', String(next));
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  // Keyboard shortcut Ctrl+B / Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Quick Patient Return State (Dashboard Shortcut - Multi-Item)
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -352,29 +388,49 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   return (
     <div className="app-layout">
       {/* Left Sidebar (Rule C5) */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? '' : 'closed'}`}>
         {/* Brand Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #0d3829', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Pill size={18} color="#ffffff" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', letterSpacing: '-0.01em' }}>
-              Trade Flow v2
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #0d3829',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Pill size={18} color="#ffffff" />
             </div>
-            <div style={{ fontSize: '11px', color: '#a7f3d0' }}>
-              Pharma B2B & Retail ERP
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+                Trade Flow v2
+              </div>
+              <div style={{ fontSize: '11px', color: '#a7f3d0', whiteSpace: 'nowrap' }}>
+                Pharma B2B & Retail ERP
+              </div>
             </div>
           </div>
+
+          {/* Close Arrow Button with Motion */}
+          <button
+            onClick={toggleSidebar}
+            className="sidebar-collapse-trigger"
+            title="Close sidebar to expand screen [Ctrl+B]"
+            aria-label="Close sidebar"
+          >
+            <ChevronLeft size={16} />
+          </button>
         </div>
 
         {/* Current Active Company Indicator */}
@@ -459,7 +515,22 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
       <div className="main-wrapper">
         {/* Top Navbar */}
         <header className="top-navbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Animated Motion Arrow Toggle Button */}
+            <button
+              onClick={toggleSidebar}
+              className={`sidebar-motion-toggle ${sidebarOpen ? 'open' : 'closed'}`}
+              title={sidebarOpen ? "Close sidebar to expand workspace [Ctrl+B]" : "Open navigation sidebar [Ctrl+B]"}
+              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              <div className="motion-arrow-icon">
+                {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </div>
+              <span className="motion-toggle-label">
+                {sidebarOpen ? 'Collapse' : 'Menu'}
+              </span>
+            </button>
+
             {/* Company Switcher Dropdown */}
             <div style={{ position: 'relative' }}>
               <button
