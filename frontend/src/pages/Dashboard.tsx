@@ -354,11 +354,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
       {/* Left Sidebar (Rule C5) */}
       <aside className="sidebar">
         {/* Brand Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #0d3829', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
             width: '32px',
             height: '32px',
-            backgroundColor: '#0284c7',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
@@ -370,19 +371,19 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', letterSpacing: '-0.01em' }}>
               Trade Flow v2
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '11px', color: '#a7f3d0' }}>
               Pharma B2B & Retail ERP
             </div>
           </div>
         </div>
 
         {/* Current Active Company Indicator */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #1e293b', backgroundColor: '#090d16' }}>
-          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #0d3829', backgroundColor: '#031711' }}>
+          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#6ee7b7', fontWeight: 600, letterSpacing: '0.04em' }}>
             Active Company
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-            <span style={{ fontWeight: 600, fontSize: '13px', color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+            <span style={{ fontWeight: 600, fontSize: '13px', color: '#f0fdf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
               {activeCompany?.name}
             </span>
             <span className={`badge badge-${activeCompany?.role}`} style={{ fontSize: '10px' }}>
@@ -409,18 +410,19 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   gap: '10px',
                   width: '100%',
                   padding: '9px 12px',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isActive ? '#1e293b' : 'transparent',
-                  color: isActive ? '#38bdf8' : '#94a3b8',
+                  backgroundColor: isActive ? '#0d3829' : 'transparent',
+                  color: isActive ? '#34d399' : '#a7bdae',
                   fontSize: '12.5px',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.15s ease'
+                  transition: 'all 0.15s ease',
+                  boxShadow: isActive ? 'inset 3px 0 0 #10b981' : 'none'
                 }}
                 onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.backgroundColor = '#1e293b';
+                  if (!isActive) e.currentTarget.style.backgroundColor = '#0a2e21';
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
@@ -434,19 +436,19 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         </nav>
 
         {/* User Info & Footer */}
-        <div style={{ padding: '14px 16px', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '14px 16px', borderTop: '1px solid #0d3829', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#f8fafc' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#f0fdf4' }}>
               {user?.username}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>
+            <div style={{ fontSize: '11px', color: '#6ee7b7' }}>
               {companies.length} company access
             </div>
           </div>
           <button
             onClick={logout}
             title="Sign out"
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+            style={{ background: 'none', border: 'none', color: '#a7bdae', cursor: 'pointer', padding: '4px' }}
           >
             <LogOut size={16} />
           </button>

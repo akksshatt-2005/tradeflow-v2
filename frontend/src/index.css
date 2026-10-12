@@ -10,8 +10,8 @@
   /* Clean Business Light Theme Palette */
   --bg-page: #f8fafc;
   --bg-card: #ffffff;
-  --bg-sidebar: #0f172a;
-  --bg-sidebar-hover: #1e293b;
+  --bg-sidebar: #06241b;
+  --bg-sidebar-hover: #0c382a;
   --bg-subtle: #f1f5f9;
   --bg-input: #ffffff;
 
@@ -85,7 +85,7 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid #0d3829;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -370,9 +370,9 @@ textarea::placeholder,
 }
 
 .badge-owner {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
 .badge-accountant {
