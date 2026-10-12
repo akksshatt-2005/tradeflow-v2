@@ -598,9 +598,6 @@ export default function Settlements() {
               <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
                 Supplier & Manufacturer Settlements
               </h1>
-              <p style={{ margin: '0.2rem 0 0', color: '#64748b', fontSize: '0.875rem' }}>
-                Pay-on-Sale reconciliation: Calculate exact payouts strictly at Purchase Cost (CP/PTR) minus customer returns.
-              </p>
             </div>
           </div>
         </div>
@@ -806,7 +803,7 @@ export default function Settlements() {
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <option value="">All Manufacturers (Combined Grand Total)</option>
+                      <option value="">All Manufacturers</option>
                       {manufacturers.map((m, idx) => (
                         <option key={idx} value={m}>
                           {m}
@@ -942,10 +939,6 @@ export default function Settlements() {
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                     {[
                       { id: 'today', label: 'Today' },
-                      { id: 'yesterday', label: 'Yesterday' },
-                      { id: 'week', label: 'Last 7 Days (Week)' },
-                      { id: 'month', label: 'This Month' },
-                      { id: 'last_month', label: 'Last Month' },
                       { id: 'custom', label: 'Custom Date Range' }
                     ].map((preset) => (
                       <button
