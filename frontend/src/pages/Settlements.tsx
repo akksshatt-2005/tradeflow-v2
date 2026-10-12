@@ -712,243 +712,372 @@ export default function Settlements() {
             boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
             marginBottom: '1.5rem'
           }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gap: '1.5rem',
+              alignItems: 'start'
+            }}>
               
-              {/* Manufacturer Selector */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    1. Select Manufacturer
-                  </label>
-                  {selectedManufacturer ? (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedManufacturer('')}
-                      style={{
-                        background: '#e0f2fe',
-                        border: '1px solid #7dd3fc',
-                        borderRadius: '4px',
+              {/* Left Column: Manufacturer & Supplier Stacked */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                
+                {/* 1. Manufacturer Selector */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em'
+                    }}>
+                      <Building2 size={15} style={{ color: '#0284c7' }} />
+                      1. Select Manufacturer
+                    </label>
+                    {selectedManufacturer ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedManufacturer('')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          color: '#475569',
+                          cursor: 'pointer',
+                          padding: '0.15rem 0.55rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="View total sale across all manufacturers combined"
+                      >
+                        <X size={12} /> Reset to All
+                      </button>
+                    ) : (
+                      <span style={{
                         fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: '#0369a1',
-                        cursor: 'pointer',
+                        fontWeight: 600,
+                        color: '#0284c7',
+                        background: '#f0f9ff',
+                        border: '1px solid #bae6fd',
                         padding: '0.12rem 0.5rem',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title="View total sale across all manufacturers combined"
-                    >
-                      Show All Manufacturers
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '0.1rem 0.45rem', borderRadius: '4px' }}>
-                      Viewing All (Grand Total)
-                    </span>
-                  )}
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={selectedManufacturer}
-                    onChange={(e) => setSelectedManufacturer(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '8px',
-                      border: selectedManufacturer ? '1px solid #0284c7' : '1px solid #10b981',
-                      fontSize: '0.875rem',
-                      outline: 'none',
-                      background: selectedManufacturer ? '#f8fafc' : '#f0fdf4',
-                      color: selectedManufacturer ? '#0f172a' : '#065f46',
-                      fontWeight: 700
-                    }}
-                  >
-                    <option value="">🌐 -- All Manufacturers (Combined Grand Total) --</option>
-                    {manufacturers.map((m, idx) => (
-                      <option key={idx} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Optional Supplier Distributor Filter */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  2. Supplier / Distributor (Optional)
-                </label>
-                <select
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    fontWeight: 500
-                  }}
-                >
-                  <option value="">-- All Linked Suppliers --</option>
-                  {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} {s.station ? `(${s.station})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Time Preset Buttons */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  3. Settlement Timeframe
-                </label>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'today', label: 'Today' },
-                    { id: 'yesterday', label: 'Yesterday' },
-                    { id: 'week', label: 'Last 7 Days (Week)' },
-                    { id: 'month', label: 'This Month' },
-                    { id: 'last_month', label: 'Last Month' },
-                    { id: 'custom', label: 'Custom Date Range' }
-                  ].map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setTimePreset(preset.id as any)}
+                        borderRadius: '6px'
+                      }}>
+                        All Manufacturers
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Building2
+                      size={16}
                       style={{
-                        padding: '0.45rem 0.85rem',
-                        borderRadius: '7px',
-                        border: timePreset === preset.id ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                        background: timePreset === preset.id ? '#e0f2fe' : '#ffffff',
-                        color: timePreset === preset.id ? '#0369a1' : '#475569',
-                        fontWeight: timePreset === preset.id ? 700 : 500,
-                        fontSize: '0.82rem',
+                        position: 'absolute',
+                        left: '0.85rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: selectedManufacturer ? '#0284c7' : '#94a3b8',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    <select
+                      value={selectedManufacturer}
+                      onChange={(e) => setSelectedManufacturer(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.62rem 2.25rem 0.62rem 2.45rem',
+                        borderRadius: '9px',
+                        border: selectedManufacturer ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                        fontSize: '0.875rem',
+                        outline: 'none',
+                        background: selectedManufacturer ? '#f0f9ff' : '#ffffff',
+                        color: '#0f172a',
+                        fontWeight: selectedManufacturer ? 700 : 500,
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
                         cursor: 'pointer',
+                        boxShadow: selectedManufacturer ? '0 0 0 3px rgba(2, 132, 199, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {preset.label}
-                    </button>
-                  ))}
+                      <option value="">All Manufacturers (Combined Grand Total)</option>
+                      {manufacturers.map((m, idx) => (
+                        <option key={idx} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        position: 'absolute',
+                        right: '0.85rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#64748b',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </div>
                 </div>
+
+                {/* 2. Optional Supplier / Distributor (Placed just below Manufacturer) */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em'
+                    }}>
+                      <Package size={15} style={{ color: '#0284c7' }} />
+                      2. Supplier / Distributor (Optional)
+                    </label>
+                    {selectedSupplierId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSupplierId('')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          color: '#475569',
+                          cursor: 'pointer',
+                          padding: '0.15rem 0.55rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Reset to all suppliers"
+                      >
+                        <X size={12} /> All Suppliers
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Package
+                      size={16}
+                      style={{
+                        position: 'absolute',
+                        left: '0.85rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: selectedSupplierId ? '#0284c7' : '#94a3b8',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    <select
+                      value={selectedSupplierId}
+                      onChange={(e) => setSelectedSupplierId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.62rem 2.25rem 0.62rem 2.45rem',
+                        borderRadius: '9px',
+                        border: selectedSupplierId ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                        fontSize: '0.875rem',
+                        outline: 'none',
+                        background: selectedSupplierId ? '#f0f9ff' : '#ffffff',
+                        color: '#0f172a',
+                        fontWeight: selectedSupplierId ? 700 : 500,
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                        cursor: 'pointer',
+                        boxShadow: selectedSupplierId ? '0 0 0 3px rgba(2, 132, 199, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <option value="">All Linked Suppliers</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.station ? `(${s.station})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        position: 'absolute',
+                        right: '0.85rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#64748b',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+
               </div>
 
-              {/* Custom Date Pickers (Shown only when timePreset === 'custom') */}
-              {timePreset === 'custom' && (
-                <div style={{ display: 'flex', gap: '0.5rem', gridColumn: 'span 2' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                      From Date
-                    </label>
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '7px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.85rem'
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                      To Date
-                    </label>
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '7px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '0.85rem'
-                      }}
-                    />
+              {/* Right Column: 3. Settlement Timeframe */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    marginBottom: '0.4rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}>
+                    <Calendar size={15} style={{ color: '#0284c7' }} />
+                    3. Settlement Timeframe
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'today', label: 'Today' },
+                      { id: 'yesterday', label: 'Yesterday' },
+                      { id: 'week', label: 'Last 7 Days (Week)' },
+                      { id: 'month', label: 'This Month' },
+                      { id: 'last_month', label: 'Last Month' },
+                      { id: 'custom', label: 'Custom Date Range' }
+                    ].map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setTimePreset(preset.id as any)}
+                        style={{
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '8px',
+                          border: timePreset === preset.id ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                          background: timePreset === preset.id ? '#e0f2fe' : '#ffffff',
+                          color: timePreset === preset.id ? '#0369a1' : '#475569',
+                          fontWeight: timePreset === preset.id ? 700 : 500,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          boxShadow: timePreset === preset.id ? '0 1px 3px rgba(2, 132, 199, 0.15)' : 'none'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {/* Custom Date Pickers (Shown only when timePreset === 'custom') */}
+                {timePreset === 'custom' && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '0.65rem',
+                    background: '#f8fafc',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>
+                        From Date
+                      </label>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '7px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: '#ffffff'
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>
+                        To Date
+                      </label>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '7px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: '#ffffff'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            {/* Active Query Status Indicator */}
+            {/* Quick Actions Footer Bar (Reconciliation Window removed) */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: '1rem',
+              justifyContent: 'flex-end',
+              marginTop: '1.25rem',
               paddingTop: '0.85rem',
-              borderTop: '1px dashed #e2e8f0',
-              fontSize: '0.82rem',
-              color: '#64748b'
+              borderTop: '1px solid #f1f5f9',
+              gap: '0.75rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontWeight: 600, color: '#334155' }}>Reconciliation Window:</span>
-                <span style={{
-                  background: '#f1f5f9',
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '5px',
-                  fontWeight: 600,
-                  color: '#0284c7'
-                }}>
-                  {computedDateRange.displayLabel}
-                </span>
-                <span>•</span>
-                <span style={{ fontWeight: 600, color: '#334155' }}>Manufacturer:</span>
-                <span style={{ fontWeight: 700, color: selectedManufacturer ? '#0f172a' : '#059669' }}>
-                  {selectedManufacturer ? selectedManufacturer : 'All Manufacturers (Grand Total)'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Deduct Patient Returns Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setDeductReturns(!deductReturns)}
-                  style={{
-                    background: deductReturns ? '#e0f2fe' : '#f8fafc',
-                    border: deductReturns ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    color: deductReturns ? '#0369a1' : '#64748b',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '20px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Toggle whether verified patient return vouchers should deduct from the pay-on-sale payout"
-                >
-                  <RotateCcw size={12} color={deductReturns ? '#0284c7' : '#94a3b8'} />
-                  Deduct Patient Returns: <span style={{ color: deductReturns ? '#0284c7' : '#0f172a' }}>{deductReturns ? 'ON' : 'OFF'}</span>
-                </button>
+              {/* Deduct Patient Returns Toggle */}
+              <button
+                type="button"
+                onClick={() => setDeductReturns(!deductReturns)}
+                style={{
+                  background: deductReturns ? '#e0f2fe' : '#f8fafc',
+                  border: deductReturns ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                  color: deductReturns ? '#0369a1' : '#64748b',
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Toggle whether verified patient return vouchers should deduct from the pay-on-sale payout"
+              >
+                <RotateCcw size={13} color={deductReturns ? '#0284c7' : '#94a3b8'} />
+                Deduct Patient Returns: <span style={{ color: deductReturns ? '#0284c7' : '#0f172a' }}>{deductReturns ? 'ON' : 'OFF'}</span>
+              </button>
 
-                <button
-                  onClick={calculateSettlement}
-                  disabled={loadingCalculation}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#0284c7',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    fontSize: '0.82rem'
-                  }}
-                >
-                  <RefreshCw size={14} className={loadingCalculation ? 'animate-spin' : ''} />
-                  {loadingCalculation ? 'Re-calculating...' : 'Refresh Numbers'}
-                </button>
-              </div>
+              <button
+                onClick={calculateSettlement}
+                disabled={loadingCalculation}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '20px',
+                  padding: '0.4rem 0.85rem',
+                  color: '#0284c7',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.78rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <RefreshCw size={13} className={loadingCalculation ? 'animate-spin' : ''} />
+                {loadingCalculation ? 'Re-calculating...' : 'Refresh Numbers'}
+              </button>
             </div>
           </div>
 
