@@ -277,15 +277,20 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }));
   };
 
-  // Select Item & Auto-Pick FEFO Batch (Supports Negative Stock Billing)
+  // Select Item & Auto-Pick Batch with Highest Stock / More Strips (User can change batch anytime)
   const handleSelectItem = (item: MedicineItem) => {
-    let availableBatches = (item.batches || [])
-      .filter(b => b.currentStock > 0)
-      .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+    // Sort batches: highest stock (more strips) first. In case of equal stock, break tie with earlier expiry.
+    const sortedBatches = [...(item.batches || [])].sort((a, b) => {
+      if (b.currentStock !== a.currentStock) {
+        return b.currentStock - a.currentStock;
+      }
+      return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+    });
+
+    let availableBatches = sortedBatches.filter(b => b.currentStock > 0);
 
     if (availableBatches.length === 0) {
-      availableBatches = (item.batches || [])
-        .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+      availableBatches = sortedBatches;
     }
 
     if (availableBatches.length === 0) {
@@ -293,8 +298,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       return;
     }
 
-    const fefoBatch = availableBatches[0];
-    const unitPrice = Number(fefoBatch.mrp) || Number(fefoBatch.pts) || 0;
+    // Default to the batch containing more strips / stock
+    const defaultBatch = availableBatches[0];
+    const unitPrice = Number(defaultBatch.mrp) || Number(defaultBatch.pts) || 0;
     const catalogGst = Number(item.gstRate) !== undefined && !isNaN(Number(item.gstRate)) ? Number(item.gstRate) : 5.0;
     const gstRate = isGstBill ? catalogGst : 0;
     const factor = item.conversionFactor || 1;
@@ -316,16 +322,16 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       sku: item.sku,
       pack: factor > 1 ? `${factor} ${item.unit}` : item.unit,
       conversionFactor: factor,
-      batchId: fefoBatch.id,
-      batchNumber: fefoBatch.batchNumber,
-      expiryDate: fefoBatch.expiryDate,
-      currentStock: fefoBatch.currentStock,
+      batchId: defaultBatch.id,
+      batchNumber: defaultBatch.batchNumber,
+      expiryDate: defaultBatch.expiryDate,
+      currentStock: defaultBatch.currentStock,
       strips: 1,
       looseQty: 0,
       quantity: totalUnits,
       freeQuantity: 0,
       unitPrice,
-      mrp: Number(fefoBatch.mrp),
+      mrp: Number(defaultBatch.mrp),
       discountPercent: 0,
       gstRate,
       taxableAmount: lineTaxable,
@@ -978,6 +984,23 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 setMedicineSearch(e.target.value);
                 setShowMedicineDropdown(true);
               }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const q = (medicineSearch || '').trim().toLowerCase();
+                  if (!q) return;
+                  const filtered = (items || []).filter(i => {
+                    if (!i) return false;
+                    const nameMatch = (i.name || '').toLowerCase().includes(q);
+                    const genMatch = Boolean(i.genericName && (i.genericName || '').toLowerCase().includes(q));
+                    const skuMatch = Boolean(i.sku && (i.sku || '').toLowerCase().includes(q));
+                    return nameMatch || genMatch || skuMatch;
+                  });
+                  if (filtered.length > 0) {
+                    handleSelectItem(filtered[0]);
+                  }
+                }
+              }}
               onFocus={() => setShowMedicineDropdown(true)}
               onBlur={() => setTimeout(() => setShowMedicineDropdown(false), 200)}
               style={{
@@ -1021,7 +1044,11 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   .slice(0, 40)
                   .map(med => {
                     const totalStock = med.totalStock ?? (med.batches || []).reduce((s, b) => s + (b.currentStock || 0), 0) ?? 0;
-                    const topBatch = med.batches?.[0];
+                    const sortedMedBatches = [...(med.batches || [])].sort((a, b) => {
+                      if (b.currentStock !== a.currentStock) return b.currentStock - a.currentStock;
+                      return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+                    });
+                    const topBatch = sortedMedBatches[0];
                     return (
                       <div
                         key={med.id}
@@ -1092,7 +1119,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 invoiceItems.map((item, idx) => {
                   const isFocused = activeRowIndex === idx;
                   const medicine = items.find(i => i.id === item.itemId);
-                  const batches = medicine?.batches || [];
+                  const batches = [...(medicine?.batches || [])].sort((a, b) => {
+                    if (b.currentStock !== a.currentStock) {
+                      return b.currentStock - a.currentStock;
+                    }
+                    return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+                  });
 
                   return (
                     <tr
@@ -1136,11 +1168,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                                 });
                               }
                             }}
+                            title="Batch containing more strips is selected by default. Click to switch batch."
                             style={{
                               width: '100%',
                               padding: '0.4rem 0.5rem',
                               background: 'var(--bg-secondary)',
-                              border: '1px solid var(--border-color)',
+                              border: '1.5px solid var(--brand-teal)',
                               borderRadius: '6px',
                               color: 'var(--text-primary)',
                               fontSize: '0.82rem',
@@ -1149,11 +1182,20 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                               outline: 'none'
                             }}
                           >
-                            {batches.map(b => (
-                              <option key={b.id} value={b.id}>
-                                {b.batchNumber} (Stock: {b.currentStock})
-                              </option>
-                            ))}
+                            {batches.map(b => {
+                              const factor = medicine?.conversionFactor || 1;
+                              const strips = factor > 1 ? Math.floor(b.currentStock / factor) : b.currentStock;
+                              const loose = factor > 1 ? b.currentStock % factor : 0;
+                              const stockStr = factor > 1
+                                ? `${strips} Str${loose > 0 ? ` + ${loose}T` : ''} (${b.currentStock} units)`
+                                : `${b.currentStock} units`;
+
+                              return (
+                                <option key={b.id} value={b.id}>
+                                  {b.batchNumber} — Stock: {stockStr} | Exp: {formatDateLabel(b.expiryDate)}
+                                </option>
+                              );
+                            })}
                           </select>
                         ) : (
                           <div style={{
@@ -1171,7 +1213,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           }}>
                             <span>{item.batchNumber}</span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-                              ({item.currentStock ?? medicine?.batches?.[0]?.currentStock ?? 0})
+                              ({item.currentStock ?? medicine?.batches?.[0]?.currentStock ?? 0} {medicine && medicine.conversionFactor > 1 ? `(${Math.floor((item.currentStock || 0) / medicine.conversionFactor)} Str)` : 'units'})
                             </span>
                           </div>
                         )}

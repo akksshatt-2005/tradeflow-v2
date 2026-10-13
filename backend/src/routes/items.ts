@@ -53,9 +53,10 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
               pts: true,
               currentStock: true
             },
-            orderBy: {
-              createdAt: 'desc'
-            }
+            orderBy: [
+              { currentStock: 'desc' },
+              { expiryDate: 'asc' }
+            ]
           }
         },
         orderBy: {
@@ -353,7 +354,10 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
       where: { id, companyId },
       include: {
         batches: {
-          orderBy: { expiryDate: 'asc' }
+          orderBy: [
+            { currentStock: 'desc' },
+            { expiryDate: 'asc' }
+          ]
         }
       }
     });
