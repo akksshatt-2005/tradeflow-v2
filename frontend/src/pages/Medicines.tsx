@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
 import * as XLSX from 'xlsx';
+
 import book1Medicines from '../data/book1Medicines.json';
 import {
   Pill,
@@ -175,7 +177,7 @@ export default function Medicines() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicine Catalog');
     const compName = (activeCompany?.name || 'Catalog').replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(workbook, `Medicines_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Medicines_${compName}_${getLocalDateString()}.xlsx`);
   };
 
   const handleExportTemplate = () => {

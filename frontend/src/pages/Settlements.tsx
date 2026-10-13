@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
+
 import {
   Handshake,
   Calendar,
@@ -188,7 +190,7 @@ export default function Settlements() {
 
   // Initial Date Helper
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     setCustomStartDate(today);
     setCustomEndDate(today);
   }, []);

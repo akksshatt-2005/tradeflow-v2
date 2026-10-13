@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
 import * as XLSX from 'xlsx';
+
 import POSBilling from './POSBilling';
 import ErrorBoundary from '../components/ErrorBoundary';
 import MultiPatientReturnModal, { MultiItemReturnSlip } from '../components/MultiPatientReturnModal';
@@ -186,18 +188,18 @@ export default function Sales() {
 
   const getDateRangeForPeriod = (p: PeriodOption, customStart?: string, customEnd?: string) => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(now);
 
     if (p === 'TODAY') {
       return { startDate: todayStr, endDate: todayStr, label: "Today's Sale (1 Day)" };
     }
     if (p === 'WEEK') {
-      const past7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return { startDate: past7.toISOString().split('T')[0], endDate: todayStr, label: '1 Week Sale (Last 7 Days)' };
+      const past7 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      return { startDate: getLocalDateString(past7), endDate: todayStr, label: '1 Week Sale (Last 7 Days)' };
     }
     if (p === 'MONTH') {
-      const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return { startDate: past30.toISOString().split('T')[0], endDate: todayStr, label: '1 Month Sale (Last 30 Days)' };
+      const past30 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+      return { startDate: getLocalDateString(past30), endDate: todayStr, label: '1 Month Sale (Last 30 Days)' };
     }
     if (p === 'CUSTOM') {
       return {
@@ -273,7 +275,7 @@ export default function Sales() {
       const invData = invoices.map((inv, idx) => ({
         'S.No': idx + 1,
         'Invoice #': inv.invoiceNumber,
-        'Invoice Date': inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '',
+        'Invoice Date': inv.invoiceDate ? getLocalDateString(new Date(inv.invoiceDate)) : '',
         'Customer / Party Name': (inv.customerName && inv.customerName !== 'Cash Customer') ? inv.customerName : (inv.party?.mailTo || inv.party?.name || inv.customerName),
         'Customer Phone': inv.customerPhone || inv.party?.phone || '',
         'Doctor Name': inv.doctorName || '',
@@ -368,7 +370,7 @@ export default function Sales() {
     XLSX.utils.book_append_sheet(workbook, wsSummary, 'Sales & Returns Summary');
 
     const compName = (activeCompany?.name || 'Pharmacy').replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(workbook, `Sales_and_Patient_Returns_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Sales_and_Patient_Returns_${compName}_${getLocalDateString()}.xlsx`);
   };
 
   const handleViewInvoice = async (invoiceId: string) => {
@@ -776,7 +778,7 @@ export default function Sales() {
                 onClick={() => {
                   setPeriod(tab.id as PeriodOption);
                   if (tab.id === 'CUSTOM' && !customStartDate) {
-                    const nowStr = new Date().toISOString().split('T')[0];
+                    const nowStr = getLocalDateString();
                     setCustomStartDate(nowStr);
                     setCustomEndDate(nowStr);
                   }
@@ -891,7 +893,7 @@ export default function Sales() {
               <button
                 type="button"
                 onClick={() => {
-                  const nowStr = new Date().toISOString().split('T')[0];
+                  const nowStr = getLocalDateString();
                   setCustomStartDate(nowStr);
                   setCustomEndDate(nowStr);
                   fetchSalesData('CUSTOM', nowStr, nowStr);

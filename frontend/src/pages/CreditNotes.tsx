@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
+
 import {
   FileText,
   Plus,
@@ -136,7 +138,7 @@ export default function CreditNotes() {
   const [suppliers, setSuppliers] = useState<SupplierParty[]>([]);
   const [catalogMedicines, setCatalogMedicines] = useState<MedicineItem[]>([]);
   const [formSupplierId, setFormSupplierId] = useState('');
-  const [formReturnDate, setFormReturnDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formReturnDate, setFormReturnDate] = useState(getLocalDateString());
   const [formReason, setFormReason] = useState('Expiry / Slow-moving medicine return');
   const [formNotes, setFormNotes] = useState('');
   const [formItems, setFormItems] = useState<CNLineItem[]>([]);
@@ -200,7 +202,7 @@ export default function CreditNotes() {
   const handleOpenCreateModal = () => {
     setEditingCNId(null);
     setFormSupplierId(suppliers.length > 0 ? suppliers[0].id : '');
-    setFormReturnDate(new Date().toISOString().split('T')[0]);
+    setFormReturnDate(getLocalDateString());
     setFormReason('Expiry / Slow-moving medicine return');
     setFormNotes('');
     setFormItems([]);
@@ -213,7 +215,7 @@ export default function CreditNotes() {
     try {
       setEditingCNId(cn.id);
       setFormSupplierId(cn.supplierId);
-      setFormReturnDate(cn.returnDate.split('T')[0]);
+      setFormReturnDate(cn.returnDate ? getLocalDateString(new Date(cn.returnDate)) : getLocalDateString());
       setFormReason(cn.reason || 'Expiry / Slow-moving medicine return');
       setFormNotes(cn.notes || '');
 

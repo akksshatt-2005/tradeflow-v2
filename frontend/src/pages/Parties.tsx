@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
 import * as XLSX from 'xlsx';
+
 import {
   Users,
   Search,
@@ -187,7 +189,7 @@ export default function Parties() {
     XLSX.utils.sheet_add_json(worksheet, tableRows, { origin: 'A14' });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Ledger Statement');
-    const filename = `Ledger_Statement_${statementParty.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filename = `Ledger_Statement_${statementParty.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${getLocalDateString()}.xlsx`;
     XLSX.writeFile(workbook, filename);
   };
 
@@ -227,7 +229,7 @@ export default function Parties() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Party Ledgers');
     const compName = (activeCompany?.name || 'Ledger').replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(workbook, `Party_Ledgers_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Party_Ledgers_${compName}_${getLocalDateString()}.xlsx`);
   };
 
   const handleExportPartyTemplate = () => {
@@ -2125,7 +2127,7 @@ export default function Parties() {
                 <button
                   type="button"
                   onClick={() => {
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = getLocalDateString();
                     setStatementStartDate(today);
                     setStatementEndDate(today);
                     handleOpenStatement(statementParty, today, today);
@@ -2134,8 +2136,8 @@ export default function Parties() {
                     padding: '4px 10px',
                     borderRadius: '6px',
                     border: '1px solid #cbd5e1',
-                    background: statementStartDate === new Date().toISOString().split('T')[0] && statementEndDate === new Date().toISOString().split('T')[0] ? '#0284c7' : '#ffffff',
-                    color: statementStartDate === new Date().toISOString().split('T')[0] && statementEndDate === new Date().toISOString().split('T')[0] ? '#ffffff' : '#0f172a',
+                    background: statementStartDate === getLocalDateString() && statementEndDate === getLocalDateString() ? '#0284c7' : '#ffffff',
+                    color: statementStartDate === getLocalDateString() && statementEndDate === getLocalDateString() ? '#ffffff' : '#0f172a',
                     fontSize: '11.5px',
                     fontWeight: 700,
                     cursor: 'pointer'
@@ -2147,8 +2149,8 @@ export default function Parties() {
                   type="button"
                   onClick={() => {
                     const now = new Date();
-                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-                    const today = now.toISOString().split('T')[0];
+                    const firstDay = getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+                    const today = getLocalDateString(now);
                     setStatementStartDate(firstDay);
                     setStatementEndDate(today);
                     handleOpenStatement(statementParty, firstDay, today);
@@ -2170,8 +2172,8 @@ export default function Parties() {
                   type="button"
                   onClick={() => {
                     const now = new Date();
-                    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-                    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+                    const firstDayLastMonth = getLocalDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+                    const lastDayLastMonth = getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 0));
                     setStatementStartDate(firstDayLastMonth);
                     setStatementEndDate(lastDayLastMonth);
                     handleOpenStatement(statementParty, firstDayLastMonth, lastDayLastMonth);

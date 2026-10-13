@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
+
 import {
   ShoppingCart,
   Plus,
@@ -111,7 +113,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   // Invoice Date & Payment
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [invoiceDate, setInvoiceDate] = useState(getLocalDateString());
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [billDiscountPct, setBillDiscountPct] = useState<number>(0);
   const [manualDiscountOverride, setManualDiscountOverride] = useState(false);
@@ -179,7 +181,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         const inv = editRes.invoice;
         if (inv) {
           setNextInvoiceNo(inv.invoiceNumber);
-          setInvoiceDate(inv.invoiceDate ? inv.invoiceDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+          setInvoiceDate(inv.invoiceDate ? getLocalDateString(new Date(inv.invoiceDate)) : getLocalDateString());
           setCustomerName(inv.customerName || 'Cash Customer');
           setCustomerPhone(inv.customerPhone || '');
           setPatientAddress(inv.patientAddress || inv.customerAddress || '');
@@ -483,7 +485,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         patientName: patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : null),
         patientAddress: patientAddress.trim() || null,
         invoiceNumber: nextInvoiceNo,
-        invoiceDate,
+        invoiceDate: invoiceDate === getLocalDateString() ? new Date().toISOString() : invoiceDate,
         paymentMode,
         paidAmount: numericPaid,
         billDiscountPct,

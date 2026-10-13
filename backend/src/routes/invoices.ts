@@ -3,6 +3,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
+import { parseFilterStartDate, parseFilterEndDate, parseRecordDate } from '../utils/dateUtils.js';
+
 
 const router = Router();
 
@@ -173,15 +175,13 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
 
   if (startDate || endDate) {
     where.invoiceDate = {};
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      where.invoiceDate.gte = start;
+    const parsedStart = parseFilterStartDate(startDate);
+    if (parsedStart) {
+      where.invoiceDate.gte = parsedStart;
     }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      where.invoiceDate.lte = end;
+    const parsedEnd = parseFilterEndDate(endDate);
+    if (parsedEnd) {
+      where.invoiceDate.lte = parsedEnd;
     }
   }
 
@@ -648,7 +648,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
       status = finalPaid > 0 ? 'PARTIAL' : 'UNPAID';
     }
 
-    const parsedInvoiceDate = new Date(invoiceDate || Date.now());
+    const parsedInvoiceDate = parseRecordDate(invoiceDate);
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
     const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
@@ -1010,7 +1010,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       status = finalPaid > 0 ? 'PARTIAL' : 'UNPAID';
     }
 
-    const parsedInvoiceDate = new Date(invoiceDate || existingInvoice.invoiceDate);
+    const parsedInvoiceDate = parseRecordDate(invoiceDate, existingInvoice.invoiceDate);
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
     // Execute atomic update with append-only reversing and fresh entries

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
+
 import {
   Truck,
   Plus,
@@ -97,8 +99,8 @@ export default function NewPurchase({
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const [entryNo, setEntryNo] = useState(`PUR-${Date.now().toString().slice(-4)}`);
   const [partyBillNo, setPartyBillNo] = useState(''); // Party No. (Supplier Bill No)
-  const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]); // Dt:
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]); // Date:
+  const [billDate, setBillDate] = useState(getLocalDateString()); // Dt:
+  const [entryDate, setEntryDate] = useState(getLocalDateString()); // Date:
   const [purchaseType, setPurchaseType] = useState<'TAX' | 'RETAIL' | 'CHALLAN'>('TAX'); // Type:
   const [dueDate, setDueDate] = useState('');
   const [paymentMode, setPaymentMode] = useState<'CREDIT' | 'CASH' | 'BANK_TRANSFER' | 'UPI'>('CREDIT');
@@ -389,8 +391,8 @@ export default function NewPurchase({
           setSelectedSupplierId(pur.supplier?.id || '');
           setSupplierSearchText(pur.supplier?.mailTo || pur.supplier?.name || '');
           setPartyBillNo(pur.invoiceNumber || '');
-          setBillDate(pur.purchaseDate ? pur.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-          setDueDate(pur.dueDate ? pur.dueDate.split('T')[0] : '');
+          setBillDate(pur.purchaseDate ? getLocalDateString(new Date(pur.purchaseDate)) : getLocalDateString());
+          setDueDate(pur.dueDate ? getLocalDateString(new Date(pur.dueDate)) : '');
           setPaymentMode(pur.paymentMode || 'CREDIT');
           setPaidAmount(String(pur.paidAmount ?? 0));
           setNotes(pur.notes || '');

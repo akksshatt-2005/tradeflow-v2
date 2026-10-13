@@ -4,6 +4,8 @@ import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
 import { generateUniqueItemSku } from '../utils/skuGenerator.js';
+import { parseRecordDate } from '../utils/dateUtils.js';
+
 
 export function parsePackingString(packStr?: string | null, defaultUnit = 'STRIP', defaultFactor = 10): { unit: string; conversionFactor: number } {
   if (!packStr || typeof packStr !== 'string') {
@@ -297,7 +299,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
   }
 
   const cleanInvoiceNo = invoiceNumber.trim().toUpperCase();
-  const parsedPurchaseDate = new Date(purchaseDate || Date.now());
+  const parsedPurchaseDate = parseRecordDate(purchaseDate);
   const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
   try {
@@ -794,7 +796,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       status = 'PARTIAL';
     }
 
-    const parsedPurchaseDate = new Date(purchaseDate || existingPurchase.purchaseDate);
+    const parsedPurchaseDate = parseRecordDate(purchaseDate, existingPurchase.purchaseDate);
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
     // Execute atomic update with append-only reversing and fresh entries

@@ -3,6 +3,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
+import { parseFilterStartDate, parseFilterEndDate } from '../utils/dateUtils.js';
+
 
 const router = Router();
 
@@ -153,10 +155,10 @@ router.get('/calculate', async (req: CompanyScopedRequest, res: Response) => {
     return;
   }
 
-  const parsedStart = new Date(startDate as string);
-  const parsedEnd = new Date(endDate as string);
+  const parsedStart = parseFilterStartDate(startDate as string);
+  const parsedEnd = parseFilterEndDate(endDate as string);
 
-  if (isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
+  if (!parsedStart || !parsedEnd || isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
     res.status(400).json({ error: 'Invalid date format for startDate or endDate' });
     return;
   }

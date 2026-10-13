@@ -393,7 +393,10 @@ async function ensureTables() {
       FOR EACH ROW EXECUTE FUNCTION prevent_stock_ledger_mutation();
     EXCEPTION
       WHEN others THEN null;
-    END $$;`
+    END $$;`,
+
+    // Auto-heal any invoice where created_at is on 14 Oct IST (after 2026-10-13 18:30:00 UTC) but was recorded under 13 Oct due to client UTC bug
+    `UPDATE "invoices" SET "invoice_date" = "created_at" WHERE "created_at" >= '2026-10-13 18:30:00' AND "invoice_date" < '2026-10-13 18:30:00'`
   ];
 
   for (const sql of statements) {

@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import prisma from '../prisma.js';
+import { parseFilterStartDate, parseFilterEndDate } from '../utils/dateUtils.js';
+
 
 const router = Router();
 
@@ -212,11 +214,13 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
 
     if (startDate || endDate) {
       whereClause.createdAt = {};
-      if (startDate) {
-        whereClause.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+      const parsedStart = parseFilterStartDate(startDate);
+      if (parsedStart) {
+        whereClause.createdAt.gte = parsedStart;
       }
-      if (endDate) {
-        whereClause.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+      const parsedEnd = parseFilterEndDate(endDate);
+      if (parsedEnd) {
+        whereClause.createdAt.lte = parsedEnd;
       }
     }
 

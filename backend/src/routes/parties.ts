@@ -3,6 +3,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
 import prisma from '../prisma.js';
+import { parseFilterStartDate, parseFilterEndDate } from '../utils/dateUtils.js';
+
 
 const router = Router();
 
@@ -540,16 +542,9 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     }
 
     // Parse date filters safely
-    let parsedStart: Date | undefined;
-    let parsedEnd: Date | undefined;
-    if (startDate) {
-      const [sY, sM, sD] = startDate.split('-').map(Number);
-      parsedStart = new Date(sY, sM - 1, sD, 0, 0, 0, 0);
-    }
-    if (endDate) {
-      const [eY, eM, eD] = endDate.split('-').map(Number);
-      parsedEnd = new Date(eY, eM - 1, eD, 23, 59, 59, 999);
-    }
+    const parsedStart = parseFilterStartDate(startDate);
+    const parsedEnd = parseFilterEndDate(endDate);
+
 
     // Find all party IDs in this company that share the same ID, name, mailTo, or GSTIN
     const partyName = party.name.trim();

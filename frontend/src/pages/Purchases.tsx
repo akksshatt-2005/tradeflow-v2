@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { getLocalDateString } from '../utils/dateUtils';
 import * as XLSX from 'xlsx';
+
 import NewPurchase from './NewPurchase';
 import {
   Truck,
@@ -122,8 +124,8 @@ export default function Purchases() {
     const data = purchases.map((p, idx) => ({
       'S.No': idx + 1,
       'Bill / Invoice #': p.invoiceNumber,
-      'Bill Date': p.purchaseDate ? p.purchaseDate.split('T')[0] : '',
-      'Due Date': p.dueDate ? p.dueDate.split('T')[0] : '',
+      'Bill Date': p.purchaseDate ? getLocalDateString(new Date(p.purchaseDate)) : '',
+      'Due Date': p.dueDate ? getLocalDateString(new Date(p.dueDate)) : '',
       'Supplier / Firm Name': p.supplier.mailTo || p.supplier.name,
       'Supplier GSTIN': p.supplier.gstin || '',
       'Supplier DL No': p.supplier.drugLicenseNo || '',
@@ -148,7 +150,7 @@ export default function Purchases() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Purchase Bills');
     const compName = (activeCompany?.name || 'Purchases').replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(workbook, `Purchases_${compName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `Purchases_${compName}_${getLocalDateString()}.xlsx`);
   };
 
   const handleOpenDetails = async (id: string) => {
