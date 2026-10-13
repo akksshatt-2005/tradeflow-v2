@@ -1696,7 +1696,10 @@ export default function Sales() {
             borderRadius: '12px',
             width: '100%',
             maxWidth: '450px',
-            padding: '1.5rem'
+            maxHeight: 'min(92vh, 92dvh)',
+            overflowY: 'auto',
+            padding: '1.5rem',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>

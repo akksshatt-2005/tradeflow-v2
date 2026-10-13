@@ -1103,8 +1103,9 @@ export default function Parties() {
       </div>
 
       {/* Pharma MODIFY LEDGER / CREATE LEDGER Modal (Styled directly after Photo 1) */}
+      {/* Pharma MODIFY LEDGER / CREATE LEDGER Modal (Styled directly after Photo 1) */}
       {showModal && (
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1117,19 +1118,20 @@ export default function Parties() {
           zIndex: 120,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: 'var(--card-bg)',
             border: '1px solid var(--border-color)',
             borderRadius: '12px',
             width: '100%',
             maxWidth: '900px',
-            maxHeight: '92vh',
-            overflowY: 'auto',
-            padding: '1.5rem',
+            maxHeight: 'min(92vh, 92dvh)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
             position: 'relative'
           }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', padding: '1rem 1.5rem', flexShrink: 0 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Building2 style={{ color: 'var(--brand-teal)' }} />
@@ -1147,106 +1149,107 @@ export default function Parties() {
               </button>
             </div>
 
-            {/* Quick GSTIN Autofill Banner */}
-            <div style={{
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '8px',
-              padding: '10px 14px',
-              marginBottom: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '260px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  ⚡ GSTIN Autofill:
-                </span>
-                <input
-                  type="text"
-                  maxLength={15}
-                  placeholder="Enter 15-char GST No. (e.g. 09AOAPV7912G1ZO)"
-                  value={gstin}
-                  onChange={e => handleGstinChange(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleGstinLookup();
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    maxWidth: '300px',
-                    padding: '6px 10px',
-                    border: '1px solid #7dd3fc',
-                    borderRadius: '6px',
-                    fontSize: '12.5px',
-                    fontFamily: 'monospace',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    background: '#ffffff'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleGstinLookup()}
-                  disabled={gstLookupLoading || gstin.trim().length < 15}
-                  className="btn btn-primary"
-                  style={{ fontSize: '12px', padding: '6px 12px' }}
-                >
-                  {gstLookupLoading ? 'Fetching Govt Data...' : '⚡ Autofill Firm'}
-                </button>
-              </div>
-
-              {gstLookupMsg && (
+            <form onSubmit={handleSaveParty} style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
+                {/* Quick GSTIN Autofill Banner */}
                 <div style={{
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  background: gstLookupMsg.type === 'success' ? '#dcfce7' : gstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
-                  color: gstLookupMsg.type === 'success' ? '#15803d' : gstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
-                  border: `1px solid ${gstLookupMsg.type === 'success' ? '#bbf7d0' : gstLookupMsg.type === 'warning' ? '#fde68a' : '#fecaca'}`
+                  background: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
                 }}>
-                  {gstLookupMsg.text}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '260px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ⚡ GSTIN Autofill:
+                    </span>
+                    <input
+                      type="text"
+                      maxLength={15}
+                      placeholder="Enter 15-char GST No. (e.g. 09AOAPV7912G1ZO)"
+                      value={gstin}
+                      onChange={e => handleGstinChange(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleGstinLookup();
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        maxWidth: '300px',
+                        padding: '6px 10px',
+                        border: '1px solid #7dd3fc',
+                        borderRadius: '6px',
+                        fontSize: '12.5px',
+                        fontFamily: 'monospace',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        background: '#ffffff'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleGstinLookup()}
+                      disabled={gstLookupLoading || gstin.trim().length < 15}
+                      className="btn btn-primary"
+                      style={{ fontSize: '12px', padding: '6px 12px' }}
+                    >
+                      {gstLookupLoading ? 'Fetching Govt Data...' : '⚡ Autofill Firm'}
+                    </button>
+                  </div>
+
+                  {gstLookupMsg && (
+                    <div style={{
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      background: gstLookupMsg.type === 'success' ? '#dcfce7' : gstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
+                      color: gstLookupMsg.type === 'success' ? '#15803d' : gstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
+                      border: `1px solid ${gstLookupMsg.type === 'success' ? '#bbf7d0' : gstLookupMsg.type === 'warning' ? '#fde68a' : '#fecaca'}`
+                    }}>
+                      {gstLookupMsg.text}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {error && (
-              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--accent-red)', padding: '0.7rem 1.2rem', borderRadius: '8px', color: 'var(--accent-red)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>⚠️ {error}</span>
-                <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>✕</button>
-              </div>
-            )}
+                {error && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--accent-red)', padding: '0.7rem 1.2rem', borderRadius: '8px', color: 'var(--accent-red)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>⚠️ {error}</span>
+                    <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>✕</button>
+                  </div>
+                )}
 
-            {/* Sub-Section Navigation Tabs */}
-            <div style={{ display: 'flex', gap: '0.4rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
-              {(['BASIC', 'CONTACT', 'STATUTORY', 'TERMS'] as const).map(sec => (
-                <button
-                  key={sec}
-                  type="button"
-                  onClick={() => setActiveSection(sec)}
-                  style={{
-                    padding: '0.4rem 0.9rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: activeSection === sec ? 'var(--brand-teal)' : 'var(--bg-secondary)',
-                    color: activeSection === sec ? '#fff' : 'var(--text-secondary)',
-                    fontWeight: '600',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {sec === 'BASIC' ? '1. General Info & Address' : sec === 'CONTACT' ? '2. Contact Persons' : sec === 'STATUTORY' ? '3. Licences & GST (DL 20B/21B)' : '4. Credit & Terms'}
-                </button>
-              ))}
-            </div>
+                {/* Sub-Section Navigation Tabs */}
+                <div style={{ display: 'flex', gap: '0.4rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
+                  {(['BASIC', 'CONTACT', 'STATUTORY', 'TERMS'] as const).map(sec => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setActiveSection(sec)}
+                      style={{
+                        padding: '0.4rem 0.9rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: activeSection === sec ? 'var(--brand-teal)' : 'var(--bg-secondary)',
+                        color: activeSection === sec ? '#fff' : 'var(--text-secondary)',
+                        fontWeight: '600',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {sec === 'BASIC' ? '1. General Info & Address' : sec === 'CONTACT' ? '2. Contact Persons' : sec === 'STATUTORY' ? '3. Licences & GST (DL 20B/21B)' : '4. Credit & Terms'}
+                    </button>
+                  ))}
+                </div>
 
-            <form onSubmit={handleSaveParty}>
-              {/* 1. General Info & Address */}
+                {/* 1. General Info & Address */}
               {activeSection === 'BASIC' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
@@ -1683,8 +1686,21 @@ export default function Parties() {
                 </div>
               )}
 
+              </div>
+
               {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <div className="modal-footer" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid var(--border-color)',
+                background: 'var(--card-bg)',
+                flexShrink: 0,
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10
+              }}>
                 <div>
                   {editingPartyId && (
                     <button

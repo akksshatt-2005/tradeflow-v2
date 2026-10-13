@@ -1088,35 +1088,12 @@ export default function Medicines() {
 
       {/* Modal: Low Stock Alert Detail */}
       {alertDetailItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '520px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
-            overflow: 'hidden'
-          }}>
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-card" style={{ maxWidth: '520px', width: '100%' }}>
             {/* Modal Header */}
-            <div style={{
-              padding: '16px 20px',
+            <div className="modal-header" style={{
               borderBottom: '1px solid #fecdd3',
-              background: '#fff1f2',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              background: '#fff1f2'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
@@ -1149,7 +1126,7 @@ export default function Medicines() {
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
                   {alertDetailItem.name}
@@ -1247,14 +1224,7 @@ export default function Medicines() {
             </div>
 
             {/* Modal Footer Actions */}
-            <div style={{
-              padding: '12px 20px',
-              borderTop: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
               <button
                 type="button"
                 onClick={() => setAlertDetailItem(null)}
@@ -1299,34 +1269,9 @@ export default function Medicines() {
 
       {/* Modal: Add Medicine */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '540px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-card" style={{ maxWidth: '540px', width: '100%' }}>
+            <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Pill size={18} color="var(--brand-primary)" />
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Add New Medicine to Catalog</h3>
@@ -1339,7 +1284,8 @@ export default function Medicines() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateMedicine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleCreateMedicine} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="form-group">
                 <label className="label">Brand / Medicine Name *</label>
                 <input
@@ -1487,7 +1433,7 @@ export default function Medicines() {
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="label" style={{ fontSize: '11px', fontWeight: 600 }}>
-                      Min Alert Stock Level (in {newItemUnit === 'STRIP' ? 'Strips' : (newItemUnit || 'Units')}s)
+                      Min Alert Stock Level (in {newItemUnit === 'STRIP' ? 'Strips' : (newItemUnit ? newItemUnit + 's' : 'Units')})
                     </label>
                     <input
                       type="number"
@@ -1580,12 +1526,14 @@ export default function Medicines() {
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="btn btn-secondary"
+                  style={{ minWidth: '90px' }}
                 >
                   Cancel
                 </button>
@@ -1593,6 +1541,7 @@ export default function Medicines() {
                   type="submit"
                   disabled={submittingItem}
                   className="btn btn-primary"
+                  style={{ minWidth: '120px' }}
                 >
                   {submittingItem ? 'Saving Medicine...' : 'Save Medicine'}
                 </button>
@@ -1604,34 +1553,9 @@ export default function Medicines() {
 
       {/* Modal: Add Batch / Opening Stock */}
       {showBatchModal && selectedItemForBatch && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-card" style={{ maxWidth: '500px', width: '100%' }}>
+            <div className="modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Add Batch & Stock</h3>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -1646,7 +1570,8 @@ export default function Medicines() {
               </button>
             </div>
 
-            <form onSubmit={handleAddBatch} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleAddBatch} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label className="label">Batch Number *</label>
@@ -1760,12 +1685,14 @@ export default function Medicines() {
                   />
                 </div>
               )}
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowBatchModal(false)}
                   className="btn btn-secondary"
+                  style={{ minWidth: '90px' }}
                 >
                   Cancel
                 </button>
@@ -1773,6 +1700,7 @@ export default function Medicines() {
                   type="submit"
                   disabled={submittingBatch}
                   className="btn btn-primary"
+                  style={{ minWidth: '130px' }}
                 >
                   {submittingBatch ? 'Adding Batch...' : 'Add Batch & Stock'}
                 </button>
@@ -1784,34 +1712,9 @@ export default function Medicines() {
 
       {/* Modal: View Batches */}
       {viewingItemBatches && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '650px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-card" style={{ maxWidth: '650px', width: '100%' }}>
+            <div className="modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Active Batches</h3>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -1826,7 +1729,7 @@ export default function Medicines() {
               </button>
             </div>
 
-            <div style={{ padding: '20px' }}>
+            <div className="modal-body" style={{ padding: '20px' }}>
               {viewingItemBatches.batches.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
                   No batches recorded yet for this medicine.
@@ -1926,7 +1829,7 @@ export default function Medicines() {
               )}
             </div>
 
-            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
+            <div className="modal-footer">
               <button
                 onClick={() => setViewingItemBatches(null)}
                 className="btn btn-secondary"
@@ -1940,37 +1843,9 @@ export default function Medicines() {
 
       {/* Modal: Edit Batch */}
       {editingBatchInfo && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10005,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '520px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 10005 }}>
+          <div className="modal-card" style={{ maxWidth: '520px', width: '100%' }}>
+            <div className="modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
                   Edit Batch & Stock
@@ -1987,7 +1862,8 @@ export default function Medicines() {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateBatch} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleUpdateBatch} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label className="label">Batch Number *</label>
@@ -2098,13 +1974,15 @@ export default function Medicines() {
                   />
                 </div>
               )}
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setEditingBatchInfo(null)}
                   className="btn btn-secondary"
                   disabled={submittingBatchEdit}
+                  style={{ minWidth: '90px' }}
                 >
                   Cancel
                 </button>
@@ -2112,6 +1990,7 @@ export default function Medicines() {
                   type="submit"
                   className="btn btn-primary"
                   disabled={submittingBatchEdit}
+                  style={{ minWidth: '150px' }}
                 >
                   {submittingBatchEdit ? 'Saving...' : 'Save Batch Changes'}
                 </button>
@@ -2123,37 +2002,9 @@ export default function Medicines() {
 
       {/* Modal: Edit Medicine */}
       {showEditModal && editingItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(3px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '560px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-card" style={{ maxWidth: '560px', width: '100%' }}>
+            <div className="modal-header">
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Edit Medicine Details</h3>
@@ -2176,7 +2027,8 @@ export default function Medicines() {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateMedicine} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleUpdateMedicine} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="form-group">
                 <label className="form-label">Brand / Commercial Name *</label>
                 <input
@@ -2316,7 +2168,7 @@ export default function Medicines() {
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '11px', fontWeight: 600 }}>
-                      Min Alert Stock Level (in {editUnit === 'STRIP' ? 'Strips' : (editUnit || 'Units')}s)
+                      Min Alert Stock Level (in {editUnit === 'STRIP' ? 'Strips' : (editUnit ? editUnit + 's' : 'Units')})
                     </label>
                     <input
                       type="number"
@@ -2379,8 +2231,9 @@ export default function Medicines() {
                   💡 <em>Directly update your strips and loose tablets. Saving will automatically recalculate total base units and log an audit adjustment.</em>
                 </div>
               </div>
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => {

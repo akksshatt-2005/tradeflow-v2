@@ -798,9 +798,9 @@ export default function CreditNotes() {
 
       {/* CREATE / EDIT CREDIT NOTE MODAL */}
       {showEditorModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '1rem' }}>
-          <div style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', width: '100%', maxWidth: '900px', maxHeight: '92vh', overflowY: 'auto', padding: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '1rem' }}>
+          <div className="modal-card" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', width: '100%', maxWidth: '900px', maxHeight: 'min(92vh, 92dvh)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', padding: '1.2rem 1.5rem', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ background: '#4f46e5', color: '#fff', padding: '6px', borderRadius: '6px' }}>
                   <RotateCcw size={18} />
@@ -819,7 +819,8 @@ export default function CreditNotes() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitCN}>
+            <form onSubmit={handleSubmitCN} style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.5rem' }}>
               {/* Supplier & Date Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
@@ -1083,7 +1084,20 @@ export default function CreditNotes() {
                 </table>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              </div>
+
+              <div className="modal-footer" style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexShrink: 0,
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10
+              }}>
                 <button
                   type="button"
                   onClick={() => setShowEditorModal(false)}

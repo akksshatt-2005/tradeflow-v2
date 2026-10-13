@@ -617,6 +617,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
       ) : (
         /* MAIN MULTI-ITEM RETURN MODAL */
         <div
+          className="modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
@@ -632,28 +633,31 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
           }}
         >
           <div
+            className="modal-card"
             style={{
               background: 'var(--card-bg, #ffffff)',
               border: '1px solid var(--border-color, #e2e8f0)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '850px',
-              maxHeight: '94vh',
-              overflowY: 'auto',
-              padding: '1.6rem',
+              maxHeight: 'min(92vh, 92dvh)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
               position: 'relative',
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)'
             }}
           >
             {/* Modal Header */}
             <div
+              className="modal-header"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                paddingBottom: '1rem',
-                marginBottom: '1.2rem'
+                padding: '1.2rem 1.6rem',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
@@ -703,6 +707,8 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
                 ✕
               </button>
             </div>
+
+            <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.4rem 1.6rem' }}>
 
             {/* Error Message */}
             {returnError && (
@@ -1415,8 +1421,20 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
               </div>
             </div>
 
+            </div>
+
             {/* Modal Actions */}
-            <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <div className="modal-footer" style={{
+              display: 'flex',
+              gap: '0.8rem',
+              padding: '1rem 1.6rem',
+              borderTop: '1px solid var(--border-color, #e2e8f0)',
+              background: 'var(--card-bg, #ffffff)',
+              flexShrink: 0,
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 10
+            }}>
               <button
                 type="button"
                 onClick={onClose}

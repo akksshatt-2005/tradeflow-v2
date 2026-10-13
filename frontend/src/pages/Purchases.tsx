@@ -780,34 +780,9 @@ export default function Purchases() {
 
       {/* Modal: Record Payment Towards Purchase */}
       {showPaymentModal && viewingPurchase && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '400px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '14px 18px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div className="modal-card" style={{ maxWidth: '400px', width: '100%' }}>
+            <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Record Payment to Supplier</h3>
               <button
                 onClick={() => setShowPaymentModal(false)}
@@ -817,32 +792,35 @@ export default function Purchases() {
               </button>
             </div>
 
-            <form onSubmit={handleRecordPayment} style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Supplier: <strong>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong>
-              </div>
-              <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                Balance Due on Bill #{viewingPurchase.invoiceNumber}: <strong>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</strong>
+            <form onSubmit={handleRecordPayment} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  Supplier: <strong>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong>
+                </div>
+                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  Balance Due on Bill #{viewingPurchase.invoiceNumber}: <strong>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</strong>
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Payment Amount (₹) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    max={viewingPurchase.totalAmount - viewingPurchase.paidAmount}
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="input"
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="label">Payment Amount (₹) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  max={viewingPurchase.totalAmount - viewingPurchase.paidAmount}
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="input"
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={() => setShowPaymentModal(false)}
                   className="btn btn-secondary btn-sm"
+                  style={{ minWidth: '80px' }}
                 >
                   Cancel
                 </button>
@@ -850,6 +828,7 @@ export default function Purchases() {
                   type="submit"
                   disabled={recordingPayment}
                   className="btn btn-primary btn-sm"
+                  style={{ minWidth: '120px' }}
                 >
                   {recordingPayment ? 'Recording...' : 'Confirm Payment'}
                 </button>

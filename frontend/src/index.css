@@ -526,27 +526,213 @@ textarea::placeholder,
   transition: width 1s linear;
 }
 
-/* Modal */
+/* ==========================================================================
+   Universal Modal & Dialog Architecture (Rule C5 Responsive Across All Displays)
+   Guarantees that modal headers and action buttons (Save / Cancel) are 100% visible
+   and pinned on all laptop screens (13", 14", 15", 18", 21") and at 100%-125% zoom.
+   ========================================================================== */
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: clamp(8px, 2vh, 20px);
   z-index: 1000;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
-.modal-box {
+.modal-box,
+.modal-card,
+.modal-dialog,
+.pharma-modal,
+div[role="dialog"] {
   background: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 100%;
-  max-width: 480px;
-  padding: 24px;
+  max-width: 560px;
+  max-height: min(92vh, 92dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-light, #e2e8f0);
+  margin: auto;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.modal-header {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.modal-body,
+.modal-form-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-light, #e2e8f0);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* Slim elegant scrollbar for modal bodies, scroll containers, and tables */
+.modal-body::-webkit-scrollbar,
+.modal-form-body::-webkit-scrollbar,
+div[style*="overflow-y: auto"]::-webkit-scrollbar,
+div[style*="overflowY: auto"]::-webkit-scrollbar,
+div[style*="overflowY: 'auto'"]::-webkit-scrollbar,
+form[style*="overflow-y: auto"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.modal-form-body::-webkit-scrollbar-track,
+div[style*="overflow-y: auto"]::-webkit-scrollbar-track,
+div[style*="overflowY: auto"]::-webkit-scrollbar-track,
+div[style*="overflowY: 'auto'"]::-webkit-scrollbar-track,
+form[style*="overflow-y: auto"]::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.modal-form-body::-webkit-scrollbar-thumb,
+div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb,
+div[style*="overflowY: auto"]::-webkit-scrollbar-thumb,
+div[style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb,
+form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.modal-form-body::-webkit-scrollbar-thumb:hover,
+div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover,
+div[style*="overflowY: auto"]::-webkit-scrollbar-thumb:hover,
+div[style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb:hover,
+form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================================================
+   Universal Responsive Auto-Adjustment for 13"-21" Laptops & Zoom 100%-125%
+   Dynamically compresses paddings and heights so customers NEVER need to zoom
+   or adjust their browser manually on any screen.
+   ========================================================================== */
+@media (max-height: 850px) {
+  body {
+    font-size: 12.5px;
+  }
+
+  .page-content {
+    padding: 16px 20px;
+  }
+
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-box,
+  .modal-card,
+  .modal-dialog,
+  .pharma-modal,
+  div[role="dialog"] {
+    max-height: min(94vh, 94dvh);
+  }
+
+  .modal-header {
+    padding: 12px 18px;
+  }
+
+  .modal-body,
+  .modal-form-body {
+    padding: 14px 18px;
+  }
+
+  .modal-footer {
+    padding: 10px 18px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="search"],
+  select,
+  .input,
+  .form-input,
+  .form-select {
+    height: 35px;
+    padding: 5px 10px;
+    font-size: 12.5px;
+  }
+
+  .form-group {
+    gap: 4px;
+  }
+}
+
+@media (max-height: 720px) {
+  .modal-box,
+  .modal-card,
+  .modal-dialog,
+  .pharma-modal,
+  div[role="dialog"] {
+    max-height: min(96vh, 96dvh);
+  }
+
+  .modal-header {
+    padding: 10px 16px;
+  }
+
+  .modal-body,
+  .modal-form-body {
+    padding: 12px 16px;
+  }
+
+  .modal-footer {
+    padding: 8px 16px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="search"],
+  select,
+  .input,
+  .form-input,
+  .form-select {
+    height: 33px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
 }

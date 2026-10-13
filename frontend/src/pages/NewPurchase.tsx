@@ -1786,16 +1786,26 @@ export default function NewPurchase({
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: 'var(--card-bg)',
             border: '1px solid var(--border-color)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '560px',
-            padding: '1.5rem',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
+            maxHeight: 'min(92vh, 92dvh)',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+            overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem' }}>
+            <div className="modal-header" style={{
+              background: 'transparent',
+              borderBottom: '1px solid var(--border-color)',
+              padding: '1.2rem 1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ padding: '0.4rem', borderRadius: '8px', background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
                   <PlusCircle size={20} />
@@ -1813,7 +1823,8 @@ export default function NewPurchase({
               </button>
             </div>
 
-            <form onSubmit={handleQuickAddMedicineSubmit}>
+            <form onSubmit={handleQuickAddMedicineSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.25rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
@@ -1984,7 +1995,20 @@ export default function NewPurchase({
                 </div>
               </div>
 
-              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.8rem' }}>
+              </div>
+
+              <div className="modal-footer" style={{
+                padding: '1rem 1.25rem',
+                borderTop: '1px solid var(--border-color)',
+                background: 'var(--card-bg)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.8rem',
+                flexShrink: 0,
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10
+              }}>
                 <button
                   type="button"
                   onClick={() => setShowAddMedicineModal(false)}
@@ -2019,7 +2043,7 @@ export default function NewPurchase({
       )}
       {/* Modal: Quick Add Supplier with GSTIN Autofill */}
       {showAddSupplierModal && (
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -2033,22 +2057,26 @@ export default function NewPurchase({
           zIndex: 99999,
           padding: '20px'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: '#ffffff',
             borderRadius: '12px',
             width: '100%',
             maxWidth: '560px',
+            maxHeight: 'min(92vh, 92dvh)',
+            display: 'flex',
+            flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             border: '1px solid #e2e8f0',
             overflow: 'hidden'
           }}>
-            <div style={{
+            <div className="modal-header" style={{
               padding: '16px 20px',
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#f8fafc'
+              background: '#f8fafc',
+              flexShrink: 0
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>⚡ Quick Add Supplier</h3>
@@ -2064,141 +2092,154 @@ export default function NewPurchase({
               </button>
             </div>
 
-            <form onSubmit={handleCreateSupplierQuick} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* GSTIN Autofill Bar */}
-              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
-                <label className="form-label" style={{ color: '#0369a1', fontWeight: 700 }}>
-                  GSTIN (15-Digit Number)
-                </label>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+            <form onSubmit={handleCreateSupplierQuick} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* GSTIN Autofill Bar */}
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
+                  <label className="form-label" style={{ color: '#0369a1', fontWeight: 700 }}>
+                    GSTIN (15-Digit Number)
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <input
+                      type="text"
+                      maxLength={15}
+                      placeholder="e.g. 09AOAPV7912G1ZO"
+                      value={newSupGstin}
+                      onChange={e => setNewSupGstin(e.target.value.toUpperCase())}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleQuickGstinLookup();
+                        }
+                      }}
+                      className="form-input"
+                      style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickGstinLookup}
+                      disabled={supGstLookupLoading}
+                      className="btn btn-primary"
+                      style={{ minWidth: '110px' }}
+                    >
+                      {supGstLookupLoading ? 'Fetching...' : '⚡ Autofill'}
+                    </button>
+                  </div>
+
+                  {supGstLookupMsg && (
+                    <div style={{
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      marginTop: '8px',
+                      background: supGstLookupMsg.type === 'success' ? '#dcfce7' : supGstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
+                      color: supGstLookupMsg.type === 'success' ? '#15803d' : supGstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
+                      border: `1px solid ${supGstLookupMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                    }}>
+                      {supGstLookupMsg.text}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Firm / Trade Name * (Mailing Display Name)</label>
                   <input
                     type="text"
-                    maxLength={15}
-                    placeholder="e.g. 09AOAPV7912G1ZO"
-                    value={newSupGstin}
-                    onChange={e => setNewSupGstin(e.target.value.toUpperCase())}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleQuickGstinLookup();
-                      }
+                    required
+                    placeholder="e.g. SHREE GANESH MEDICOS / ADMARIS PHARMA"
+                    value={newSupName}
+                    onChange={e => {
+                      setNewSupName(e.target.value);
+                      if (!newSupLegalName) setNewSupLegalName(e.target.value);
                     }}
                     className="form-input"
-                    style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
+                    style={{ fontWeight: 600 }}
                   />
-                  <button
-                    type="button"
-                    onClick={handleQuickGstinLookup}
-                    disabled={supGstLookupLoading}
-                    className="btn btn-primary"
-                    style={{ minWidth: '110px' }}
-                  >
-                    {supGstLookupLoading ? 'Fetching...' : '⚡ Autofill'}
-                  </button>
                 </div>
 
-                {supGstLookupMsg && (
-                  <div style={{
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    marginTop: '8px',
-                    background: supGstLookupMsg.type === 'success' ? '#dcfce7' : supGstLookupMsg.type === 'warning' ? '#fef3c7' : '#fee2e2',
-                    color: supGstLookupMsg.type === 'success' ? '#15803d' : supGstLookupMsg.type === 'warning' ? '#b45309' : '#b91c1c',
-                    border: `1px solid ${supGstLookupMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
-                  }}>
-                    {supGstLookupMsg.text}
+                <div className="form-group">
+                  <label className="form-label">Legal / Proprietor Name (As per GST/PAN)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. MANISH KUMAR VERMA"
+                    value={newSupLegalName}
+                    onChange={e => setNewSupLegalName(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Station / City</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. LUCKNOW"
+                      value={newSupStation}
+                      onChange={e => setNewSupStation(e.target.value)}
+                      className="form-input"
+                    />
                   </div>
-                )}
-              </div>
+                  <div className="form-group">
+                    <label className="form-label">State</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. UTTAR PRADESH"
+                      value={newSupState}
+                      onChange={e => setNewSupState(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Firm / Trade Name * (Mailing Display Name)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. SHREE GANESH MEDICOS / ADMARIS PHARMA"
-                  value={newSupName}
-                  onChange={e => {
-                    setNewSupName(e.target.value);
-                    if (!newSupLegalName) setNewSupLegalName(e.target.value);
-                  }}
-                  className="form-input"
-                  style={{ fontWeight: 600 }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Legal / Proprietor Name (As per GST/PAN)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. MANISH KUMAR VERMA"
-                  value={newSupLegalName}
-                  onChange={e => setNewSupLegalName(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
-                  <label className="form-label">Station / City</label>
+                  <label className="form-label">Registered Address</label>
                   <input
                     type="text"
-                    placeholder="e.g. LUCKNOW"
-                    value={newSupStation}
-                    onChange={e => setNewSupStation(e.target.value)}
+                    placeholder="Street, area, locality..."
+                    value={newSupAddress}
+                    onChange={e => setNewSupAddress(e.target.value)}
                     className="form-input"
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">State</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UTTAR PRADESH"
-                    value={newSupState}
-                    onChange={e => setNewSupState(e.target.value)}
-                    className="form-input"
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">PAN Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AOAPV7912G"
+                      value={newSupPan}
+                      onChange={e => setNewSupPan(e.target.value.toUpperCase())}
+                      className="form-input"
+                      style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Mobile Number</label>
+                    <input
+                      type="text"
+                      placeholder="10-digit mobile"
+                      value={newSupMobile}
+                      onChange={e => setNewSupMobile(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Registered Address</label>
-                <input
-                  type="text"
-                  placeholder="Street, area, locality..."
-                  value={newSupAddress}
-                  onChange={e => setNewSupAddress(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">PAN Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. AOAPV7912G"
-                    value={newSupPan}
-                    onChange={e => setNewSupPan(e.target.value.toUpperCase())}
-                    className="form-input"
-                    style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Mobile Number</label>
-                  <input
-                    type="text"
-                    placeholder="10-digit mobile"
-                    value={newSupMobile}
-                    onChange={e => setNewSupMobile(e.target.value)}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+              <div className="modal-footer" style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                padding: '14px 20px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexShrink: 0,
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10
+              }}>
                 <button
                   type="button"
                   onClick={() => setShowAddSupplierModal(false)}

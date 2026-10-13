@@ -1609,8 +1609,9 @@ export default function Settlements() {
       )}
 
       {/* RECORD SETTLEMENT / PAYOUT MODAL */}
+      {/* RECORD SETTLEMENT / PAYOUT MODAL */}
       {showRecordModal && summary && (
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1624,23 +1625,27 @@ export default function Settlements() {
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: '#ffffff',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '560px',
+            maxHeight: 'min(92vh, 92dvh)',
+            display: 'flex',
+            flexDirection: 'column',
             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
             overflow: 'hidden',
             animation: 'fadeIn 0.2s ease-out'
           }}>
             {/* Modal Header */}
-            <div style={{
+            <div className="modal-header" style={{
               padding: '1.25rem 1.5rem',
               background: 'linear-gradient(135deg, #065f46, #047857)',
               color: '#ffffff',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              flexShrink: 0
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
@@ -1659,136 +1664,149 @@ export default function Settlements() {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleSavePayout} style={{ padding: '1.5rem' }}>
-              {recordError && (
+            <form onSubmit={handleSavePayout} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
+              <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.5rem' }}>
+                {recordError && (
+                  <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#991b1b',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    marginBottom: '1rem',
+                    fontSize: '0.85rem'
+                  }}>
+                    {recordError}
+                  </div>
+                )}
+
+                {/* Settlement Summary Snapshot Card */}
                 <div style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#991b1b',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  fontSize: '0.85rem'
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  marginBottom: '1.25rem'
                 }}>
-                  {recordError}
-                </div>
-              )}
-
-              {/* Settlement Summary Snapshot Card */}
-              <div style={{
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: '10px',
-                padding: '1rem',
-                marginBottom: '1.25rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem', color: '#166534' }}>
-                  <span>Gross Sold Cost:</span>
-                  <span style={{ fontWeight: 600 }}>₹{summary.grossPayableCost.toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem', color: '#b91c1c' }}>
-                  <span>Sales Returns Deducted:</span>
-                  <span style={{ fontWeight: 600 }}>-₹{summary.returnDeduction.toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.4rem', borderTop: '1px dashed #86efac', fontSize: '1rem', fontWeight: 800, color: '#14532d' }}>
-                  <span>Net Payable (Cost Price):</span>
-                  <span>₹{summary.netPayableAmount.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Form Fields */}
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                    Amount Paid (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={paidAmount}
-                    onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '1.1rem',
-                      fontWeight: 800,
-                      color: '#065f46',
-                      background: '#ffffff'
-                    }}
-                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem', color: '#166534' }}>
+                    <span>Gross Sold Cost:</span>
+                    <span style={{ fontWeight: 600 }}>₹{summary.grossPayableCost.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.82rem', color: '#b91c1c' }}>
+                    <span>Sales Returns Deducted:</span>
+                    <span style={{ fontWeight: 600 }}>-₹{summary.returnDeduction.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.4rem', borderTop: '1px dashed #86efac', fontSize: '1rem', fontWeight: 800, color: '#14532d' }}>
+                    <span>Net Payable (Cost Price):</span>
+                    <span>₹{summary.netPayableAmount.toFixed(2)}</span>
+                  </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                {/* Form Fields */}
+                <div style={{ display: 'grid', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                      Payment Mode
+                      Amount Paid (₹) *
                     </label>
-                    <select
-                      value={paymentMode}
-                      onChange={(e) => setPaymentMode(e.target.value)}
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                       style={{
                         width: '100%',
-                        padding: '0.6rem 0.75rem',
+                        padding: '0.65rem 0.85rem',
                         borderRadius: '8px',
                         border: '1px solid #cbd5e1',
-                        fontSize: '0.875rem',
+                        fontSize: '1.1rem',
+                        fontWeight: 800,
+                        color: '#065f46',
                         background: '#ffffff'
                       }}
-                    >
-                      <option value="BANK_TRANSFER">Bank Transfer / NEFT / RTGS</option>
-                      <option value="UPI">UPI / GPay / PhonePe</option>
-                      <option value="CHEQUE">Cheque</option>
-                      <option value="CASH">Cash</option>
-                      <option value="CREDIT_NOTE">Credit Note Adjustment</option>
-                    </select>
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
+                        Payment Mode
+                      </label>
+                      <select
+                        value={paymentMode}
+                        onChange={(e) => setPaymentMode(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.875rem',
+                          background: '#ffffff'
+                        }}
+                      >
+                        <option value="BANK_TRANSFER">Bank Transfer / NEFT / RTGS</option>
+                        <option value="UPI">UPI / GPay / PhonePe</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CREDIT_NOTE">Credit Note Adjustment</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
+                        Reference / UTR / Cheque #
+                      </label>
+                      <input
+                        type="text"
+                        value={paymentRef}
+                        onChange={(e) => setPaymentRef(e.target.value)}
+                        placeholder="e.g. UTR12893892 or Chq# 4029"
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.875rem'
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                      Reference / UTR / Cheque #
+                      Notes & Remarks
                     </label>
-                    <input
-                      type="text"
-                      value={paymentRef}
-                      onChange={(e) => setPaymentRef(e.target.value)}
-                      placeholder="e.g. UTR12893892 or Chq# 4029"
+                    <textarea
+                      rows={2}
+                      value={settlementNotes}
+                      onChange={(e) => setSettlementNotes(e.target.value)}
+                      placeholder="e.g. Reconciled with Sun Pharma MR on 9th Oct..."
                       style={{
                         width: '100%',
                         padding: '0.6rem 0.75rem',
                         borderRadius: '8px',
                         border: '1px solid #cbd5e1',
-                        fontSize: '0.875rem'
+                        fontSize: '0.85rem'
                       }}
                     />
                   </div>
                 </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
-                    Notes & Remarks
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={settlementNotes}
-                    onChange={(e) => setSettlementNotes(e.target.value)}
-                    placeholder="e.g. Reconciled with Sun Pharma MR on 9th Oct..."
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
               </div>
 
               {/* Modal Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div className="modal-footer" style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.75rem',
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexShrink: 0,
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 10
+              }}>
                 <button
                   type="button"
                   onClick={() => setShowRecordModal(false)}
@@ -1830,7 +1848,7 @@ export default function Settlements() {
 
       {/* PRINTABLE STATEMENT & VOUCHER SLIP MODAL */}
       {showPrintModal && statementData && (
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1844,12 +1862,12 @@ export default function Settlements() {
           zIndex: 1100,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: '#ffffff',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '820px',
-            maxHeight: '90vh',
+            maxHeight: 'min(92vh, 92dvh)',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',

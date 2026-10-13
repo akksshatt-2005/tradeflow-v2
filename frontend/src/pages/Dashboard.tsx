@@ -1097,7 +1097,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
 
       {/* Multi-Item Supplier Return (Debit Note / CN) Modal */}
       {showSupplierReturnModal && (
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -1110,21 +1110,22 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           zIndex: 200,
           padding: '1rem'
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: 'var(--card-bg, #ffffff)',
             color: 'var(--text-primary, #0f172a)',
             width: '100%',
             maxWidth: '850px',
-            maxHeight: '94vh',
+            maxHeight: 'min(92vh, 92dvh)',
             borderRadius: '14px',
-            overflowY: 'auto',
-            padding: '1.6rem',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
             position: 'relative',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             border: '1px solid var(--border-color, #e2e8f0)'
           }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.2rem', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: '0.8rem' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color, #e2e8f0)', padding: '1.2rem 1.6rem', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ background: '#4f46e5', color: '#fff', padding: '8px', borderRadius: '8px' }}>
                   <Truck size={20} />
@@ -1146,6 +1147,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               </button>
             </div>
 
+            <div className="modal-body" style={{ flex: '1 1 auto', overflowY: 'auto', padding: '1.4rem 1.6rem' }}>
             {/* Success Notification */}
             {suppReturnSuccessMsg && (
               <div style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#065f46', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
@@ -1474,8 +1476,20 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
               )}
             </div>
 
+              </div>
+
             {/* Submit Action Buttons */}
-            <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <div className="modal-footer" style={{
+              display: 'flex',
+              gap: '0.8rem',
+              padding: '1rem 1.6rem',
+              borderTop: '1px solid var(--border-color, #e2e8f0)',
+              background: 'var(--card-bg, #ffffff)',
+              flexShrink: 0,
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 10
+            }}>
               <button
                 type="button"
                 onClick={() => setShowSupplierReturnModal(false)}
