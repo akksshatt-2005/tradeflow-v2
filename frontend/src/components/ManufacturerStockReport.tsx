@@ -686,7 +686,7 @@ export default function ManufacturerStockReport() {
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                        Total in stock: <strong>{mfg.totalStrips} Strips</strong> ({mfg.totalUnits.toLocaleString('en-IN')} units)
+                        Total in stock: <strong style={{ color: '#0f172a' }}>{mfg.totalUnits.toLocaleString('en-IN')} units</strong>
                       </div>
                     </div>
                   </div>
@@ -866,7 +866,7 @@ export default function ManufacturerStockReport() {
                               Subtotal for {mfg.manufacturer} ({mfg.itemCount} medicines)
                             </td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0f172a' }}>
-                              {mfg.totalStrips} Str ({mfg.totalUnits} units)
+                              {mfg.totalUnits.toLocaleString('en-IN')} units
                             </td>
                             <td colSpan={2}></td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', color: '#059669', fontSize: '13px' }}>

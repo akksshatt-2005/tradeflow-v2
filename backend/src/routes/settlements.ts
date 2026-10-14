@@ -296,6 +296,7 @@ router.get('/manufacturer-stock', async (req: CompanyScopedRequest, res: Respons
     // Convert to sorted list (descending by stock value at cost)
     const manufacturerReports = Array.from(mfgMap.values()).map(m => ({
       ...m,
+      totalStrips: Math.round(m.totalStrips),
       stockValueCost: Math.round(m.stockValueCost * 100) / 100,
       stockValueRetail: Math.round(m.stockValueRetail * 100) / 100,
       marginAmount: Math.round((m.stockValueRetail - m.stockValueCost) * 100) / 100,
