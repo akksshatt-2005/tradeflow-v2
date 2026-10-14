@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
+import ManufacturerStockReport from '../components/ManufacturerStockReport';
 
 import {
   Handshake,
@@ -131,8 +132,8 @@ interface SavedSettlement {
 export default function Settlements() {
   const { activeCompany, user } = useAuth();
 
-  // Active View Tab: 'calculate' | 'history'
-  const [activeTab, setActiveTab] = useState<'calculate' | 'history'>('calculate');
+  // Active View Tab: 'calculate' | 'history' | 'manufacturer-stock'
+  const [activeTab, setActiveTab] = useState<'calculate' | 'history' | 'manufacturer-stock'>('calculate');
 
   // Filter Master Data
   const [manufacturers, setManufacturers] = useState<string[]>([]);
@@ -653,6 +654,26 @@ export default function Settlements() {
             >
               <History size={16} /> Settlement History & Vouchers
             </button>
+            <button
+              onClick={() => setActiveTab('manufacturer-stock')}
+              style={{
+                padding: '0.5rem 1.1rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: activeTab === 'manufacturer-stock' ? '#ffffff' : 'transparent',
+                color: activeTab === 'manufacturer-stock' ? '#0284c7' : '#64748b',
+                fontWeight: activeTab === 'manufacturer-stock' ? 700 : 500,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                boxShadow: activeTab === 'manufacturer-stock' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Building2 size={16} /> Manufacturer Stock & Valuation
+            </button>
           </div>
 
           {activeTab === 'calculate' && summary && summary.netPayableAmount > 0 && (
@@ -700,7 +721,9 @@ export default function Settlements() {
         </div>
       </div>
 
-      {activeTab === 'calculate' ? (
+      {activeTab === 'manufacturer-stock' ? (
+        <ManufacturerStockReport />
+      ) : activeTab === 'calculate' ? (
         <>
           {/* Filter & Control Bar */}
           <div style={{

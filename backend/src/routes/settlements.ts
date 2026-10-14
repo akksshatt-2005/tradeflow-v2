@@ -138,6 +138,197 @@ router.get('/manufacturers', async (req: CompanyScopedRequest, res: Response) =>
 });
 
 /**
+ * GET /manufacturer-stock
+ * Real-time inventory holding, strip counts, and financial valuation (Cost PTR vs Retail MRP) grouped by manufacturer.
+ */
+router.get('/manufacturer-stock', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const now = new Date();
+  const ninetyDaysLater = new Date();
+  ninetyDaysLater.setDate(now.getDate() + 90);
+
+  try {
+    // 1. Fetch all items with their active batches (currentStock > 0)
+    const items = await prisma.item.findMany({
+      where: { companyId },
+      include: {
+        batches: {
+          where: { currentStock: { gt: 0 } },
+          orderBy: { expiryDate: 'asc' }
+        }
+      }
+    });
+
+    // 2. Aggregate per manufacturer
+    const mfgMap = new Map<string, {
+      manufacturer: string;
+      itemCount: number;
+      totalUnits: number;
+      totalStrips: number;
+      stockValueCost: number; // based on PTR
+      stockValueRetail: number; // based on MRP
+      nearExpiryCount: number;
+      expiredCount: number;
+      medicines: Array<{
+        id: string;
+        name: string;
+        sku: string;
+        genericName: string | null;
+        unit: string;
+        conversionFactor: number;
+        totalUnits: number;
+        totalStrips: number;
+        stockValueCost: number;
+        stockValueRetail: number;
+        batches: Array<{
+          id: string;
+          batchNumber: string;
+          expiryDate: string;
+          currentStock: number;
+          strips: number;
+          looseQty: number;
+          ptr: number;
+          mrp: number;
+          lineCost: number;
+          lineRetail: number;
+          isNearExpiry: boolean;
+          isExpired: boolean;
+        }>;
+      }>;
+    }>();
+
+    let grandTotalUnits = 0;
+    let grandTotalCost = 0;
+    let grandTotalRetail = 0;
+    let grandTotalMedicines = 0;
+    let grandActiveBatches = 0;
+
+    for (const item of items) {
+      if (!item.batches || item.batches.length === 0) continue;
+
+      const mfgName = (item.manufacturer && item.manufacturer.trim()) ? item.manufacturer.trim() : 'Unassigned / General';
+      const factor = Math.max(1, item.conversionFactor || 1);
+
+      if (!mfgMap.has(mfgName)) {
+        mfgMap.set(mfgName, {
+          manufacturer: mfgName,
+          itemCount: 0,
+          totalUnits: 0,
+          totalStrips: 0,
+          stockValueCost: 0,
+          stockValueRetail: 0,
+          nearExpiryCount: 0,
+          expiredCount: 0,
+          medicines: []
+        });
+      }
+
+      const mfgData = mfgMap.get(mfgName)!;
+      mfgData.itemCount += 1;
+      grandTotalMedicines += 1;
+
+      let itemUnits = 0;
+      let itemCost = 0;
+      let itemRetail = 0;
+      const batchList: any[] = [];
+
+      for (const b of item.batches) {
+        const units = b.currentStock;
+        const strips = Math.floor(units / factor);
+        const loose = units % factor;
+        const ptr = Number(b.ptr) || 0;
+        const mrp = Number(b.mrp) || 0;
+        const lineCost = (units / factor) * ptr;
+        const lineRetail = (units / factor) * mrp;
+
+        const exp = new Date(b.expiryDate);
+        const isExp = exp < now;
+        const isNear = !isExp && exp <= ninetyDaysLater;
+
+        if (isExp) mfgData.expiredCount++;
+        if (isNear) mfgData.nearExpiryCount++;
+
+        itemUnits += units;
+        itemCost += lineCost;
+        itemRetail += lineRetail;
+        grandActiveBatches++;
+
+        batchList.push({
+          id: b.id,
+          batchNumber: b.batchNumber,
+          expiryDate: b.expiryDate.toISOString().split('T')[0],
+          currentStock: units,
+          strips,
+          looseQty: loose,
+          ptr,
+          mrp,
+          lineCost: Math.round(lineCost * 100) / 100,
+          lineRetail: Math.round(lineRetail * 100) / 100,
+          isNearExpiry: isNear,
+          isExpired: isExp
+        });
+      }
+
+      mfgData.totalUnits += itemUnits;
+      mfgData.totalStrips += Math.round((itemUnits / factor) * 10) / 10;
+      mfgData.stockValueCost += itemCost;
+      mfgData.stockValueRetail += itemRetail;
+
+      grandTotalUnits += itemUnits;
+      grandTotalCost += itemCost;
+      grandTotalRetail += itemRetail;
+
+      mfgData.medicines.push({
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        genericName: item.genericName,
+        unit: item.unit,
+        conversionFactor: factor,
+        totalUnits: itemUnits,
+        totalStrips: Math.round((itemUnits / factor) * 10) / 10,
+        stockValueCost: Math.round(itemCost * 100) / 100,
+        stockValueRetail: Math.round(itemRetail * 100) / 100,
+        batches: batchList
+      });
+    }
+
+    // Convert to sorted list (descending by stock value at cost)
+    const manufacturerReports = Array.from(mfgMap.values()).map(m => ({
+      ...m,
+      stockValueCost: Math.round(m.stockValueCost * 100) / 100,
+      stockValueRetail: Math.round(m.stockValueRetail * 100) / 100,
+      marginAmount: Math.round((m.stockValueRetail - m.stockValueCost) * 100) / 100,
+      marginPercent: m.stockValueCost > 0
+        ? Math.round(((m.stockValueRetail - m.stockValueCost) / m.stockValueCost) * 1000) / 10
+        : 0
+    })).sort((a, b) => b.stockValueCost - a.stockValueCost);
+
+    const grandMargin = grandTotalRetail - grandTotalCost;
+    const grandMarginPercent = grandTotalCost > 0
+      ? Math.round((grandMargin / grandTotalCost) * 1000) / 10
+      : 0;
+
+    res.status(200).json({
+      summary: {
+        totalManufacturers: manufacturerReports.length,
+        totalMedicines: grandTotalMedicines,
+        activeBatches: grandActiveBatches,
+        totalUnits: grandTotalUnits,
+        totalStockCost: Math.round(grandTotalCost * 100) / 100,
+        totalStockRetail: Math.round(grandTotalRetail * 100) / 100,
+        totalProjectedMargin: Math.round(grandMargin * 100) / 100,
+        averageMarginPercent: grandMarginPercent
+      },
+      manufacturers: manufacturerReports
+    });
+  } catch (error: any) {
+    console.error('Error calculating manufacturer stock:', error);
+    res.status(500).json({ error: error.message || 'Failed to calculate manufacturer stock' });
+  }
+});
+
+/**
  * GET /calculate
  * Calculate real-time sales, patient returns, and net payable amount strictly at Cost Price (PTR)
  * Query params:
