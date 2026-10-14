@@ -814,6 +814,13 @@ router.delete('/:itemId/batches/:batchId', async (req: CompanyScopedRequest, res
       return;
     }
 
+    // Check if any purchase return items reference this batch
+    const prCount = await prisma.purchaseReturnItem.count({ where: { batchId } });
+    if (prCount > 0) {
+      res.status(400).json({ error: `Cannot delete batch "${existingBatch.batchNumber}" because it is referenced in ${prCount} purchase return credit note(s).` });
+      return;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
       await tx.stockLedger.deleteMany({ where: { batchId, companyId } });

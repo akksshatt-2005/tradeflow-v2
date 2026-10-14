@@ -799,6 +799,28 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     const parsedPurchaseDate = parseRecordDate(purchaseDate, existingPurchase.purchaseDate);
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
+    // Pre-validate stock availability for edited/removed items
+    for (const oldItem of existingPurchase.items) {
+      const oldInwardUnits = oldItem.quantity + (oldItem.freeQuantity || 0);
+      const oldBatch = await prisma.batch.findUnique({ where: { id: oldItem.batchId }, include: { item: true } });
+      if (!oldBatch) continue;
+
+      // Find matching item in updated items for the same batch
+      const matchingNewItem = validatedItems.find(v => v.batchNumber === oldBatch.batchNumber && (v.itemId === oldItem.itemId || !v.itemId));
+      const newInwardUnits = matchingNewItem ? (matchingNewItem.quantity + matchingNewItem.freeQuantity) : 0;
+      const netReduction = oldInwardUnits - newInwardUnits;
+
+      if (netReduction > 0 && oldBatch.currentStock < netReduction) {
+        const factor = oldBatch.item?.conversionFactor || 1;
+        const availableStrips = Math.floor(oldBatch.currentStock / factor);
+        const reductionStrips = Math.floor(netReduction / factor);
+        res.status(400).json({
+          error: `Cannot reduce quantity for batch "${oldBatch.batchNumber}" of "${oldBatch.item.name}": Available stock is ${oldBatch.currentStock} units (${availableStrips} strips), but reduction is ${netReduction} units (${reductionStrips} strips). Some stock has already been sold or returned.`
+        });
+        return;
+      }
+    }
+
     // Execute atomic update with append-only reversing and fresh entries
     const updatedPurchase = await prisma.$transaction(async (tx) => {
       // 1. REVERSE OLD ITEMS STOCK VIA COMPENSATING PURCHASE_RETURN ENTRIES
@@ -808,10 +830,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         // Deduct old inward units from batch
         const oldBatch = await tx.batch.findUnique({ where: { id: oldItem.batchId } });
         if (oldBatch) {
-          const newStock = Math.max(0, oldBatch.currentStock - oldInwardUnits);
           await tx.batch.update({
             where: { id: oldItem.batchId },
-            data: { currentStock: newStock }
+            data: { currentStock: { decrement: oldInwardUnits } }
           });
         }
 
@@ -1225,6 +1246,112 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
 });
 
 /**
+ * Helper to validate stock and cancel a purchase bill.
+ * Prevents cancellation if stock has already been consumed/returned via Credit Notes or Sales Invoices.
+ */
+async function cancelPurchaseBill(purchase: any, companyId: string, userId: string) {
+  // Pre-validate that all batches have sufficient stock to reverse
+  for (const pItem of purchase.items) {
+    const totalInwardUnits = pItem.quantity + (pItem.freeQuantity || 0);
+    const batch = await prisma.batch.findUnique({
+      where: { id: pItem.batchId },
+      include: { item: true }
+    });
+
+    if (batch && batch.currentStock < totalInwardUnits) {
+      // Find active Credit Notes (Purchase Returns)
+      const activeReturns = await prisma.purchaseReturnItem.findMany({
+        where: { batchId: pItem.batchId },
+        include: { purchaseReturn: true }
+      });
+
+      // Find active Sales Invoices
+      const activeInvoices = await prisma.invoiceItem.findMany({
+        where: {
+          batchId: pItem.batchId,
+          invoice: { status: { not: 'CANCELLED' } }
+        },
+        include: { invoice: true }
+      });
+
+      const factor = batch.item?.conversionFactor || 1;
+      const availableStrips = Math.floor(batch.currentStock / factor);
+      const inwardStrips = Math.floor(totalInwardUnits / factor);
+      const medName = batch.item?.name || 'Medicine';
+
+      let reason = `Batch "${batch.batchNumber}" of "${medName}" currently has only ${batch.currentStock} units (${availableStrips} strips) in stock, but this bill inwarded ${totalInwardUnits} units (${inwardStrips} strips).`;
+
+      if (activeReturns.length > 0) {
+        const cnNums = [...new Set(activeReturns.map(r => r.purchaseReturn.returnNumber))].join(', ');
+        reason += ` There are active Credit Note(s) (${cnNums}) referencing this batch. Please delete or reverse those Credit Note(s) first before cancelling this purchase bill.`;
+      } else if (activeInvoices.length > 0) {
+        const invNums = [...new Set(activeInvoices.map(i => i.invoice.invoiceNumber))].join(', ');
+        reason += ` There are active Sales Invoice(s) (${invNums}) referencing this batch. Please cancel or adjust those Invoice(s) first before cancelling this purchase bill.`;
+      } else {
+        reason += ` Stock has already been consumed or adjusted below the inward quantity.`;
+      }
+
+      const err: any = new Error(reason);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Mark the purchase as CANCELLED (never delete historical purchase or purchase_items)
+    await tx.purchase.update({
+      where: { id: purchase.id },
+      data: {
+        status: 'CANCELLED',
+        notes: purchase.notes ? `${purchase.notes} | [CANCELLED on ${new Date().toISOString()}]` : `[CANCELLED on ${new Date().toISOString()}]`
+      }
+    });
+
+    // 2. Reverse inward stock using exact decrement and append-only audit entries
+    for (const pItem of purchase.items) {
+      const totalInwardUnits = pItem.quantity + (pItem.freeQuantity || 0);
+
+      // Deduct inward stock from batch
+      const batch = await tx.batch.findUnique({ where: { id: pItem.batchId } });
+      if (batch) {
+        await tx.batch.update({
+          where: { id: pItem.batchId },
+          data: { currentStock: { decrement: totalInwardUnits } }
+        });
+      }
+
+      // Write append-only compensating reversal in stock_ledger (NEVER delete historical rows)
+      await tx.stockLedger.create({
+        data: {
+          companyId,
+          itemId: pItem.itemId,
+          batchId: pItem.batchId,
+          entryType: 'PURCHASE_RETURN',
+          quantity: -totalInwardUnits, // Negative to reverse inward stock
+          unitPrice: pItem.purchaseRate,
+          referenceId: purchase.id,
+          notes: `Reversal for Cancelled Purchase Bill #${purchase.invoiceNumber} (-${totalInwardUnits} units reversed)`,
+          createdBy: userId
+        }
+      });
+    }
+
+    // 3. Adjust supplier outstanding balance if there was unpaid amount
+    const totalAmount = Number(purchase.totalAmount);
+    const paidAmount = Number(purchase.paidAmount);
+    const unpaidAmount = Math.max(0, totalAmount - paidAmount);
+    if (unpaidAmount > 0) {
+      await tx.party.update({
+        where: { id: purchase.supplierId },
+        data: {
+          outstandingBalance: { decrement: unpaidAmount }
+        }
+      });
+    }
+  });
+}
+
+/**
  * DELETE /purchases/:id (and POST /purchases/:id/cancel)
  * Cancels a purchase bill — marks status CANCELLED, writes append-only reversing stock ledger entries,
  * reverses batch stock, and adjusts supplier balance without deleting historical records.
@@ -1263,59 +1390,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Mark the purchase as CANCELLED (never delete historical purchase or purchase_items)
-      await tx.purchase.update({
-        where: { id },
-        data: {
-          status: 'CANCELLED',
-          notes: purchase.notes ? `${purchase.notes} | [CANCELLED on ${new Date().toISOString()}]` : `[CANCELLED on ${new Date().toISOString()}]`
-        }
-      });
-
-      // 2. Reverse inward stock using append-only reversing entries
-      for (const pItem of purchase.items) {
-        const totalInwardUnits = pItem.quantity + (pItem.freeQuantity || 0);
-
-        // Deduct inward stock from batch
-        const batch = await tx.batch.findUnique({ where: { id: pItem.batchId } });
-        if (batch) {
-          const newStock = Math.max(0, batch.currentStock - totalInwardUnits);
-          await tx.batch.update({
-            where: { id: pItem.batchId },
-            data: { currentStock: newStock }
-          });
-        }
-
-        // Write append-only compensating reversal in stock_ledger (NEVER delete historical rows)
-        await tx.stockLedger.create({
-          data: {
-            companyId,
-            itemId: pItem.itemId,
-            batchId: pItem.batchId,
-            entryType: 'PURCHASE_RETURN',
-            quantity: -totalInwardUnits, // Negative to reverse inward stock
-            unitPrice: pItem.purchaseRate,
-            referenceId: purchase.id,
-            notes: `Reversal for Cancelled Purchase Bill #${purchase.invoiceNumber} (-${totalInwardUnits} units reversed)`,
-            createdBy: userId
-          }
-        });
-      }
-
-      // 3. Adjust supplier outstanding balance if there was unpaid amount
-      const totalAmount = Number(purchase.totalAmount);
-      const paidAmount = Number(purchase.paidAmount);
-      const unpaidAmount = Math.max(0, totalAmount - paidAmount);
-      if (unpaidAmount > 0) {
-        await tx.party.update({
-          where: { id: purchase.supplierId },
-          data: {
-            outstandingBalance: { decrement: unpaidAmount }
-          }
-        });
-      }
-    });
+    await cancelPurchaseBill(purchase, companyId, userId);
 
     res.status(200).json({
       message: `Purchase bill "${purchase.invoiceNumber}" cancelled and stock reversed via append-only reversing ledger entries`,
@@ -1323,7 +1398,7 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error cancelling purchase:', error);
-    res.status(500).json({ error: error.message || 'Failed to cancel purchase' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to cancel purchase' });
   }
 });
 
@@ -1355,54 +1430,7 @@ router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
       return;
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.purchase.update({
-        where: { id },
-        data: {
-          status: 'CANCELLED',
-          notes: purchase.notes ? `${purchase.notes} | [CANCELLED on ${new Date().toISOString()}]` : `[CANCELLED on ${new Date().toISOString()}]`
-        }
-      });
-
-      for (const pItem of purchase.items) {
-        const totalInwardUnits = pItem.quantity + (pItem.freeQuantity || 0);
-
-        const batch = await tx.batch.findUnique({ where: { id: pItem.batchId } });
-        if (batch) {
-          const newStock = Math.max(0, batch.currentStock - totalInwardUnits);
-          await tx.batch.update({
-            where: { id: pItem.batchId },
-            data: { currentStock: newStock }
-          });
-        }
-
-        await tx.stockLedger.create({
-          data: {
-            companyId,
-            itemId: pItem.itemId,
-            batchId: pItem.batchId,
-            entryType: 'PURCHASE_RETURN',
-            quantity: -totalInwardUnits,
-            unitPrice: pItem.purchaseRate,
-            referenceId: purchase.id,
-            notes: `Reversal for Cancelled Purchase Bill #${purchase.invoiceNumber} (-${totalInwardUnits} units reversed)`,
-            createdBy: userId
-          }
-        });
-      }
-
-      const totalAmount = Number(purchase.totalAmount);
-      const paidAmount = Number(purchase.paidAmount);
-      const unpaidAmount = Math.max(0, totalAmount - paidAmount);
-      if (unpaidAmount > 0) {
-        await tx.party.update({
-          where: { id: purchase.supplierId },
-          data: {
-            outstandingBalance: { decrement: unpaidAmount }
-          }
-        });
-      }
-    });
+    await cancelPurchaseBill(purchase, companyId, userId);
 
     res.status(200).json({
       message: `Purchase bill "${purchase.invoiceNumber}" cancelled and stock reversed via append-only reversing ledger entries`,
@@ -1410,7 +1438,7 @@ router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error cancelling purchase:', error);
-    res.status(500).json({ error: error.message || 'Failed to cancel purchase' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to cancel purchase' });
   }
 });
 

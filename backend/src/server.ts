@@ -324,6 +324,8 @@ async function ensureTables() {
     `CREATE INDEX IF NOT EXISTS "purchase_return_items_purchase_return_id_idx" ON "purchase_return_items"("purchase_return_id")`,
     `CREATE INDEX IF NOT EXISTS "purchase_return_items_item_id_idx" ON "purchase_return_items"("item_id")`,
     `CREATE INDEX IF NOT EXISTS "purchase_return_items_batch_id_idx" ON "purchase_return_items"("batch_id")`,
+    `ALTER TABLE IF EXISTS "purchase_returns" ENABLE ROW LEVEL SECURITY`,
+    `ALTER TABLE IF EXISTS "purchase_return_items" ENABLE ROW LEVEL SECURITY`,
     // Company Master columns
     `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "gstin" TEXT`,
     `ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "drug_license_no" TEXT`,
@@ -377,14 +379,16 @@ async function ensureTables() {
 
     // Append-Only Immutability Trigger for stock_ledger (Bypassable for owner company reset)
     `CREATE OR REPLACE FUNCTION prevent_stock_ledger_mutation()
-    RETURNS TRIGGER AS $$
+    RETURNS TRIGGER
+    SET search_path = public, pg_temp
+    LANGUAGE plpgsql AS $$
     BEGIN
         IF current_setting('app.allow_ledger_cleanup', true) = 'on' THEN
             RETURN OLD;
         END IF;
         RAISE EXCEPTION 'stock_ledger is an append-only audit ledger: UPDATE and DELETE operations are strictly prohibited.';
     END;
-    $$ LANGUAGE plpgsql;`,
+    $$;`,
 
     `DO $$ BEGIN
       DROP TRIGGER IF EXISTS trg_stock_ledger_immutable ON "stock_ledger";
