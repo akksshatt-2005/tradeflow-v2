@@ -217,7 +217,9 @@ export default function Purchases() {
       await fetchPurchases();
     } catch (err: any) {
       console.error('Failed to cancel purchase:', err);
-      setError(err.message || 'Failed to cancel purchase bill');
+      const msg = err.message || 'Failed to cancel purchase bill';
+      setError(msg);
+      window.alert(msg);
     } finally {
       setLoading(false);
     }
@@ -595,6 +597,20 @@ export default function Purchases() {
             </div>
 
             <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {error && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  padding: '10px 14px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  lineHeight: 1.4
+                }}>
+                  {error}
+                </div>
+              )}
+
               {/* Supplier & Bill Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12px' }}>
                 <div>
