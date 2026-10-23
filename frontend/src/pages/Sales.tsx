@@ -171,6 +171,29 @@ export default function Sales() {
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // Global hotkeys for Sales & POS
+  useEffect(() => {
+    const onOpenPOS = () => setShowPOS(true);
+    const onClosePOS = () => setShowPOS(false);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        setShowPOS(true);
+      } else if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        setShowPOS(false);
+      }
+    };
+    window.addEventListener('tradeflow_open_pos', onOpenPOS);
+    window.addEventListener('tradeflow_close_pos', onClosePOS);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('tradeflow_open_pos', onOpenPOS);
+      window.removeEventListener('tradeflow_close_pos', onClosePOS);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   // Multi-Item Patient Return State
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [viewingMultiReturnSlip, setViewingMultiReturnSlip] = useState<MultiItemReturnSlip | null>(null);
@@ -661,6 +684,7 @@ export default function Sales() {
           {/* New Sale Button */}
           <button
             onClick={() => setShowPOS(true)}
+            title="Start new POS Sale [Alt+P]"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -677,7 +701,7 @@ export default function Sales() {
               transition: 'all 0.15s ease'
             }}
           >
-            <Plus size={18} /> New Sale (POS)
+            <Plus size={18} /> New Sale (POS) <span style={{ fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.25)', padding: '2px 6px', borderRadius: '4px', marginLeft: '2px', fontWeight: 800 }}>Alt+P</span>
           </button>
         </div>
       </div>

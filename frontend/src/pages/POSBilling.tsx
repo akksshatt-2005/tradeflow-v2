@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -126,6 +126,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [invoiceItems, setInvoiceItems] = useState<SaleLineItem[]>([]);
   const [medicineSearch, setMedicineSearch] = useState('');
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
+  const [selectedMedIndex, setSelectedMedIndex] = useState<number>(0);
   const [activeRowIndex, setActiveRowIndex] = useState<number>(0);
 
   // Status & Print Modals
@@ -135,8 +136,35 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   const medicineInputRef = useRef<HTMLInputElement>(null);
+  const medicineDropdownRef = useRef<HTMLDivElement>(null);
+  const stripsInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const patientInputRef = useRef<HTMLInputElement>(null);
   const doctorInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter medicines for live search
+  const filteredMedicines: MedicineItem[] = useMemo(() => {
+    const q = (medicineSearch || '').trim().toLowerCase();
+    if (!q) return [];
+    return (items || [])
+      .filter(i => {
+        if (!i) return false;
+        const nameMatch = (i.name || '').toLowerCase().includes(q);
+        const genMatch = Boolean(i.genericName && (i.genericName || '').toLowerCase().includes(q));
+        const skuMatch = Boolean(i.sku && (i.sku || '').toLowerCase().includes(q));
+        return nameMatch || genMatch || skuMatch;
+      })
+      .slice(0, 40);
+  }, [items, medicineSearch]);
+
+  // Keep highlighted medicine in view when using arrow keys
+  useEffect(() => {
+    if (showMedicineDropdown && medicineDropdownRef.current) {
+      const activeEl = medicineDropdownRef.current.querySelector(`[data-med-index="${selectedMedIndex}"]`) as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedMedIndex, showMedicineDropdown]);
 
   useEffect(() => {
     loadMasterData();
@@ -245,6 +273,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setError('Could not load inventory items. Please check connection.');
     } finally {
       setLoadingInitial(false);
+      // Automatically focus medicine search bar on open for zero-mouse flow
+      setTimeout(() => {
+        medicineInputRef.current?.focus();
+      }, 100);
     }
   };
 
@@ -341,11 +373,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       totalAmount: lineTotal
     };
 
+    const newIdx = invoiceItems.length;
     setInvoiceItems([...invoiceItems, newItem]);
-    setActiveRowIndex(invoiceItems.length);
+    setActiveRowIndex(newIdx);
     setMedicineSearch('');
     setShowMedicineDropdown(false);
+    setSelectedMedIndex(0);
     setError(null);
+
+    // Auto-focus strips quantity input of the newly added line
+    setTimeout(() => {
+      stripsInputRefs.current[newIdx]?.focus();
+      stripsInputRefs.current[newIdx]?.select();
+    }, 60);
   };
 
   // Update specific field in item row
@@ -435,7 +475,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
   const balanceDue = Math.max(0, grandTotal - numericPaid);
 
-  // Keyboard Navigation: F1 (Doctor), F2 (Patient/Complete), F3 (Search)
+  // Keyboard Navigation: F1 (Doctor), F2 (Patient/Complete), F3 (Search), Alt+S (Sales)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F1') {
@@ -456,11 +496,14 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         if (invoiceItems.length > 0 && !submitting) {
           handleSaveInvoice();
         }
+      } else if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        onBack();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [invoiceItems, paymentMode, paidAmount, customerName, submitting]);
+  }, [invoiceItems, paymentMode, paidAmount, customerName, submitting, onBack]);
 
   const handleSaveInvoice = async () => {
     if (!activeCompany) return;
@@ -576,16 +619,17 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           <button
             onClick={onBack}
             className="btn btn-secondary"
+            title="Return to Sales Invoices list [Alt+S]"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', fontSize: '0.8rem' }}
           >
-            ← Back to Sales List
+            ← Back to Sales List <span style={{ opacity: 0.65, fontSize: '0.72rem' }}>[Alt+S]</span>
           </button>
           <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
             <ShoppingCart style={{ color: 'var(--brand-teal)' }} />
             {editingInvoiceId ? `EDIT SALE INVOICE #${nextInvoiceNo}` : 'SALE ENTRY / POS BILLING TERMINAL'}
           </h1>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Keyboard Shortcuts: <strong>[F1]</strong> Doctor • <strong>[F2]</strong> Patient/Save • <strong>[F3]</strong> Product Search • <strong>[Ctrl+Enter]</strong> Complete & Print
+            Keyboard Shortcuts: <strong>[↑/↓]</strong> Navigate Meds • <strong>[Enter]</strong> Add & Qty • <strong>[F3]</strong> Search • <strong>[F1]</strong> Doctor • <strong>[F2/Ctrl+Enter]</strong> Save • <strong>[Alt+S]</strong> Sales
           </div>
         </div>
 
@@ -980,30 +1024,47 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
             <input
               ref={medicineInputRef}
               type="text"
-              placeholder="Search by brand name, generic name, or scan barcode... [F3]"
+              placeholder="Search by brand name, generic name, or barcode... [F3] (Use ↑ / ↓ to navigate, Enter to select)"
               value={medicineSearch}
               onChange={e => {
                 setMedicineSearch(e.target.value);
+                setSelectedMedIndex(0);
                 setShowMedicineDropdown(true);
               }}
               onKeyDown={e => {
-                if (e.key === 'Enter') {
+                if (e.key === 'ArrowDown') {
                   e.preventDefault();
-                  const q = (medicineSearch || '').trim().toLowerCase();
-                  if (!q) return;
-                  const filtered = (items || []).filter(i => {
-                    if (!i) return false;
-                    const nameMatch = (i.name || '').toLowerCase().includes(q);
-                    const genMatch = Boolean(i.genericName && (i.genericName || '').toLowerCase().includes(q));
-                    const skuMatch = Boolean(i.sku && (i.sku || '').toLowerCase().includes(q));
-                    return nameMatch || genMatch || skuMatch;
-                  });
-                  if (filtered.length > 0) {
-                    handleSelectItem(filtered[0]);
+                  if (!showMedicineDropdown) {
+                    setShowMedicineDropdown(true);
                   }
+                  if (filteredMedicines.length > 0) {
+                    setSelectedMedIndex(prev => (prev + 1) % filteredMedicines.length);
+                  }
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  if (!showMedicineDropdown) {
+                    setShowMedicineDropdown(true);
+                  }
+                  if (filteredMedicines.length > 0) {
+                    setSelectedMedIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
+                  }
+                } else if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (filteredMedicines.length > 0) {
+                    const target = (selectedMedIndex >= 0 && selectedMedIndex < filteredMedicines.length)
+                      ? filteredMedicines[selectedMedIndex]
+                      : filteredMedicines[0];
+                    handleSelectItem(target);
+                  }
+                } else if (e.key === 'Escape') {
+                  setShowMedicineDropdown(false);
                 }
               }}
-              onFocus={() => setShowMedicineDropdown(true)}
+              onFocus={() => {
+                if ((medicineSearch || '').trim().length > 0) {
+                  setShowMedicineDropdown(true);
+                }
+              }}
               onBlur={() => setTimeout(() => setShowMedicineDropdown(false), 200)}
               style={{
                 width: '100%',
@@ -1019,32 +1080,30 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
             />
 
             {showMedicineDropdown && (medicineSearch || '').trim().length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                background: 'var(--card-bg)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                marginTop: '4px',
-                maxHeight: '260px',
-                overflowY: 'auto',
-                zIndex: 70,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-              }}>
-                {(items || [])
-                  .filter(i => {
-                    if (!i) return false;
-                    const q = (medicineSearch || '').trim().toLowerCase();
-                    if (!q) return true;
-                    const nameMatch = (i.name || '').toLowerCase().includes(q);
-                    const genMatch = Boolean(i.genericName && (i.genericName || '').toLowerCase().includes(q));
-                    const skuMatch = Boolean(i.sku && (i.sku || '').toLowerCase().includes(q));
-                    return nameMatch || genMatch || skuMatch;
-                  })
-                  .slice(0, 40)
-                  .map(med => {
+              <div
+                ref={medicineDropdownRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  marginTop: '4px',
+                  maxHeight: '280px',
+                  overflowY: 'auto',
+                  zIndex: 70,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                }}
+              >
+                {filteredMedicines.length === 0 ? (
+                  <div style={{ padding: '0.9rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
+                    No medicines matching "{medicineSearch}"
+                  </div>
+                ) : (
+                  filteredMedicines.map((med, idx) => {
+                    const isSelected = idx === selectedMedIndex;
                     const totalStock = med.totalStock ?? (med.batches || []).reduce((s, b) => s + (b.currentStock || 0), 0) ?? 0;
                     const sortedMedBatches = [...(med.batches || [])].sort((a, b) => {
                       if (b.currentStock !== a.currentStock) return b.currentStock - a.currentStock;
@@ -1054,25 +1113,44 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                     return (
                       <div
                         key={med.id}
+                        data-med-index={idx}
                         onClick={() => handleSelectItem(med)}
+                        onMouseEnter={() => setSelectedMedIndex(idx)}
                         style={{
                           padding: '0.7rem 1rem',
                           borderBottom: '1px solid var(--border-color)',
                           cursor: 'pointer',
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          background: isSelected ? 'rgba(20, 184, 166, 0.15)' : 'transparent',
+                          borderLeft: isSelected ? '4px solid var(--brand-teal)' : '4px solid transparent',
+                          transition: 'background 0.1s ease'
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
-                        <div>
-                          <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: '0.8rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '700', color: isSelected ? 'var(--brand-teal)' : 'var(--text-primary)' }}>
+                              {med.name}
+                            </span>
+                            {isSelected && (
+                              <span style={{
+                                background: 'var(--brand-teal)',
+                                color: '#ffffff',
+                                fontSize: '0.68rem',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                fontWeight: '700'
+                              }}>
+                                ↵ Press Enter
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                             {med.genericName ? `${med.genericName} • ` : ''}Pack: {med.conversionFactor > 1 ? `${med.conversionFactor}T` : med.unit} {med.gstRate !== undefined ? `• GST: ${med.gstRate}%` : ''}
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <div style={{ fontWeight: '800', color: totalStock > 0 ? 'var(--brand-teal)' : (totalStock < 0 ? 'var(--accent-red)' : 'var(--text-muted)') }}>
                             {totalStock > 0 ? `${totalStock} in stock` : (totalStock < 0 ? `${totalStock} units (Negative)` : '0 in stock')}
                           </div>
@@ -1084,7 +1162,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                )}
               </div>
             )}
           </div>
@@ -1224,6 +1303,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       {/* STRI (Full Strips) */}
                       <td style={{ padding: '0.6rem 0.6rem' }}>
                         <input
+                          ref={el => { stripsInputRefs.current[idx] = el; }}
                           type="number"
                           min="0"
                           placeholder="0"
@@ -1232,6 +1312,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           onChange={e => {
                             const val = e.target.value;
                             updateLineItem(idx, { strips: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              medicineInputRef.current?.focus();
+                            }
                           }}
                           style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                         />
@@ -1250,7 +1336,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             const val = e.target.value;
                             updateLineItem(idx, { looseQty: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
                           }}
-                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              medicineInputRef.current?.focus();
+                            }
+                          }}
+                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                         />
                       </td>
 

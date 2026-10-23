@@ -154,15 +154,52 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const [showReturnVoucherModal, setShowReturnVoucherModal] = useState(false);
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
-    { id: 'sales', label: 'Sales & POS Terminal', icon: ShoppingCart },
-    { id: 'purchases', label: 'Purchases & Inward', icon: Truck },
-    { id: 'medicines', label: 'Medicine Catalog', icon: Pill },
+    { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard, hotkey: 'Alt+D' },
+    { id: 'sales', label: 'Sales & POS Terminal', icon: ShoppingCart, hotkey: 'Alt+S' },
+    { id: 'purchases', label: 'Purchases & Inward', icon: Truck, hotkey: 'Alt+B' },
+    { id: 'medicines', label: 'Medicine Catalog', icon: Pill, hotkey: 'Alt+M' },
     { id: 'batches', label: 'Batches & Expiry', icon: Layers },
     { id: 'parties', label: 'Suppliers & Clients', icon: Users },
-    { id: 'credit-notes', label: 'Credit Notes (CN)', icon: RotateCcw },
-    { id: 'settlements', label: 'Supplier Settlements', icon: Handshake },
+    { id: 'credit-notes', label: 'Credit Notes (CN)', icon: RotateCcw, hotkey: 'Alt+C' },
+    { id: 'settlements', label: 'Supplier Settlements', icon: Handshake, hotkey: 'Alt+T' },
   ];
+
+  // Global Navigation Hotkeys (Option A)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === 's') {
+          e.preventDefault();
+          setActiveTab('sales');
+          window.dispatchEvent(new CustomEvent('tradeflow_close_pos'));
+        } else if (k === 'p') {
+          e.preventDefault();
+          setActiveTab('sales');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+          }, 40);
+        } else if (k === 'm') {
+          e.preventDefault();
+          setActiveTab('medicines');
+        } else if (k === 'b' || k === 'u') {
+          e.preventDefault();
+          setActiveTab('purchases');
+        } else if (k === 'd') {
+          e.preventDefault();
+          setActiveTab('dashboard');
+        } else if (k === 'c') {
+          e.preventDefault();
+          setActiveTab('credit-notes');
+        } else if (k === 't' || k === 'l') {
+          e.preventDefault();
+          setActiveTab('settlements');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   useEffect(() => {
     if (activeCompany) {
@@ -483,9 +520,15 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                 onMouseLeave={(e) => {
                   if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
+                title={item.hotkey ? `${item.label} [${item.hotkey}]` : item.label}
               >
                 <Icon size={16} />
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.hotkey && (
+                  <span style={{ fontSize: '10px', opacity: 0.65, background: '#0a2e21', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                    {item.hotkey}
+                  </span>
+                )}
               </button>
             );
           })}
