@@ -35,7 +35,9 @@ import {
   ArrowDownLeft,
   Check,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Banknote,
+  QrCode
 } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -353,6 +355,10 @@ export default function Sales() {
     const netProfit = Math.max(0, netVal - netCost);
     const marginPct = netVal > 0 ? ((netProfit / netVal) * 100).toFixed(1) : '0.0';
 
+    const cashVal = activeInvs.filter(inv => (inv.paymentMode || '').toUpperCase() === 'CASH').reduce((sum, inv) => sum + inv.paidAmount, 0);
+    const upiVal = activeInvs.filter(inv => (inv.paymentMode || '').toUpperCase() === 'UPI').reduce((sum, inv) => sum + inv.paidAmount, 0);
+    const cardVal = activeInvs.filter(inv => (inv.paymentMode || '').toUpperCase() === 'CARD').reduce((sum, inv) => sum + inv.paidAmount, 0);
+
     const summaryData = [
       { 'Metric': 'Selected Period', 'Value': getDateRangeForPeriod(period, customStartDate, customEndDate).label },
       { 'Metric': 'Gross Invoiced Sales (A)', 'Value': `₹${grossVal.toFixed(2)}` },
@@ -361,7 +367,10 @@ export default function Sales() {
       { 'Metric': 'Total Purchase Cost / Inward PTR', 'Value': `₹${netCost.toFixed(2)}` },
       { 'Metric': 'TOTAL ESTIMATED PROFIT (MRP - Purchase Cost)', 'Value': `₹${netProfit.toFixed(2)}` },
       { 'Metric': 'Profit Margin (%)', 'Value': `${marginPct}%` },
-      { 'Metric': 'Collected Cash / UPI', 'Value': `₹${receivedVal.toFixed(2)}` },
+      { 'Metric': 'Collected Cash / UPI Total', 'Value': `₹${receivedVal.toFixed(2)}` },
+      { 'Metric': '  ↳ Cash Sales Collected', 'Value': `₹${cashVal.toFixed(2)}` },
+      { 'Metric': '  ↳ UPI Sales Collected', 'Value': `₹${upiVal.toFixed(2)}` },
+      ...(cardVal > 0 ? [{ 'Metric': '  ↳ Card Sales Collected', 'Value': `₹${cardVal.toFixed(2)}` }] : []),
       { 'Metric': 'Total Invoices Count', 'Value': activeInvs.length },
       { 'Metric': 'Total Return Vouchers Count', 'Value': groupedReturns.length },
       { 'Metric': 'Total Return Items Count', 'Value': patientReturns.length }
@@ -474,7 +483,8 @@ export default function Sales() {
       (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
       (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
       (inv.customerPhone && inv.customerPhone.includes(search)) ||
-      (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase()))
+      (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase())) ||
+      (inv.paymentMode && inv.paymentMode.toLowerCase().includes(search.toLowerCase()))
     );
 
   // Group patient returns by voucherNumber so multi-item returns appear as 1 return entry
@@ -528,6 +538,25 @@ export default function Sales() {
   const totalReturnsVal = patientReturns.reduce((sum, ret) => sum + ret.refundAmount, 0);
   const netSalesVal = Math.max(0, grossSalesVal - totalReturnsVal);
   const totalReceivedVal = activeInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+
+  // Breakdown of collections by payment mode (Cash flow & Digital)
+  const cashReceivedVal = activeInvoices
+    .filter(inv => (inv.paymentMode || '').toUpperCase() === 'CASH')
+    .reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+
+  const upiReceivedVal = activeInvoices
+    .filter(inv => (inv.paymentMode || '').toUpperCase() === 'UPI')
+    .reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+
+  const cardReceivedVal = activeInvoices
+    .filter(inv => (inv.paymentMode || '').toUpperCase() === 'CARD')
+    .reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+
+  const otherReceivedVal = Math.max(0, totalReceivedVal - cashReceivedVal - upiReceivedVal - cardReceivedVal);
+
+  const cashCount = activeInvoices.filter(inv => (inv.paymentMode || '').toUpperCase() === 'CASH').length;
+  const upiCount = activeInvoices.filter(inv => (inv.paymentMode || '').toUpperCase() === 'UPI').length;
+  const cardCount = activeInvoices.filter(inv => (inv.paymentMode || '').toUpperCase() === 'CARD').length;
 
   // Total Purchase Cost & Profit (MRP - Purchase Price / PTR minus returns)
   const grossCostVal = activeInvoices.reduce((sum, inv) => sum + (inv.costAmount || 0), 0);
@@ -746,16 +775,182 @@ export default function Sales() {
         </div>
 
         {/* 4. Collected Cash & Digital */}
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.15rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: '600' }}>
-            <span>Collected / Paid</span>
-            <CheckCircle2 size={17} style={{ color: 'var(--accent-green)' }} />
+        <div style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          padding: '1.15rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: '600' }}>
+              <span>Collected / Paid</span>
+              <CheckCircle2 size={17} style={{ color: 'var(--accent-green)' }} />
+            </div>
+            <div style={{ fontSize: '1.45rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.4rem', letterSpacing: '-0.02em' }}>
+              ₹{totalReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              Direct counter & digital collections
+            </div>
           </div>
-          <div style={{ fontSize: '1.45rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '0.4rem', letterSpacing: '-0.02em' }}>
-            ₹{totalReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Direct counter & digital collections
+
+          {/* Cash flow & UPI breakdown note */}
+          <div style={{
+            marginTop: '0.75rem',
+            paddingTop: '0.65rem',
+            borderTop: '1px dashed var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.35rem'
+          }}>
+            {/* Cash Sales Note (only if > 0) */}
+            {cashReceivedVal > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.78rem'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <Banknote size={15} style={{ color: '#10b981' }} />
+                  <span>Cash Sales:</span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#047857', fontWeight: 700 }}>
+                    ₹{cashReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                  {totalReceivedVal > 0 && (
+                    <span
+                      title={`${cashCount} cash bill${cashCount !== 1 ? 's' : ''}`}
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        color: '#065f46',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.68rem'
+                      }}
+                    >
+                      {((cashReceivedVal / totalReceivedVal) * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* UPI Sales Note (only if > 0) */}
+            {upiReceivedVal > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.78rem'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <QrCode size={15} style={{ color: '#0284c7' }} />
+                  <span>UPI Sales:</span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#0284c7', fontWeight: 700 }}>
+                    ₹{upiReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                  {totalReceivedVal > 0 && (
+                    <span
+                      title={`${upiCount} UPI bill${upiCount !== 1 ? 's' : ''}`}
+                      style={{
+                        background: 'rgba(2, 132, 199, 0.12)',
+                        color: '#0369a1',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.68rem'
+                      }}
+                    >
+                      {((upiReceivedVal / totalReceivedVal) * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback if no collections in period */}
+            {totalReceivedVal === 0 && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '0.2rem 0' }}>
+                No collections recorded for this period
+              </div>
+            )}
+
+            {/* Card Sales Note (only if > 0) */}
+            {cardReceivedVal > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.78rem'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <CreditCard size={15} style={{ color: '#8b5cf6' }} />
+                  <span>Card Sales:</span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#7c3aed', fontWeight: 700 }}>
+                    ₹{cardReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                  {totalReceivedVal > 0 && (
+                    <span
+                      title={`${cardCount} card bill${cardCount !== 1 ? 's' : ''}`}
+                      style={{
+                        background: 'rgba(139, 92, 246, 0.12)',
+                        color: '#7c3aed',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.68rem'
+                      }}
+                    >
+                      {((cardReceivedVal / totalReceivedVal) * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Other / Credit collections (only if > 0) */}
+            {otherReceivedVal > 0.01 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.78rem'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <CreditCard size={15} style={{ color: '#f59e0b' }} />
+                  <span>Other / Credit:</span>
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#b45309', fontWeight: 700 }}>
+                    ₹{otherReceivedVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                  {totalReceivedVal > 0 && (
+                    <span
+                      style={{
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        color: '#b45309',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        fontSize: '0.68rem'
+                      }}
+                    >
+                      {((otherReceivedVal / totalReceivedVal) * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1037,12 +1232,24 @@ export default function Sales() {
                       </td>
                       <td style={{ padding: '0.5rem 0.9rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          padding: '0.15rem 0.45rem',
+                          padding: '0.15rem 0.5rem',
                           borderRadius: '4px',
-                          background: 'var(--bg-secondary)',
                           fontSize: '0.72rem',
-                          fontWeight: '600',
-                          color: 'var(--text-secondary)'
+                          fontWeight: '700',
+                          background: inv.paymentMode === 'UPI'
+                            ? 'rgba(2, 132, 199, 0.12)'
+                            : inv.paymentMode === 'CASH'
+                            ? 'rgba(16, 185, 129, 0.12)'
+                            : inv.paymentMode === 'CARD'
+                            ? 'rgba(139, 92, 246, 0.12)'
+                            : 'var(--bg-secondary)',
+                          color: inv.paymentMode === 'UPI'
+                            ? '#0284c7'
+                            : inv.paymentMode === 'CASH'
+                            ? '#059669'
+                            : inv.paymentMode === 'CARD'
+                            ? '#7c3aed'
+                            : 'var(--text-secondary)'
                         }}>
                           {inv.paymentMode}
                         </span>
