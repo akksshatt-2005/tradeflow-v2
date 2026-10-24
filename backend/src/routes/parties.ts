@@ -44,6 +44,39 @@ async function ensureCashParty(companyId: string) {
 }
 
 /**
+ * Helper: Ensure payments table exists in PostgreSQL
+ */
+export async function ensurePaymentsTableExists() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        party_id UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+        purchase_id UUID REFERENCES purchases(id) ON DELETE SET NULL,
+        invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
+        voucher_no VARCHAR(100) NOT NULL,
+        payment_type VARCHAR(50) NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
+        payment_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        payment_mode VARCHAR(50) NOT NULL DEFAULT 'CASH',
+        reference_no VARCHAR(100),
+        notes TEXT,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_payments_company_party ON payments(company_id, party_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_company_date ON payments(company_id, payment_date);
+      CREATE INDEX IF NOT EXISTS idx_payments_company_purchase ON payments(company_id, purchase_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_company_invoice ON payments(company_id, invoice_id);
+    `);
+  } catch (err) {
+    // Non-fatal if table already exists or schema managed by Prisma
+  }
+}
+
+/**
  * GET /parties
  * List parties filtered by type ('supplier' | 'customer' | 'both') with optional search
  */
@@ -593,74 +626,18 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       ]
     };
 
-    // 1. If startDate is set, compute Prior Period Accumulations to arrive at exact Period Opening Balance
-    let priorPurchasesTotal = 0;
-    let priorPurchasesPaid = 0;
-    let priorReturnsTotal = 0;
-    let priorInvoicesTotal = 0;
-    let priorInvoicesPaid = 0;
+    // Ensure payments table exists
+    await ensurePaymentsTableExists();
 
-    if (parsedStart) {
-      let priorP: any[] = [];
-      let priorR: any[] = [];
-      let priorI: any[] = [];
-
-      try {
-        priorP = await prisma.purchase.findMany({
-          where: { ...basePurchaseWhere, purchaseDate: { lt: parsedStart } },
-          select: { totalAmount: true, paidAmount: true }
-        });
-      } catch (e: any) {
-        console.warn('Prior purchases query error:', e.message);
-      }
-
-      try {
-        priorR = await prisma.purchaseReturn.findMany({
-          where: { ...baseReturnWhere, returnDate: { lt: parsedStart } },
-          select: { totalAmount: true }
-        });
-      } catch (e: any) {
-        console.warn('Prior purchaseReturn query skipped (table may not exist yet):', e.message);
-      }
-
-      try {
-        priorI = await prisma.invoice.findMany({
-          where: { ...baseInvoiceWhere, invoiceDate: { lt: parsedStart } },
-          select: { grandTotal: true, paidAmount: true }
-        });
-      } catch (e: any) {
-        console.warn('Prior invoice query error:', e.message);
-      }
-
-      priorPurchasesTotal = priorP.reduce((sum, p) => sum + Number(p.totalAmount), 0);
-      priorPurchasesPaid = priorP.reduce((sum, p) => sum + Number(p.paidAmount || 0), 0);
-      priorReturnsTotal = priorR.reduce((sum, r) => sum + Number(r.totalAmount), 0);
-      priorInvoicesTotal = priorI.reduce((sum, i) => sum + Number(i.grandTotal), 0);
-      priorInvoicesPaid = priorI.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);
-    }
-
-    // 2. Query in-period purchases, returns, and invoices
-    const inPeriodPurchaseWhere = { ...basePurchaseWhere };
-    const inPeriodReturnWhere = { ...baseReturnWhere };
-    const inPeriodInvoiceWhere = { ...baseInvoiceWhere };
-
-    if (parsedStart || parsedEnd) {
-      const dFilter: any = {};
-      if (parsedStart) dFilter.gte = parsedStart;
-      if (parsedEnd) dFilter.lte = parsedEnd;
-
-      inPeriodPurchaseWhere.purchaseDate = dFilter;
-      inPeriodReturnWhere.returnDate = dFilter;
-      inPeriodInvoiceWhere.invoiceDate = dFilter;
-    }
-
-    let purchases: any[] = [];
-    let returns: any[] = [];
-    let invoices: any[] = [];
+    // 1. Fetch all historical transactions for this party to accurately partition into Prior Period vs In-Period
+    let allPurchases: any[] = [];
+    let allReturns: any[] = [];
+    let allInvoices: any[] = [];
+    let allPartyPayments: any[] = [];
 
     try {
-      purchases = await prisma.purchase.findMany({
-        where: inPeriodPurchaseWhere,
+      allPurchases = await prisma.purchase.findMany({
+        where: basePurchaseWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -673,8 +650,8 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     }
 
     try {
-      returns = await prisma.purchaseReturn.findMany({
-        where: inPeriodReturnWhere,
+      allReturns = await prisma.purchaseReturn.findMany({
+        where: baseReturnWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -683,12 +660,12 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         orderBy: { returnDate: 'asc' }
       });
     } catch (e: any) {
-      console.warn('purchaseReturn query skipped (table may not exist yet):', e.message);
+      console.warn('purchaseReturn query skipped:', e.message);
     }
 
     try {
-      invoices = await prisma.invoice.findMany({
-        where: inPeriodInvoiceWhere,
+      allInvoices = await prisma.invoice.findMany({
+        where: baseInvoiceWhere,
         include: {
           items: {
             include: { item: { select: { name: true, sku: true } } }
@@ -700,21 +677,158 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       console.warn('Invoices query error:', e.message);
     }
 
+    try {
+      allPartyPayments = await prisma.payment.findMany({
+        where: {
+          companyId,
+          partyId: { in: partyIds }
+        },
+        orderBy: { paymentDate: 'asc' }
+      });
+    } catch (e: any) {
+      console.warn('Payments query error:', e.message);
+    }
+
+    // Determine unlinked legacy payments from purchases and sales
+    interface ResolvedPayment {
+      date: Date;
+      voucherNo: string;
+      referenceId: string;
+      type: 'PAYMENT';
+      typeLabel: string;
+      particulars: string;
+      amount: number;
+    }
+
+    const resolvedPayments: ResolvedPayment[] = [];
+
+    // A. Add all formal payments from the payments table
+    for (const pay of allPartyPayments) {
+      resolvedPayments.push({
+        date: new Date(pay.paymentDate),
+        voucherNo: pay.voucherNo,
+        referenceId: pay.id,
+        type: 'PAYMENT',
+        typeLabel: pay.paymentType === 'PAYMENT_OUT' ? 'Payment Made' : 'Payment Received',
+        particulars: pay.notes || (pay.purchaseId ? `Payment for Bill #${pay.voucherNo}` : `Payment (${pay.paymentMode})`),
+        amount: Number(pay.amount)
+      });
+    }
+
+    // B. Check for legacy purchase payments not in payments table
+    for (const p of allPurchases) {
+      const totPaid = Number(p.paidAmount || 0);
+      if (totPaid <= 0) continue;
+
+      const linked = allPartyPayments.filter(pay => pay.purchaseId === p.id);
+      const linkedTotal = linked.reduce((sum, pay) => sum + Number(pay.amount), 0);
+      const unlinkedPaid = Math.round((totPaid - linkedTotal) * 100) / 100;
+
+      if (unlinkedPaid > 0.001) {
+        // If updatedAt is significantly after purchaseDate (>2h), the payment was recorded later!
+        const pDate = new Date(p.purchaseDate);
+        const uDate = p.updatedAt ? new Date(p.updatedAt) : pDate;
+        const wasUpdatedLater = (uDate.getTime() - pDate.getTime()) > (2 * 60 * 60 * 1000);
+        const legacyDate = wasUpdatedLater ? uDate : pDate;
+
+        resolvedPayments.push({
+          date: legacyDate,
+          voucherNo: `PAY-${p.invoiceNumber}`,
+          referenceId: p.id,
+          type: 'PAYMENT',
+          typeLabel: 'Payment Made',
+          particulars: `Payment for Bill #${p.invoiceNumber} (${p.paymentMode})`,
+          amount: unlinkedPaid
+        });
+      }
+    }
+
+    // C. Check for legacy invoice payments not in payments table
+    for (const inv of allInvoices) {
+      const totPaid = Number(inv.paidAmount || 0);
+      if (totPaid <= 0) continue;
+
+      const linked = allPartyPayments.filter(pay => pay.invoiceId === inv.id);
+      const linkedTotal = linked.reduce((sum, pay) => sum + Number(pay.amount), 0);
+      const unlinkedPaid = Math.round((totPaid - linkedTotal) * 100) / 100;
+
+      if (unlinkedPaid > 0.001) {
+        const iDate = new Date(inv.invoiceDate);
+        const uDate = inv.updatedAt ? new Date(inv.updatedAt) : iDate;
+        const wasUpdatedLater = (uDate.getTime() - iDate.getTime()) > (2 * 60 * 60 * 1000);
+        const legacyDate = wasUpdatedLater ? uDate : iDate;
+
+        resolvedPayments.push({
+          date: legacyDate,
+          voucherNo: `REC-${inv.invoiceNumber}`,
+          referenceId: inv.id,
+          type: 'PAYMENT',
+          typeLabel: 'Payment Received',
+          particulars: `Received for Bill #${inv.invoiceNumber} (${inv.paymentMode})`,
+          amount: unlinkedPaid
+        });
+      }
+    }
+
+    // 2. Compute Prior Period Accumulations (strictly before parsedStart)
+    let priorPurchasesTotal = 0;
+    let priorReturnsTotal = 0;
+    let priorInvoicesTotal = 0;
+    let priorPaymentsTotal = 0;
+
+    if (parsedStart) {
+      const startMs = parsedStart.getTime();
+
+      for (const p of allPurchases) {
+        if (new Date(p.purchaseDate).getTime() < startMs) {
+          priorPurchasesTotal += Number(p.totalAmount);
+        }
+      }
+
+      for (const r of allReturns) {
+        if (new Date(r.returnDate).getTime() < startMs) {
+          priorReturnsTotal += Number(r.totalAmount);
+        }
+      }
+
+      for (const inv of allInvoices) {
+        if (new Date(inv.invoiceDate).getTime() < startMs) {
+          priorInvoicesTotal += Number(inv.grandTotal);
+        }
+      }
+
+      for (const pay of resolvedPayments) {
+        if (pay.date.getTime() < startMs) {
+          priorPaymentsTotal += pay.amount;
+        }
+      }
+    }
+
+    // 3. Compute Effective Period Opening Balance
     const rawOpeningBalance = Number(party.openingBalance || 0);
     const outstanding = Number(party.outstandingBalance || 0);
     const initialOpeningBalance = rawOpeningBalance > 0
       ? rawOpeningBalance
-      : (purchases.length === 0 && returns.length === 0 && outstanding > 0 ? outstanding : rawOpeningBalance);
+      : (allPurchases.length === 0 && allReturns.length === 0 && outstanding > 0 ? outstanding : rawOpeningBalance);
     const openingType = party.openingBalanceType || (party.type === 'supplier' ? 'CR' : 'DR');
 
-    // Effective Period Opening Balance (Base + Prior Debits - Prior Credits)
     let periodOpeningBalance = initialOpeningBalance;
     if (parsedStart) {
-      // Prior debits increase balance, prior credits decrease balance
       const priorDebit = priorPurchasesTotal + priorInvoicesTotal;
-      const priorCredit = priorReturnsTotal + priorPurchasesPaid + priorInvoicesPaid;
+      const priorCredit = priorReturnsTotal + priorPaymentsTotal;
       periodOpeningBalance = initialOpeningBalance + (priorDebit - priorCredit);
     }
+
+    // 4. Filter In-Period Transactions
+    const startMs = parsedStart ? parsedStart.getTime() : null;
+    const endMs = parsedEnd ? parsedEnd.getTime() : null;
+
+    const isInPeriod = (d: Date) => {
+      const ms = d.getTime();
+      if (startMs !== null && ms < startMs) return false;
+      if (endMs !== null && ms > endMs) return false;
+      return true;
+    };
 
     // Build unified chronological ledger stream
     const rawTransactions: Array<{
@@ -730,7 +844,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     }> = [];
 
     // 0. Include Period Opening Balance Row
-    if (periodOpeningBalance !== 0 || purchases.length > 0 || returns.length > 0) {
+    if (periodOpeningBalance !== 0 || allPurchases.length > 0 || allReturns.length > 0) {
       rawTransactions.push({
         date: parsedStart || party.createdAt || new Date('2026-01-01'),
         type: 'OPENING_BALANCE',
@@ -745,14 +859,16 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       });
     }
 
-    // 1. Inward Purchases
-    for (const p of purchases) {
+    // 1. In-Period Purchases
+    for (const p of allPurchases) {
+      const pDate = new Date(p.purchaseDate);
+      if (!isInPeriod(pDate)) continue;
+
       const tot = Number(p.totalAmount);
-      const paid = Number(p.paidAmount || 0);
       const itemSummary = p.items.map((i: any) => `${i.item?.name || 'Medicine'} (${i.batchNumber}) x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
-        date: p.purchaseDate,
+        date: pDate,
         type: 'PURCHASE',
         typeLabel: 'Purchase Bill Inward',
         voucherNo: p.invoiceNumber,
@@ -769,29 +885,18 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         debit: tot,
         credit: 0
       });
-
-      // If purchase had immediate partial or full payment
-      if (paid > 0) {
-        rawTransactions.push({
-          date: p.purchaseDate,
-          type: 'PAYMENT',
-          typeLabel: 'Payment Made',
-          voucherNo: `PAY-${p.invoiceNumber}`,
-          referenceId: p.id,
-          particulars: `Payment for Bill #${p.invoiceNumber} (${p.paymentMode})`,
-          debit: 0,
-          credit: paid
-        });
-      }
     }
 
-    // 2. Supplier Returns / Credit Notes (CN)
-    for (const r of returns) {
+    // 2. In-Period Supplier Returns (CN)
+    for (const r of allReturns) {
+      const rDate = new Date(r.returnDate);
+      if (!isInPeriod(rDate)) continue;
+
       const tot = Number(r.totalAmount);
       const itemSummary = r.items.map((i: any) => `${i.item?.name || 'Medicine'} (Batch: ${i.batchNumber}) x ${i.strips > 0 ? `${i.strips} Str` : ''}${i.looseQty > 0 ? ` + ${i.looseQty} Loose` : ''}`).join(', ');
 
       rawTransactions.push({
-        date: r.returnDate,
+        date: rDate,
         type: 'PURCHASE_RETURN',
         typeLabel: 'Supplier Return (CN / Debit Note)',
         voucherNo: r.returnNumber,
@@ -812,14 +917,16 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       });
     }
 
-    // 3. Customer Sales Invoices
-    for (const inv of invoices) {
+    // 3. In-Period Customer Sales Invoices
+    for (const inv of allInvoices) {
+      const iDate = new Date(inv.invoiceDate);
+      if (!isInPeriod(iDate)) continue;
+
       const tot = Number(inv.grandTotal);
-      const paid = Number(inv.paidAmount || 0);
       const itemSummary = inv.items.map((i: any) => `${i.item?.name || 'Medicine'} x ${i.quantity}`).join(', ');
 
       rawTransactions.push({
-        date: inv.invoiceDate,
+        date: iDate,
         type: 'SALE',
         typeLabel: 'Sales Invoice',
         voucherNo: inv.invoiceNumber,
@@ -835,19 +942,22 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
         debit: tot,
         credit: 0
       });
+    }
 
-      if (paid > 0) {
-        rawTransactions.push({
-          date: inv.invoiceDate,
-          type: 'PAYMENT',
-          typeLabel: 'Payment Received',
-          voucherNo: `REC-${inv.invoiceNumber}`,
-          referenceId: inv.id,
-          particulars: `Received for Bill #${inv.invoiceNumber} (${inv.paymentMode})`,
-          debit: 0,
-          credit: paid
-        });
-      }
+    // 4. In-Period Payments (Exact Date)
+    for (const pay of resolvedPayments) {
+      if (!isInPeriod(pay.date)) continue;
+
+      rawTransactions.push({
+        date: pay.date,
+        type: 'PAYMENT',
+        typeLabel: pay.typeLabel,
+        voucherNo: pay.voucherNo,
+        referenceId: pay.referenceId,
+        particulars: pay.particulars,
+        debit: 0,
+        credit: pay.amount
+      });
     }
 
     // 4. Sort chronologically
@@ -902,9 +1012,9 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       summary: {
         openingBalance: Math.round(periodOpeningBalance * 100) / 100,
         openingBalanceType: openingType,
-        purchaseCount: purchases.length,
+        purchaseCount: rawTransactions.filter(t => t.type === 'PURCHASE').length,
         totalPurchases: Math.round(totalPurchases * 100) / 100,
-        returnCount: returns.length,
+        returnCount: rawTransactions.filter(t => t.type === 'PURCHASE_RETURN').length,
         totalReturns: Math.round(totalReturns * 100) / 100,
         paymentCount: rawTransactions.filter(t => t.type === 'PAYMENT').length,
         totalPayments: Math.round(totalPayments * 100) / 100,

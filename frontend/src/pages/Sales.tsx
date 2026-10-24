@@ -209,6 +209,9 @@ export default function Sales() {
   // Payment Recording State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(getLocalDateString());
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER'>('CASH');
+  const [referenceNo, setReferenceNo] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
 
   const getDateRangeForPeriod = (p: PeriodOption, customStart?: string, customEnd?: string) => {
@@ -424,6 +427,9 @@ export default function Sales() {
   const handleOpenPayment = (inv: InvoiceListItem) => {
     setViewingInvoice(inv);
     setPaymentAmount(String(inv.balanceAmount));
+    setPaymentDate(getLocalDateString());
+    setPaymentMode('CASH');
+    setReferenceNo('');
     setShowPaymentModal(true);
   };
 
@@ -439,8 +445,10 @@ export default function Sales() {
       setRecordingPayment(true);
       await api.post(`/api/invoices/${viewingInvoice.id}/payment`, {
         paymentAmount: amt,
-        paymentMode: 'CASH',
-        notes: 'Customer ledger settlement'
+        paymentDate,
+        paymentMode,
+        referenceNo: referenceNo.trim() || undefined,
+        notes: `Customer settlement for Bill #${viewingInvoice.invoiceNumber}`
       }, {
         companyId: activeCompany.id,
         idempotencyKey: `pay-inv-${Date.now()}`
@@ -1949,9 +1957,58 @@ export default function Sales() {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1.2rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                  Payment Date *
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={e => setPaymentDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                  Payment Mode
+                </label>
+                <select
+                  value={paymentMode}
+                  onChange={e => setPaymentMode(e.target.value as any)}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="CARD">Card</option>
+                  <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
+                </select>
+              </div>
+            </div>
+
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                Payment Amount (₹)
+                Payment Amount (₹) *
               </label>
               <input
                 type="number"
@@ -1967,7 +2024,30 @@ export default function Sales() {
                   borderRadius: '6px',
                   color: 'var(--text-primary)',
                   fontWeight: '700',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                Reference / Notes (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. UPI Ref / Cheque / Settlement note"
+                value={referenceNo}
+                onChange={e => setReferenceNo(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.65rem',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>

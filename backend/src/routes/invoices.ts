@@ -1187,8 +1187,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
  */
 router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
+  const userId = req.user!.userId;
   const { id } = req.params;
-  const { paymentAmount, amount, paymentMode = 'CASH', notes } = req.body;
+  const { paymentAmount, amount, paymentDate, paymentMode = 'CASH', referenceNo, notes } = req.body;
 
   const numPayment = parseFloat(paymentAmount !== undefined ? paymentAmount : amount) || 0;
   if (numPayment <= 0) {
@@ -1218,6 +1219,7 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
     const actualPayment = Math.min(numPayment, balanceRemaining);
     const newPaid = currentPaid + actualPayment;
     const newStatus = newPaid >= total ? 'PAID' : 'PARTIAL';
+    const effectivePaymentDate = paymentDate ? new Date(paymentDate) : new Date();
 
     await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -1236,6 +1238,23 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
             outstandingBalance: { decrement: actualPayment }
           }
         });
+
+        // Create permanent Payment transaction voucher
+        await tx.payment.create({
+          data: {
+            companyId,
+            partyId: invoice.partyId,
+            invoiceId: invoice.id,
+            voucherNo: `REC-${invoice.invoiceNumber}`,
+            paymentType: 'PAYMENT_IN',
+            amount: actualPayment,
+            paymentDate: effectivePaymentDate,
+            paymentMode: String(paymentMode || 'CASH'),
+            referenceNo: referenceNo ? String(referenceNo).trim() : null,
+            notes: notes ? String(notes).trim() : `Customer payment for Bill #${invoice.invoiceNumber} (${paymentMode || 'CASH'})`,
+            createdBy: userId
+          }
+        });
       }
     });
 
@@ -1249,7 +1268,8 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
       },
       paidAmount: newPaid,
       status: newStatus,
-      message: `Customer payment of ₹${actualPayment.toFixed(2)} recorded successfully`
+      paymentDate: effectivePaymentDate.toISOString(),
+      message: `Customer payment of ₹${actualPayment.toFixed(2)} recorded successfully on ${effectivePaymentDate.toLocaleDateString('en-IN')}`
     });
   } catch (error: any) {
     console.error('Error recording invoice payment:', error);

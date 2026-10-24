@@ -25,6 +25,7 @@ model User {
   createdInvoices    Invoice[]
   createdReturns     PurchaseReturn[]
   createdSettlements SupplierSettlement[]
+  payments           Payment[]
 
   @@map("users")
 }
@@ -53,6 +54,7 @@ model Company {
   purchaseReturns PurchaseReturn[]
   invoices        Invoice[]
   settlements     SupplierSettlement[]
+  payments        Payment[]
 
   @@map("companies")
 }
@@ -227,6 +229,7 @@ model Party {
   purchaseReturns PurchaseReturn[]
   invoices        Invoice[]
   settlements     SupplierSettlement[]
+  payments        Payment[]
 
   @@unique([companyId, name, type])
   @@index([companyId, type])
@@ -289,6 +292,7 @@ model Purchase {
   supplier Party          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   creator  User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   items    PurchaseItem[]
+  payments Payment[]
 
   @@unique([companyId, supplierId, invoiceNumber])
   @@index([companyId, purchaseDate])
@@ -368,6 +372,7 @@ model Invoice {
   party    Party?        @relation(fields: [partyId], references: [id], onDelete: SetNull)
   creator  User          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   items    InvoiceItem[]
+  payments Payment[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, invoiceDate])
@@ -506,5 +511,36 @@ model SupplierSettlement {
   @@index([companyId, manufacturer])
   @@index([companyId, supplierId])
   @@map("supplier_settlements")
+}
+
+// 19. Payments & Vouchers (Cash, Bank, UPI towards Purchases or Invoices)
+model Payment {
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
+  partyId     String    @map("party_id")
+  purchaseId  String?   @map("purchase_id")
+  invoiceId   String?   @map("invoice_id")
+  voucherNo   String    @map("voucher_no")
+  paymentType String    @map("payment_type") // "PAYMENT_OUT" (paid to supplier) | "PAYMENT_IN" (received from customer)
+  amount      Decimal   @db.Decimal(12, 2)
+  paymentDate DateTime  @default(now()) @map("payment_date")
+  paymentMode String    @default("CASH") @map("payment_mode") // CASH, UPI, BANK_TRANSFER, CHEQUE
+  referenceNo String?   @map("reference_no")
+  notes       String?
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  party    Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  purchase Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  creator  User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([companyId, partyId])
+  @@index([companyId, paymentDate])
+  @@index([companyId, purchaseId])
+  @@index([companyId, invoiceId])
+  @@map("payments")
 }
 

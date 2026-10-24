@@ -91,6 +91,10 @@ export default function Purchases() {
   // Payment Recording State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(getLocalDateString());
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'BANK_TRANSFER' | 'UPI' | 'CHEQUE'>('CASH');
+  const [referenceNo, setReferenceNo] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
 
   useEffect(() => {
@@ -177,13 +181,20 @@ export default function Purchases() {
       setError(null);
 
       await api.post(`/api/purchases/${viewingPurchase.id}/payment`, {
-        paymentAmount: parseFloat(paymentAmount)
+        paymentAmount: parseFloat(paymentAmount),
+        paymentDate,
+        paymentMode,
+        referenceNo: referenceNo.trim() || undefined,
+        notes: paymentNotes.trim() || undefined
       }, {
         companyId: activeCompany.id
       });
 
       setShowPaymentModal(false);
       setPaymentAmount('');
+      setPaymentDate(getLocalDateString());
+      setReferenceNo('');
+      setPaymentNotes('');
       await handleOpenDetails(viewingPurchase.id);
       await fetchPurchases();
     } catch (err: any) {
@@ -819,6 +830,32 @@ export default function Purchases() {
                   Balance Due on Bill #{viewingPurchase.invoiceNumber}: <strong>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</strong>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="form-group">
+                    <label className="label">Payment Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Payment Mode</label>
+                    <select
+                      value={paymentMode}
+                      onChange={(e) => setPaymentMode(e.target.value as any)}
+                      className="input"
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
+                      <option value="UPI">UPI</option>
+                      <option value="CHEQUE">Cheque</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label className="label">Payment Amount (₹) *</label>
                   <input
@@ -828,6 +865,17 @@ export default function Purchases() {
                     max={viewingPurchase.totalAmount - viewingPurchase.paidAmount}
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="label">Reference / UTR / Cheque # (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UPI Ref / UTR / Cheque number"
+                    value={referenceNo}
+                    onChange={(e) => setReferenceNo(e.target.value)}
                     className="input"
                   />
                 </div>

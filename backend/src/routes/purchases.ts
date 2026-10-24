@@ -1177,8 +1177,9 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
  */
 router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
+  const userId = req.user!.userId;
   const { id } = req.params;
-  const { paymentAmount, amount } = req.body;
+  const { paymentAmount, amount, paymentDate, paymentMode = 'CASH', referenceNo, notes } = req.body;
 
   const numPayment = parseFloat(paymentAmount !== undefined ? paymentAmount : amount) || 0;
   if (numPayment <= 0) {
@@ -1208,6 +1209,7 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
     const actualPayment = Math.min(numPayment, balanceRemaining);
     const newPaid = currentPaid + actualPayment;
     const newStatus = newPaid >= total ? 'PAID' : 'PARTIAL';
+    const effectivePaymentDate = paymentDate ? new Date(paymentDate) : new Date();
 
     await prisma.$transaction(async (tx) => {
       await tx.purchase.update({
@@ -1225,6 +1227,23 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
           outstandingBalance: { decrement: actualPayment }
         }
       });
+
+      // Create permanent Payment transaction voucher
+      await tx.payment.create({
+        data: {
+          companyId,
+          partyId: purchase.supplierId,
+          purchaseId: purchase.id,
+          voucherNo: `PAY-${purchase.invoiceNumber}`,
+          paymentType: 'PAYMENT_OUT',
+          amount: actualPayment,
+          paymentDate: effectivePaymentDate,
+          paymentMode: String(paymentMode || 'CASH'),
+          referenceNo: referenceNo ? String(referenceNo).trim() : null,
+          notes: notes ? String(notes).trim() : `Payment for Bill #${purchase.invoiceNumber} (${paymentMode || 'CASH'})`,
+          createdBy: userId
+        }
+      });
     });
 
     res.status(200).json({
@@ -1237,7 +1256,8 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
       },
       paidAmount: newPaid,
       status: newStatus,
-      message: `Payment of ₹${actualPayment.toFixed(2)} recorded successfully`
+      paymentDate: effectivePaymentDate.toISOString(),
+      message: `Payment of ₹${actualPayment.toFixed(2)} recorded successfully on ${effectivePaymentDate.toLocaleDateString('en-IN')}`
     });
   } catch (error: any) {
     console.error('Error recording purchase payment:', error);
