@@ -1171,20 +1171,20 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
         {/* Sale Entry Grid (Responsive & Horizontal Scroll Protected) */}
         <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <table style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <table style={{ width: '100%', minWidth: '1060px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '0.75rem 0.6rem', width: '35px', textAlign: 'center' }}>#</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '38px', minWidth: '38px', textAlign: 'center' }}>#</th>
                 <th style={{ padding: '0.75rem 0.8rem', minWidth: '200px' }}>PRODUCT</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }}>PACK</th>
-                <th style={{ padding: '0.75rem 0.8rem', minWidth: '150px' }}>BATCH</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }} title="Full Strips / Packs">STRIPS</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '85px', textAlign: 'center' }} title="Loose Tablets (e.g. 2 tabs or 12 tabs)">LOOSE TABS</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '95px', textAlign: 'right' }}>M.R.P./S</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '75px', textAlign: 'center' }}>DIS%</th>
-                <th style={{ padding: '0.75rem 0.6rem', width: '80px', textAlign: 'center' }} title="GST rate percentage (Editable per item)">GST% ✎</th>
-                <th style={{ padding: '0.75rem 0.8rem', width: '115px', textAlign: 'right' }}>AMOUNT (₹)</th>
-                <th style={{ padding: '0.75rem 0.5rem', width: '35px' }}></th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '85px', minWidth: '85px', textAlign: 'center' }}>PACK</th>
+                <th style={{ padding: '0.75rem 0.8rem', width: '180px', minWidth: '170px' }}>BATCH</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '85px', minWidth: '80px', textAlign: 'center' }} title="Full Strips / Packs">STRIPS</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '90px', minWidth: '85px', textAlign: 'center' }} title="Loose Tablets (e.g. 2 tabs or 12 tabs)">LOOSE TABS</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '115px', minWidth: '105px', textAlign: 'right' }}>M.R.P./S</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '75px', minWidth: '70px', textAlign: 'center' }}>DIS%</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '80px', minWidth: '75px', textAlign: 'center' }} title="GST rate percentage (Editable per item)">GST% ✎</th>
+                <th style={{ padding: '0.75rem 0.8rem', width: '130px', minWidth: '120px', textAlign: 'right' }}>AMOUNT (₹)</th>
+                <th style={{ padding: '0.75rem 0.5rem', width: '35px', minWidth: '35px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -1232,7 +1232,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       </td>
 
                       {/* Batch Selection */}
-                      <td style={{ padding: '0.6rem 0.8rem' }}>
+                      <td style={{ padding: '0.6rem 0.7rem' }}>
                         {batches.length > 1 ? (
                           <select
                             value={item.batchId}
@@ -1252,6 +1252,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             title="Batch containing more strips is selected by default. Click to switch batch."
                             style={{
                               width: '100%',
+                              boxSizing: 'border-box',
                               padding: '0.4rem 0.5rem',
                               background: 'var(--bg-secondary)',
                               border: '1.5px solid var(--brand-teal)',
@@ -1260,7 +1261,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                               fontSize: '0.82rem',
                               fontWeight: '600',
                               cursor: 'pointer',
-                              outline: 'none'
+                              outline: 'none',
+                              whiteSpace: 'nowrap'
                             }}
                           >
                             {batches.map(b => {
@@ -1285,12 +1287,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             gap: '0.35rem',
                             background: 'rgba(20, 184, 166, 0.08)',
                             color: 'var(--brand-teal)',
-                            padding: '0.3rem 0.6rem',
+                            padding: '0.35rem 0.6rem',
                             borderRadius: '5px',
                             border: '1px solid rgba(20, 184, 166, 0.2)',
                             fontFamily: 'monospace',
                             fontWeight: '700',
-                            fontSize: '0.85rem'
+                            fontSize: '0.85rem',
+                            whiteSpace: 'nowrap'
                           }}>
                             <span>{item.batchNumber}</span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '500' }}>
@@ -1301,7 +1304,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       </td>
 
                       {/* STRI (Full Strips) */}
-                      <td style={{ padding: '0.6rem 0.6rem' }}>
+                      <td style={{ padding: '0.6rem 0.5rem' }}>
                         <input
                           ref={el => { stripsInputRefs.current[idx] = el; }}
                           type="number"
@@ -1319,12 +1322,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                               medicineInputRef.current?.focus();
                             }
                           }}
-                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                         />
                       </td>
 
                       {/* LOOSE TABS (Loose Units) */}
-                      <td style={{ padding: '0.6rem 0.6rem' }}>
+                      <td style={{ padding: '0.6rem 0.5rem' }}>
                         <input
                           type="number"
                           min="0"
@@ -1342,12 +1345,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                               medicineInputRef.current?.focus();
                             }
                           }}
-                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
                         />
                       </td>
 
                       {/* MRP / Strip Price */}
-                      <td style={{ padding: '0.6rem 0.6rem' }}>
+                      <td style={{ padding: '0.6rem 0.5rem' }}>
                         <input
                           type="number"
                           step="0.01"
@@ -1358,12 +1361,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             const val = e.target.value;
                             updateLineItem(idx, { unitPrice: val === '' ? 0 : Math.max(0, parseFloat(val) || 0) });
                           }}
-                          style={{ width: '100%', padding: '0.4rem 0.4rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}
                         />
                       </td>
 
                       {/* Discount % */}
-                      <td style={{ padding: '0.6rem 0.6rem' }}>
+                      <td style={{ padding: '0.6rem 0.5rem' }}>
                         <input
                           type="number"
                           min="0"
@@ -1375,7 +1378,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             const val = e.target.value;
                             updateLineItem(idx, { discountPercent: val === '' ? 0 : Math.min(100, Math.max(0, parseFloat(val) || 0)) });
                           }}
-                          style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
                         />
                       </td>
 
@@ -1397,6 +1400,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             }}
                             style={{
                               width: '56px',
+                              boxSizing: 'border-box',
                               padding: '0.35rem 0.2rem',
                               background: item.gstRate === 0 ? 'rgba(148, 163, 184, 0.12)' : 'rgba(20, 184, 166, 0.1)',
                               border: item.gstRate === 0 ? '1px dashed var(--border-color)' : '1px solid var(--brand-teal)',
@@ -1413,7 +1417,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       </td>
 
                       {/* Line Amount */}
-                      <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', fontWeight: '800', color: 'var(--text-primary)' }}>
+                      <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', fontWeight: '800', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                         ₹{item.totalAmount.toFixed(2)}
                       </td>
 

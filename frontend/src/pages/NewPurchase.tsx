@@ -113,6 +113,26 @@ export default function NewPurchase({
   // Active Row Focus for Footer Inspection HUD
   const [activeRowIndex, setActiveRowIndex] = useState<number>(0);
 
+  // Keyboard Navigation Refs for Zero-Mouse Rapid Inward Entry
+  const supplierInputRef = useRef<HTMLInputElement>(null);
+  const partyBillNoInputRef = useRef<HTMLInputElement>(null);
+  const billDateInputRef = useRef<HTMLInputElement>(null);
+
+  const medInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const batchInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const expMonthInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const expYearInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const qtyInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const freeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const rateInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const discInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const gstInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const mrpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Navigation indices for keyboard-driven dropdowns
+  const [supplierDropdownIndex, setSupplierDropdownIndex] = useState<number>(0);
+  const [medDropdownIndex, setMedDropdownIndex] = useState<number>(0);
+
   // Helper to create a blank purchase row with no dummy pre-filled values
   const createEmptyRow = (id: string): PurchaseRow => ({
     id,
@@ -454,8 +474,12 @@ export default function NewPurchase({
   };
 
   const handleAddRow = () => {
+    const nextIdx = rows.length;
     setRows(prev => [...prev, createEmptyRow(`row-${Date.now()}`)]);
-    setActiveRowIndex(rows.length);
+    setActiveRowIndex(nextIdx);
+    setTimeout(() => {
+      medInputRefs.current[nextIdx]?.focus();
+    }, 60);
   };
 
   const handleRemoveRow = (index: number) => {
@@ -501,6 +525,13 @@ export default function NewPurchase({
     });
     setActiveSearchRowIndex(null);
     setSearchQuery('');
+    setMedDropdownIndex(0);
+
+    // Auto-advance focus to Batch input
+    setTimeout(() => {
+      batchInputRefs.current[index]?.focus();
+      batchInputRefs.current[index]?.select();
+    }, 60);
   };
 
   const handleCreateNewMedicineInline = (index: number, customName: string) => {
@@ -528,6 +559,13 @@ export default function NewPurchase({
     });
     setActiveSearchRowIndex(null);
     setSearchQuery('');
+    setMedDropdownIndex(0);
+
+    // Auto-advance focus to Batch input
+    setTimeout(() => {
+      batchInputRefs.current[index]?.focus();
+      batchInputRefs.current[index]?.select();
+    }, 60);
   };
 
   const handleQuickAddMedicineSubmit = async (e: React.FormEvent) => {
@@ -825,6 +863,60 @@ export default function NewPurchase({
     }
   };
 
+  // Global Keyboard Shortcuts (F2: Save, F4: Quick Add Medicine, Alt+A: Add Row, Alt+D: Remove Row, Escape: Close)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (showAddMedicineModal || showAddSupplierModal) {
+        if (e.key === 'Escape') {
+          setShowAddMedicineModal(false);
+          setShowAddSupplierModal(false);
+        }
+        return;
+      }
+
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (!submitting) {
+          handleSubmit();
+        }
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        setShowAddMedicineModal(true);
+      } else if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        handleAddRow();
+      } else if (e.altKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        if (rows.length > 1) {
+          handleRemoveRow(activeRowIndex);
+        }
+      } else if (e.key === 'Escape') {
+        setActiveSearchRowIndex(null);
+        setShowSupplierDropdown(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [
+    showAddMedicineModal,
+    showAddSupplierModal,
+    submitting,
+    activeCompany,
+    selectedSupplierId,
+    partyBillNo,
+    rows,
+    activeRowIndex,
+    editingPurchaseId,
+    entryDate,
+    billDate,
+    purchaseType,
+    paymentMode,
+    paidAmount,
+    notes,
+    entryNo
+  ]);
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
       {/* Top Header */}
@@ -957,15 +1049,49 @@ export default function NewPurchase({
             
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
+                ref={supplierInputRef}
                 type="text"
                 value={supplierSearchText}
                 onChange={e => {
                   setSupplierSearchText(e.target.value);
                   setSelectedSupplierId('');
                   setShowSupplierDropdown(true);
+                  setSupplierDropdownIndex(0);
                 }}
-                onFocus={() => setShowSupplierDropdown(true)}
-                placeholder="Type party name or GSTIN to search..."
+                onFocus={() => {
+                  setShowSupplierDropdown(true);
+                  setSupplierDropdownIndex(0);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!showSupplierDropdown) setShowSupplierDropdown(true);
+                    if (filteredSuppliers.length > 0) {
+                      setSupplierDropdownIndex(prev => (prev + 1) % filteredSuppliers.length);
+                    }
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!showSupplierDropdown) setShowSupplierDropdown(true);
+                    if (filteredSuppliers.length > 0) {
+                      setSupplierDropdownIndex(prev => (prev - 1 + filteredSuppliers.length) % filteredSuppliers.length);
+                    }
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredSuppliers.length > 0) {
+                      const target = (supplierDropdownIndex >= 0 && supplierDropdownIndex < filteredSuppliers.length)
+                        ? filteredSuppliers[supplierDropdownIndex]
+                        : filteredSuppliers[0];
+                      setSelectedSupplierId(target.id);
+                      setSupplierSearchText(target.mailTo || target.name);
+                      setShowSupplierDropdown(false);
+                    }
+                    partyBillNoInputRef.current?.focus();
+                    partyBillNoInputRef.current?.select();
+                  } else if (e.key === 'Escape') {
+                    setShowSupplierDropdown(false);
+                  }
+                }}
+                placeholder="Type party name or GSTIN to search... (↓/↑ to navigate, Enter to select)"
                 style={{
                   width: '100%',
                   padding: '0.6rem 4.5rem 0.6rem 0.75rem',
@@ -1038,45 +1164,51 @@ export default function NewPurchase({
                     No matching party found. Click <strong>+ Quick Add (GSTIN)</strong> above to create.
                   </div>
                 ) : (
-                  filteredSuppliers.map(s => (
-                    <div
-                      key={s.id}
-                      onClick={() => {
-                        setSelectedSupplierId(s.id);
-                        setSupplierSearchText(s.mailTo || s.name);
-                        setShowSupplierDropdown(false);
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderBottom: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px',
-                        background: selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent',
-                        transition: 'background 0.15s'
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(20, 184, 166, 0.15)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent')}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                          {s.mailTo || s.name}
-                        </span>
-                        {s.station && (
-                          <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '1px 6px', borderRadius: '4px' }}>
-                            {s.station}
+                  filteredSuppliers.map((s, sIdx) => {
+                    const isSelected = sIdx === supplierDropdownIndex;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setSelectedSupplierId(s.id);
+                          setSupplierSearchText(s.mailTo || s.name);
+                          setShowSupplierDropdown(false);
+                          partyBillNoInputRef.current?.focus();
+                          partyBillNoInputRef.current?.select();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderBottom: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          background: isSelected ? 'rgba(2, 132, 199, 0.15)' : (selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent'),
+                          borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = isSelected ? 'rgba(2, 132, 199, 0.15)' : (selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent'))}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                            {s.mailTo || s.name}
+                          </span>
+                          {s.station && (
+                            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '1px 6px', borderRadius: '4px' }}>
+                              {s.station}
+                            </span>
+                          )}
+                        </div>
+                        {s.gstin && (
+                          <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: '600' }}>
+                            GSTIN: {s.gstin}
                           </span>
                         )}
                       </div>
-                      {s.gstin && (
-                        <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: '600' }}>
-                          GSTIN: {s.gstin}
-                        </span>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}
@@ -1111,10 +1243,17 @@ export default function NewPurchase({
               PARTY NO. (BILL NO) * :
             </label>
             <input
+              ref={partyBillNoInputRef}
               type="text"
               placeholder="e.g. INV-9901"
               value={partyBillNo}
               onChange={e => setPartyBillNo(e.target.value.toUpperCase())}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  billDateInputRef.current?.focus();
+                }
+              }}
               style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
             />
           </div>
@@ -1124,9 +1263,16 @@ export default function NewPurchase({
               DT: (BILL DATE) :
             </label>
             <input
+              ref={billDateInputRef}
               type="date"
               value={billDate}
               onChange={e => setBillDate(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  medInputRefs.current[0]?.focus();
+                }
+              }}
               style={{ width: '100%', padding: '0.6rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
             />
           </div>
@@ -1144,6 +1290,7 @@ export default function NewPurchase({
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
+              type="button"
               onClick={handleAddRow}
               style={{
                 padding: '0.4rem 0.8rem',
@@ -1158,32 +1305,34 @@ export default function NewPurchase({
                 alignItems: 'center',
                 gap: '0.3rem'
               }}
+              title="Add line item [Alt + A]"
             >
-              <Plus size={14} /> Add Product Line (+)
+              <Plus size={14} /> Add Product Line (Alt+A)
             </button>
           </div>
         </div>
 
-        <div style={{ overflowX: 'visible', minHeight: '120px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+        {/* Responsive Inward Line Items Grid with Guaranteed Width & Zero Truncation */}
+        <div style={{ overflowX: 'auto', minHeight: '120px' }}>
+          <table style={{ width: '100%', minWidth: '1280px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
-                <th style={{ padding: '0.7rem 0.6rem', width: '38px', textAlign: 'center' }}>Sr.</th>
-                <th style={{ padding: '0.7rem 0.6rem', minWidth: '200px' }}>Description Of Goods</th>
-                <th style={{ padding: '0.7rem 0.5rem', width: '85px', textAlign: 'center' }}>Pack (1*X)</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '70px', textAlign: 'center' }}>HSN</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '105px' }}>Batch</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '90px', textAlign: 'center' }}>Exp.</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'center' }} title="e.g. 20 = 20 Strips, 20.4 = 20 Strips + 4 loose tablets">
+                <th style={{ padding: '0.75rem 0.5rem', width: '40px', minWidth: '40px', textAlign: 'center' }}>Sr.</th>
+                <th style={{ padding: '0.75rem 0.7rem', minWidth: '240px' }}>Description Of Goods</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '85px', minWidth: '85px', textAlign: 'center' }}>Pack (1*X)</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '75px', minWidth: '75px', textAlign: 'center' }}>HSN</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '140px', minWidth: '130px' }}>Batch</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '105px', minWidth: '100px', textAlign: 'center' }}>Exp.</th>
+                <th style={{ padding: '0.75rem 0.5rem', width: '95px', minWidth: '90px', textAlign: 'center' }} title="e.g. 20 = 20 Strips, 20.4 = 20 Strips + 4 loose tablets">
                   Qty (Str.Tab)
                 </th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '60px', textAlign: 'center' }}>Free</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>Rate</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>Disc%</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '65px', textAlign: 'center' }}>GST%</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '85px', textAlign: 'right' }}>MRP</th>
-                <th style={{ padding: '0.7rem 0.6rem', width: '95px', textAlign: 'right' }}>Amount</th>
-                <th style={{ padding: '0.7rem 0.4rem', width: '32px' }}></th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '65px', minWidth: '60px', textAlign: 'center' }}>Free</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '115px', minWidth: '105px', textAlign: 'right' }}>Rate</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '75px', minWidth: '70px', textAlign: 'center' }}>Disc%</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '75px', minWidth: '70px', textAlign: 'center' }}>GST%</th>
+                <th style={{ padding: '0.75rem 0.6rem', width: '115px', minWidth: '105px', textAlign: 'right' }}>MRP</th>
+                <th style={{ padding: '0.75rem 0.8rem', width: '125px', minWidth: '115px', textAlign: 'right' }}>Amount</th>
+                <th style={{ padding: '0.75rem 0.4rem', width: '38px', minWidth: '38px', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -1209,14 +1358,15 @@ export default function NewPurchase({
                     }}
                   >
                     {/* 1. Sr. */}
-                    <td style={{ padding: '0.5rem 0.6rem', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '600' }}>
+                    <td style={{ padding: '0.45rem 0.4rem', color: 'var(--text-secondary)', textAlign: 'center', fontWeight: '600' }}>
                       {idx + 1}
                     </td>
 
                     {/* 2. Description Of Goods (Medicine search & input) */}
-                    <td style={{ padding: '0.5rem 0.6rem', position: 'relative', overflow: 'visible' }}>
+                    <td style={{ padding: '0.45rem 0.6rem', position: 'relative', overflow: 'visible' }}>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <input
+                          ref={el => { medInputRefs.current[idx] = el; }}
                           type="text"
                           placeholder="Type medicine name or select..."
                           value={activeSearchRowIndex === idx ? searchQuery : row.medicineName}
@@ -1224,10 +1374,12 @@ export default function NewPurchase({
                             setActiveSearchRowIndex(idx);
                             setActiveRowIndex(idx);
                             setSearchQuery(row.medicineName);
+                            setMedDropdownIndex(0);
                           }}
                           onChange={e => {
                             const val = e.target.value;
                             setSearchQuery(val);
+                            setMedDropdownIndex(0);
                             const exactMatch = medicines.find(m => m.name.toLowerCase() === val.trim().toLowerCase());
                             if (exactMatch) {
                               const latestBatch = exactMatch.batches && exactMatch.batches.length > 0 ? exactMatch.batches[0] : null;
@@ -1259,15 +1411,52 @@ export default function NewPurchase({
                               handleRowChange(idx, 'itemId', '');
                             }
                           }}
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              if (activeSearchRowIndex !== idx) {
+                                setActiveSearchRowIndex(idx);
+                              }
+                              if (filteredMedicines.length > 0) {
+                                setMedDropdownIndex(prev => (prev + 1) % filteredMedicines.length);
+                              }
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              if (activeSearchRowIndex !== idx) {
+                                setActiveSearchRowIndex(idx);
+                              }
+                              if (filteredMedicines.length > 0) {
+                                setMedDropdownIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
+                              }
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (activeSearchRowIndex === idx && filteredMedicines.length > 0 && medDropdownIndex >= 0 && medDropdownIndex < filteredMedicines.length) {
+                                handleSelectExistingMedicine(idx, filteredMedicines[medDropdownIndex]);
+                              } else if (searchQuery.trim().length > 0) {
+                                handleCreateNewMedicineInline(idx, searchQuery);
+                              } else if (row.medicineName.trim().length > 0) {
+                                setActiveSearchRowIndex(null);
+                                setTimeout(() => {
+                                  batchInputRefs.current[idx]?.focus();
+                                  batchInputRefs.current[idx]?.select();
+                                }, 50);
+                              }
+                            } else if (e.key === 'Escape') {
+                              setActiveSearchRowIndex(null);
+                            }
+                          }}
                           style={{
                             width: '100%',
-                            padding: '0.4rem 0.6rem',
+                            boxSizing: 'border-box',
+                            padding: '0.45rem 0.6rem',
                             paddingRight: row.isNewCatalog ? '85px' : '0.6rem',
                             background: 'var(--bg-secondary)',
                             border: isFocused ? '1px solid #0284c7' : '1px solid var(--border-color)',
                             borderRadius: '6px',
                             color: 'var(--text-primary)',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            fontSize: '0.84rem',
+                            outline: 'none'
                           }}
                         />
                         {row.isNewCatalog && row.medicineName && (
@@ -1296,7 +1485,7 @@ export default function NewPurchase({
                             position: 'absolute',
                             top: 'calc(100% + 4px)',
                             left: '0.6rem',
-                            width: '380px',
+                            width: '400px',
                             minWidth: '320px',
                             background: 'var(--card-bg)',
                             border: '1px solid var(--border-color)',
@@ -1335,15 +1524,23 @@ export default function NewPurchase({
                             </div>
                           )}
 
-                          {filteredMedicines.map(med => {
+                          {filteredMedicines.map((med, mIdx) => {
                             const latestB = med.batches && med.batches.length > 0 ? med.batches[0] : null;
+                            const isSelected = mIdx === medDropdownIndex;
                             return (
                               <div
                                 key={med.id}
                                 onClick={() => handleSelectExistingMedicine(idx, med)}
-                                style={{ padding: '0.55rem 0.8rem', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.8rem' }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                style={{
+                                  padding: '0.55rem 0.8rem',
+                                  borderBottom: '1px solid var(--border-color)',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  background: isSelected ? 'rgba(2, 132, 199, 0.15)' : 'transparent',
+                                  borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)'}
+                                onMouseLeave={e => e.currentTarget.style.background = isSelected ? 'rgba(2, 132, 199, 0.15)' : 'transparent'}
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</span>
@@ -1373,15 +1570,27 @@ export default function NewPurchase({
                     </td>
 
                     {/* 3. Pack (1*10, 1*15, 1*4, 1*5, 1*1) */}
-                    <td style={{ padding: '0.5rem 0.4rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
                         type="text"
                         placeholder="1*10"
                         value={row.pack || '1*10'}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'pack', e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            batchInputRefs.current[idx]?.focus();
+                            batchInputRefs.current[idx]?.select();
+                          }
+                        }}
                         title="Pack format e.g. 1*10 (10 Tabs per strip), 1*15, 1*4, 1*5, 1*1"
                         style={{
                           width: '100%',
+                          boxSizing: 'border-box',
                           padding: '0.4rem 0.3rem',
                           background: 'var(--bg-secondary)',
                           border: '1px solid var(--border-color)',
@@ -1389,139 +1598,415 @@ export default function NewPurchase({
                           color: 'var(--text-primary)',
                           textAlign: 'center',
                           fontWeight: '600',
-                          fontSize: '0.8rem'
+                          fontSize: '0.8rem',
+                          outline: 'none'
                         }}
                       />
                     </td>
 
                     {/* 4. HSN */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
                         type="text"
                         placeholder="3004"
                         value={row.hsnCode}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'hsnCode', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            batchInputRefs.current[idx]?.focus();
+                            batchInputRefs.current[idx]?.select();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.3rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '0.8rem',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
-                    {/* 5. Batch */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    {/* 5. Batch (Expanded Width, Monospace, Never Truncated) */}
+                    <td style={{ padding: '0.45rem 0.45rem' }}>
                       <input
+                        ref={el => { batchInputRefs.current[idx] = el; }}
                         type="text"
                         placeholder="BATCH NO"
                         value={row.batchNumber}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'batchNumber', e.target.value.toUpperCase())}
-                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700', fontFamily: 'monospace' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            expMonthInputRefs.current[idx]?.focus();
+                            expMonthInputRefs.current[idx]?.select();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.55rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          fontWeight: '700',
+                          fontFamily: 'monospace',
+                          letterSpacing: '0.02em',
+                          fontSize: '0.85rem',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
                     {/* 6. Exp. (MM/YY) */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
-                      <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center', justifyContent: 'center' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
+                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center', justifyContent: 'center' }}>
                         <input
+                          ref={el => { expMonthInputRefs.current[idx] = el; }}
                           type="text"
                           maxLength={2}
                           placeholder="MM"
                           value={row.expiryMonth}
-                          onChange={e => handleRowChange(idx, 'expiryMonth', e.target.value)}
-                          style={{ width: '34px', padding: '0.4rem 0.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          onFocus={e => {
+                            setActiveRowIndex(idx);
+                            e.target.select();
+                          }}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            handleRowChange(idx, 'expiryMonth', val);
+                            if (val.length === 2) {
+                              expYearInputRefs.current[idx]?.focus();
+                              expYearInputRefs.current[idx]?.select();
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              expYearInputRefs.current[idx]?.focus();
+                              expYearInputRefs.current[idx]?.select();
+                            } else if (e.key === 'Backspace' && !row.expiryMonth) {
+                              batchInputRefs.current[idx]?.focus();
+                              batchInputRefs.current[idx]?.select();
+                            }
+                          }}
+                          style={{
+                            width: '38px',
+                            boxSizing: 'border-box',
+                            padding: '0.4rem 0.2rem',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: 'var(--text-primary)',
+                            textAlign: 'center',
+                            fontWeight: '600',
+                            fontSize: '0.82rem',
+                            outline: 'none'
+                          }}
                         />
-                        <span style={{ color: 'var(--text-muted)' }}>/</span>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 'bold' }}>/</span>
                         <input
+                          ref={el => { expYearInputRefs.current[idx] = el; }}
                           type="text"
                           maxLength={4}
                           placeholder="YY"
                           value={row.expiryYear}
-                          onChange={e => handleRowChange(idx, 'expiryYear', e.target.value)}
-                          style={{ width: '42px', padding: '0.4rem 0.2rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                          onFocus={e => {
+                            setActiveRowIndex(idx);
+                            e.target.select();
+                          }}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            handleRowChange(idx, 'expiryYear', val);
+                            if (val.length === 2 && parseInt(val, 10) >= 20) {
+                              qtyInputRefs.current[idx]?.focus();
+                              qtyInputRefs.current[idx]?.select();
+                            }
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              qtyInputRefs.current[idx]?.focus();
+                              qtyInputRefs.current[idx]?.select();
+                            } else if (e.key === 'Backspace' && !row.expiryYear) {
+                              expMonthInputRefs.current[idx]?.focus();
+                              expMonthInputRefs.current[idx]?.select();
+                            }
+                          }}
+                          style={{
+                            width: '42px',
+                            boxSizing: 'border-box',
+                            padding: '0.4rem 0.2rem',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            color: 'var(--text-primary)',
+                            textAlign: 'center',
+                            fontWeight: '600',
+                            fontSize: '0.82rem',
+                            outline: 'none'
+                          }}
                         />
                       </div>
                     </td>
 
                     {/* 7. Qty (Strips.Loose) */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
+                        ref={el => { qtyInputRefs.current[idx] = el; }}
                         type="text"
-                        placeholder="e.g. 20 or 20.4"
+                        placeholder="e.g. 20"
                         value={row.quantity}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'quantity', e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            freeInputRefs.current[idx]?.focus();
+                            freeInputRefs.current[idx]?.select();
+                          }
+                        }}
                         title={rowCalc.factor > 1 && row.quantity ? `${rowCalc.parsedQty.strips} Strips ${rowCalc.parsedQty.loose > 0 ? `+ ${rowCalc.parsedQty.loose} Loose Tabs` : ''} (${rowCalc.parsedQty.totalBaseUnits} total tablets inwarded)` : 'Format: 20 for 20 strips, 20.4 for 20 strips + 4 loose tablets'}
-                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center', fontWeight: '700' }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.4rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontWeight: '700',
+                          fontSize: '0.84rem',
+                          fontVariantNumeric: 'tabular-nums',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
                     {/* 8. Free */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
+                        ref={el => { freeInputRefs.current[idx] = el; }}
                         type="text"
                         placeholder="0"
                         value={row.freeQuantity}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'freeQuantity', e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            rateInputRefs.current[idx]?.focus();
+                            rateInputRefs.current[idx]?.select();
+                          }
+                        }}
                         title={rowCalc.factor > 1 && row.freeQuantity ? `${parseRowQuantity(row.freeQuantity, rowCalc.factor).strips} Free Strips ${parseRowQuantity(row.freeQuantity, rowCalc.factor).loose > 0 ? `+ ${parseRowQuantity(row.freeQuantity, rowCalc.factor).loose} Free Tabs` : ''}` : undefined}
-                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.3rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '0.84rem',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
-                    {/* 9. Rate (PTR) */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    {/* 9. Rate (PTR) - Generous Width, Right-Aligned, Never Clipped */}
+                    <td style={{ padding: '0.45rem 0.45rem' }}>
                       <input
+                        ref={el => { rateInputRefs.current[idx] = el; }}
                         type="number"
                         step="0.01"
+                        placeholder="0.00"
                         value={row.purchaseRate}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'purchaseRate', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            discInputRefs.current[idx]?.focus();
+                            discInputRefs.current[idx]?.select();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.65rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'right',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          fontVariantNumeric: 'tabular-nums',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
                     {/* 10. Disc% */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
+                        ref={el => { discInputRefs.current[idx] = el; }}
                         type="number"
                         min="0"
                         max="100"
                         step="0.01"
+                        placeholder="0"
                         value={row.discountPercent}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'discountPercent', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            gstInputRefs.current[idx]?.focus();
+                            gstInputRefs.current[idx]?.select();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.3rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '0.84rem',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
                     {/* 11. GST% */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    <td style={{ padding: '0.45rem 0.35rem' }}>
                       <input
+                        ref={el => { gstInputRefs.current[idx] = el; }}
                         type="number"
                         step="0.01"
+                        placeholder="5"
                         value={row.gstRate}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'gstRate', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.3rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'center' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            mrpInputRefs.current[idx]?.focus();
+                            mrpInputRefs.current[idx]?.select();
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.3rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '0.84rem',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
-                    {/* 12. MRP */}
-                    <td style={{ padding: '0.5rem 0.6rem' }}>
+                    {/* 12. MRP - Generous Width, Right-Aligned, Never Clipped */}
+                    <td style={{ padding: '0.45rem 0.45rem' }}>
                       <input
+                        ref={el => { mrpInputRefs.current[idx] = el; }}
                         type="number"
                         step="0.01"
                         placeholder="0.00"
                         value={row.mrp}
+                        onFocus={e => {
+                          setActiveRowIndex(idx);
+                          e.target.select();
+                        }}
                         onChange={e => handleRowChange(idx, 'mrp', e.target.value)}
-                        style={{ width: '100%', padding: '0.4rem 0.5rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textAlign: 'right', fontWeight: '700' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (idx === rows.length - 1) {
+                              handleAddRow();
+                            } else {
+                              setActiveRowIndex(idx + 1);
+                              medInputRefs.current[idx + 1]?.focus();
+                              medInputRefs.current[idx + 1]?.select();
+                            }
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.4rem 0.65rem',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'var(--text-primary)',
+                          textAlign: 'right',
+                          fontWeight: '700',
+                          fontSize: '0.85rem',
+                          fontVariantNumeric: 'tabular-nums',
+                          outline: 'none'
+                        }}
                       />
                     </td>
 
                     {/* 13. Amount (Line Taxable Total e.g. Qty * Rate - Disc) */}
-                    <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                    <td style={{
+                      padding: '0.45rem 0.7rem',
+                      textAlign: 'right',
+                      fontWeight: '700',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem',
+                      fontVariantNumeric: 'tabular-nums',
+                      whiteSpace: 'nowrap'
+                    }}>
                       ₹{rowCalc.taxable.toFixed(2)}
                     </td>
 
                     {/* Delete Action */}
-                    <td style={{ padding: '0.5rem 0.3rem', textAlign: 'center' }}>
+                    <td style={{ padding: '0.45rem 0.3rem', textAlign: 'center' }}>
                       {rows.length > 1 && (
                         <button
                           onClick={() => handleRemoveRow(idx)}
                           style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: '2px' }}
-                          title="Remove line"
+                          title="Remove line [Alt + D]"
                         >
                           <Trash2 size={14} />
                         </button>
