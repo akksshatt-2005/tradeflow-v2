@@ -1387,8 +1387,8 @@ export default function NewPurchase({
 
         {/* Responsive Inward Line Items Grid with Guaranteed Width & Zero Truncation */}
         <div style={{
-          overflowX: activeSearchRowIndex !== null ? 'visible' : 'auto',
-          minHeight: activeSearchRowIndex !== null ? '460px' : '140px',
+          overflowX: activeSearchRowIndex !== null && (searchQuery || '').trim().length > 0 ? 'visible' : 'auto',
+          minHeight: activeSearchRowIndex !== null && (searchQuery || '').trim().length > 0 ? '460px' : '140px',
           position: 'relative'
         }}>
           <table style={{ width: '100%', minWidth: '1280px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
@@ -1417,9 +1417,8 @@ export default function NewPurchase({
                 const rowCalc = calculateRowTotal(row);
                 const isFocused = activeRowIndex === idx;
                 const cleanQuery = (searchQuery || '').trim().toLowerCase();
-                const filteredMedicines = medicines.filter(m => {
+                const filteredMedicines = cleanQuery.length === 0 ? [] : medicines.filter(m => {
                   if (!m) return false;
-                  if (!cleanQuery) return true;
                   const nameMatch = (m.name || '').toLowerCase().includes(cleanQuery);
                   const skuMatch = Boolean(m.sku && (m.sku || '').toLowerCase().includes(cleanQuery));
                   const genMatch = Boolean(m.genericName && (m.genericName || '').toLowerCase().includes(cleanQuery));
@@ -1450,25 +1449,35 @@ export default function NewPurchase({
                           placeholder="Type medicine name or select..."
                           value={activeSearchRowIndex === idx ? searchQuery : row.medicineName}
                           onFocus={() => {
-                            setActiveSearchRowIndex(idx);
                             setActiveRowIndex(idx);
-                            setSearchQuery(row.medicineName || '');
-                            setMedDropdownIndex(0);
+                            const val = row.medicineName || '';
+                            setSearchQuery(val);
+                            if (val.trim().length > 0) {
+                              setActiveSearchRowIndex(idx);
+                              setMedDropdownIndex(0);
+                            } else {
+                              setActiveSearchRowIndex(null);
+                            }
                           }}
                           onClick={() => {
-                            if (activeSearchRowIndex !== idx) {
+                            setActiveRowIndex(idx);
+                            const val = row.medicineName || '';
+                            if (val.trim().length > 0) {
                               setActiveSearchRowIndex(idx);
-                              setActiveRowIndex(idx);
-                              setSearchQuery(row.medicineName || '');
+                              setSearchQuery(val);
                               setMedDropdownIndex(0);
                             }
                           }}
                           onChange={e => {
                             const val = e.target.value;
-                            setActiveSearchRowIndex(idx);
-                            setActiveRowIndex(idx);
                             setSearchQuery(val);
                             setMedDropdownIndex(0);
+                            setActiveRowIndex(idx);
+                            if (val.trim().length > 0) {
+                              setActiveSearchRowIndex(idx);
+                            } else {
+                              setActiveSearchRowIndex(null);
+                            }
                             const exactMatch = medicines.find(m => (m.name || '').toLowerCase() === val.trim().toLowerCase());
                             if (exactMatch) {
                               const latestBatch = exactMatch.batches && exactMatch.batches.length > 0 ? exactMatch.batches[0] : null;
@@ -1579,7 +1588,7 @@ export default function NewPurchase({
                         )}
                       </div>
 
-                      {activeSearchRowIndex === idx && (
+                      {activeSearchRowIndex === idx && (searchQuery || '').trim().length > 0 && (
                         <div
                           ref={searchDropdownRef}
                           style={{
