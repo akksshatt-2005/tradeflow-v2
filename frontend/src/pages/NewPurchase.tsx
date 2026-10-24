@@ -132,6 +132,8 @@ export default function NewPurchase({
   // Navigation indices for keyboard-driven dropdowns
   const [supplierDropdownIndex, setSupplierDropdownIndex] = useState<number>(0);
   const [medDropdownIndex, setMedDropdownIndex] = useState<number>(0);
+  const isPurchaseKeyboardNavRef = useRef(false);
+  const purchaseKeyboardTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper to create a blank purchase row with no dummy pre-filled values
   const createEmptyRow = (id: string): PurchaseRow => ({
@@ -917,6 +919,52 @@ export default function NewPurchase({
     entryNo
   ]);
 
+  // Keep highlighted medicine in view within inward line items dropdown
+  useEffect(() => {
+    if (activeSearchRowIndex !== null && searchDropdownRef.current) {
+      const container = searchDropdownRef.current;
+      const activeEl = container.querySelector(`[data-med-dropdown-index="${medDropdownIndex}"]`) as HTMLElement;
+      if (activeEl) {
+        const containerTop = container.scrollTop;
+        const containerHeight = container.clientHeight;
+        const containerBottom = containerTop + containerHeight;
+
+        const elemTop = activeEl.offsetTop;
+        const elemHeight = activeEl.offsetHeight;
+        const elemBottom = elemTop + elemHeight;
+
+        if (elemTop < containerTop) {
+          container.scrollTop = elemTop;
+        } else if (elemBottom > containerBottom) {
+          container.scrollTop = elemBottom - containerHeight;
+        }
+      }
+    }
+  }, [medDropdownIndex, activeSearchRowIndex]);
+
+  // Keep highlighted supplier in view within party dropdown
+  useEffect(() => {
+    if (showSupplierDropdown && supplierDropdownRef.current) {
+      const container = supplierDropdownRef.current;
+      const activeEl = container.querySelector(`[data-supplier-index="${supplierDropdownIndex}"]`) as HTMLElement;
+      if (activeEl) {
+        const containerTop = container.scrollTop;
+        const containerHeight = container.clientHeight;
+        const containerBottom = containerTop + containerHeight;
+
+        const elemTop = activeEl.offsetTop;
+        const elemHeight = activeEl.offsetHeight;
+        const elemBottom = elemTop + elemHeight;
+
+        if (elemTop < containerTop) {
+          container.scrollTop = elemTop;
+        } else if (elemBottom > containerBottom) {
+          container.scrollTop = elemBottom - containerHeight;
+        }
+      }
+    }
+  }, [supplierDropdownIndex, showSupplierDropdown]);
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
       {/* Top Header */}
@@ -1066,12 +1114,24 @@ export default function NewPurchase({
                   if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     if (!showSupplierDropdown) setShowSupplierDropdown(true);
+                    isPurchaseKeyboardNavRef.current = true;
+                    if (purchaseKeyboardTimerRef.current) clearTimeout(purchaseKeyboardTimerRef.current);
+                    purchaseKeyboardTimerRef.current = setTimeout(() => {
+                      isPurchaseKeyboardNavRef.current = false;
+                    }, 400);
+
                     if (filteredSuppliers.length > 0) {
                       setSupplierDropdownIndex(prev => (prev + 1) % filteredSuppliers.length);
                     }
                   } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     if (!showSupplierDropdown) setShowSupplierDropdown(true);
+                    isPurchaseKeyboardNavRef.current = true;
+                    if (purchaseKeyboardTimerRef.current) clearTimeout(purchaseKeyboardTimerRef.current);
+                    purchaseKeyboardTimerRef.current = setTimeout(() => {
+                      isPurchaseKeyboardNavRef.current = false;
+                    }, 400);
+
                     if (filteredSuppliers.length > 0) {
                       setSupplierDropdownIndex(prev => (prev - 1 + filteredSuppliers.length) % filteredSuppliers.length);
                     }
@@ -1169,12 +1229,18 @@ export default function NewPurchase({
                     return (
                       <div
                         key={s.id}
+                        data-supplier-index={sIdx}
                         onClick={() => {
                           setSelectedSupplierId(s.id);
                           setSupplierSearchText(s.mailTo || s.name);
                           setShowSupplierDropdown(false);
                           partyBillNoInputRef.current?.focus();
                           partyBillNoInputRef.current?.select();
+                        }}
+                        onMouseMove={() => {
+                          if (!isPurchaseKeyboardNavRef.current && supplierDropdownIndex !== sIdx) {
+                            setSupplierDropdownIndex(sIdx);
+                          }
                         }}
                         style={{
                           padding: '8px 12px',
@@ -1417,6 +1483,12 @@ export default function NewPurchase({
                               if (activeSearchRowIndex !== idx) {
                                 setActiveSearchRowIndex(idx);
                               }
+                              isPurchaseKeyboardNavRef.current = true;
+                              if (purchaseKeyboardTimerRef.current) clearTimeout(purchaseKeyboardTimerRef.current);
+                              purchaseKeyboardTimerRef.current = setTimeout(() => {
+                                isPurchaseKeyboardNavRef.current = false;
+                              }, 400);
+
                               if (filteredMedicines.length > 0) {
                                 setMedDropdownIndex(prev => (prev + 1) % filteredMedicines.length);
                               }
@@ -1425,6 +1497,12 @@ export default function NewPurchase({
                               if (activeSearchRowIndex !== idx) {
                                 setActiveSearchRowIndex(idx);
                               }
+                              isPurchaseKeyboardNavRef.current = true;
+                              if (purchaseKeyboardTimerRef.current) clearTimeout(purchaseKeyboardTimerRef.current);
+                              purchaseKeyboardTimerRef.current = setTimeout(() => {
+                                isPurchaseKeyboardNavRef.current = false;
+                              }, 400);
+
                               if (filteredMedicines.length > 0) {
                                 setMedDropdownIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
                               }
@@ -1530,7 +1608,13 @@ export default function NewPurchase({
                             return (
                               <div
                                 key={med.id}
+                                data-med-dropdown-index={mIdx}
                                 onClick={() => handleSelectExistingMedicine(idx, med)}
+                                onMouseMove={() => {
+                                  if (!isPurchaseKeyboardNavRef.current && medDropdownIndex !== mIdx) {
+                                    setMedDropdownIndex(mIdx);
+                                  }
+                                }}
                                 style={{
                                   padding: '0.55rem 0.8rem',
                                   borderBottom: '1px solid var(--border-color)',

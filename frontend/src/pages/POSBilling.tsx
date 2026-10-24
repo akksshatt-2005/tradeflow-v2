@@ -156,12 +156,29 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       .slice(0, 40);
   }, [items, medicineSearch]);
 
-  // Keep highlighted medicine in view when using arrow keys
+  // Dropdown scroll & keyboard navigation protection (prevents mouse hover collision when scrolling)
+  const isKeyboardNavRef = useRef(false);
+  const keyboardTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep highlighted medicine in view when using arrow keys without causing window jitter or triggering mouse events
   useEffect(() => {
     if (showMedicineDropdown && medicineDropdownRef.current) {
-      const activeEl = medicineDropdownRef.current.querySelector(`[data-med-index="${selectedMedIndex}"]`) as HTMLElement;
+      const container = medicineDropdownRef.current;
+      const activeEl = container.querySelector(`[data-med-index="${selectedMedIndex}"]`) as HTMLElement;
       if (activeEl) {
-        activeEl.scrollIntoView({ block: 'nearest' });
+        const containerTop = container.scrollTop;
+        const containerHeight = container.clientHeight;
+        const containerBottom = containerTop + containerHeight;
+
+        const elemTop = activeEl.offsetTop;
+        const elemHeight = activeEl.offsetHeight;
+        const elemBottom = elemTop + elemHeight;
+
+        if (elemTop < containerTop) {
+          container.scrollTop = elemTop;
+        } else if (elemBottom > containerBottom) {
+          container.scrollTop = elemBottom - containerHeight;
+        }
       }
     }
   }, [selectedMedIndex, showMedicineDropdown]);
@@ -1037,6 +1054,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   if (!showMedicineDropdown) {
                     setShowMedicineDropdown(true);
                   }
+                  isKeyboardNavRef.current = true;
+                  if (keyboardTimerRef.current) clearTimeout(keyboardTimerRef.current);
+                  keyboardTimerRef.current = setTimeout(() => {
+                    isKeyboardNavRef.current = false;
+                  }, 400);
+
                   if (filteredMedicines.length > 0) {
                     setSelectedMedIndex(prev => (prev + 1) % filteredMedicines.length);
                   }
@@ -1045,6 +1068,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   if (!showMedicineDropdown) {
                     setShowMedicineDropdown(true);
                   }
+                  isKeyboardNavRef.current = true;
+                  if (keyboardTimerRef.current) clearTimeout(keyboardTimerRef.current);
+                  keyboardTimerRef.current = setTimeout(() => {
+                    isKeyboardNavRef.current = false;
+                  }, 400);
+
                   if (filteredMedicines.length > 0) {
                     setSelectedMedIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
                   }
@@ -1115,7 +1144,11 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         key={med.id}
                         data-med-index={idx}
                         onClick={() => handleSelectItem(med)}
-                        onMouseEnter={() => setSelectedMedIndex(idx)}
+                        onMouseMove={() => {
+                          if (!isKeyboardNavRef.current && selectedMedIndex !== idx) {
+                            setSelectedMedIndex(idx);
+                          }
+                        }}
                         style={{
                           padding: '0.7rem 1rem',
                           borderBottom: '1px solid var(--border-color)',
