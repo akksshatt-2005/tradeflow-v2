@@ -919,51 +919,57 @@ export default function NewPurchase({
     entryNo
   ]);
 
-  // Keep highlighted medicine in view within inward line items dropdown
+  // Keep highlighted medicine cleanly and comfortably in view within inward line items dropdown
   useEffect(() => {
     if (activeSearchRowIndex !== null && searchDropdownRef.current) {
       const container = searchDropdownRef.current;
       const activeEl = container.querySelector(`[data-med-dropdown-index="${medDropdownIndex}"]`) as HTMLElement;
       if (activeEl) {
-        const containerTop = container.scrollTop;
-        const containerHeight = container.clientHeight;
-        const containerBottom = containerTop + containerHeight;
+        if (medDropdownIndex === 0) {
+          container.scrollTop = 0;
+          return;
+        }
 
-        const elemTop = activeEl.offsetTop;
-        const elemHeight = activeEl.offsetHeight;
-        const elemBottom = elemTop + elemHeight;
+        const containerRect = container.getBoundingClientRect();
+        const activeRect = activeEl.getBoundingClientRect();
+        const BUFFER = 16;
 
-        if (elemTop < containerTop) {
-          container.scrollTop = elemTop;
-        } else if (elemBottom > containerBottom) {
-          container.scrollTop = elemBottom - containerHeight;
+        if (activeRect.bottom > containerRect.bottom - BUFFER) {
+          container.scrollTop += (activeRect.bottom - containerRect.bottom + BUFFER);
+        } else if (activeRect.top < containerRect.top + BUFFER) {
+          container.scrollTop -= (containerRect.top - activeRect.top + BUFFER);
         }
       }
     }
   }, [medDropdownIndex, activeSearchRowIndex]);
 
-  // Keep highlighted supplier in view within party dropdown
+  // Keep highlighted supplier cleanly in view within party dropdown
   useEffect(() => {
     if (showSupplierDropdown && supplierDropdownRef.current) {
       const container = supplierDropdownRef.current;
       const activeEl = container.querySelector(`[data-supplier-index="${supplierDropdownIndex}"]`) as HTMLElement;
       if (activeEl) {
-        const containerTop = container.scrollTop;
-        const containerHeight = container.clientHeight;
-        const containerBottom = containerTop + containerHeight;
+        if (supplierDropdownIndex === 0) {
+          container.scrollTop = 0;
+          return;
+        }
+        if (supplierDropdownIndex === filteredSuppliers.length - 1) {
+          container.scrollTop = container.scrollHeight;
+          return;
+        }
 
-        const elemTop = activeEl.offsetTop;
-        const elemHeight = activeEl.offsetHeight;
-        const elemBottom = elemTop + elemHeight;
+        const containerRect = container.getBoundingClientRect();
+        const activeRect = activeEl.getBoundingClientRect();
+        const BUFFER = 16;
 
-        if (elemTop < containerTop) {
-          container.scrollTop = elemTop;
-        } else if (elemBottom > containerBottom) {
-          container.scrollTop = elemBottom - containerHeight;
+        if (activeRect.bottom > containerRect.bottom - BUFFER) {
+          container.scrollTop += (activeRect.bottom - containerRect.bottom + BUFFER);
+        } else if (activeRect.top < containerRect.top + BUFFER) {
+          container.scrollTop -= (containerRect.top - activeRect.top + BUFFER);
         }
       }
     }
-  }, [supplierDropdownIndex, showSupplierDropdown]);
+  }, [supplierDropdownIndex, showSupplierDropdown, filteredSuppliers.length]);
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: '1440px', margin: '0 auto' }}>
@@ -1568,7 +1574,7 @@ export default function NewPurchase({
                             background: 'var(--card-bg)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '8px',
-                            maxHeight: '280px',
+                            maxHeight: '340px',
                             overflowY: 'auto',
                             zIndex: 99999,
                             boxShadow: '0 16px 40px rgba(0,0,0,0.45)'
@@ -1621,10 +1627,9 @@ export default function NewPurchase({
                                   cursor: 'pointer',
                                   fontSize: '0.8rem',
                                   background: isSelected ? 'rgba(2, 132, 199, 0.15)' : 'transparent',
-                                  borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent'
+                                  borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent',
+                                  transition: 'background 0.1s ease'
                                 }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)'}
-                                onMouseLeave={e => e.currentTarget.style.background = isSelected ? 'rgba(2, 132, 199, 0.15)' : 'transparent'}
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</span>

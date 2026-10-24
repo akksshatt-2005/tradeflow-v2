@@ -160,28 +160,35 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const isKeyboardNavRef = useRef(false);
   const keyboardTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keep highlighted medicine in view when using arrow keys without causing window jitter or triggering mouse events
+  // Keep highlighted medicine cleanly and comfortably in view when navigating with arrow keys
   useEffect(() => {
     if (showMedicineDropdown && medicineDropdownRef.current) {
       const container = medicineDropdownRef.current;
       const activeEl = container.querySelector(`[data-med-index="${selectedMedIndex}"]`) as HTMLElement;
       if (activeEl) {
-        const containerTop = container.scrollTop;
-        const containerHeight = container.clientHeight;
-        const containerBottom = containerTop + containerHeight;
+        if (selectedMedIndex === 0) {
+          container.scrollTop = 0;
+          return;
+        }
+        if (selectedMedIndex === filteredMedicines.length - 1) {
+          container.scrollTop = container.scrollHeight;
+          return;
+        }
 
-        const elemTop = activeEl.offsetTop;
-        const elemHeight = activeEl.offsetHeight;
-        const elemBottom = elemTop + elemHeight;
+        const containerRect = container.getBoundingClientRect();
+        const activeRect = activeEl.getBoundingClientRect();
 
-        if (elemTop < containerTop) {
-          container.scrollTop = elemTop;
-        } else if (elemBottom > containerBottom) {
-          container.scrollTop = elemBottom - containerHeight;
+        // 16px buffer ensures the item has comfortable breathing room and is NEVER half-cut off
+        const BUFFER = 16;
+
+        if (activeRect.bottom > containerRect.bottom - BUFFER) {
+          container.scrollTop += (activeRect.bottom - containerRect.bottom + BUFFER);
+        } else if (activeRect.top < containerRect.top + BUFFER) {
+          container.scrollTop -= (containerRect.top - activeRect.top + BUFFER);
         }
       }
     }
-  }, [selectedMedIndex, showMedicineDropdown]);
+  }, [selectedMedIndex, showMedicineDropdown, filteredMedicines.length]);
 
   useEffect(() => {
     loadMasterData();
@@ -891,7 +898,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       </div>
 
       {/* Main Medicine Search & Bill Grid (Photo 3 Middle Table) */}
-      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', marginBottom: '1rem' }}>
+      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'visible', position: 'relative', marginBottom: '1rem' }}>
         
         {/* Bill Options & Tax Mode Bar */}
         <div style={{
@@ -1120,10 +1127,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   marginTop: '4px',
-                  maxHeight: '280px',
+                  maxHeight: '340px',
                   overflowY: 'auto',
-                  zIndex: 70,
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                  zIndex: 99999,
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.45)'
                 }}
               >
                 {filteredMedicines.length === 0 ? (
