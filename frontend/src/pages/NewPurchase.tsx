@@ -341,7 +341,10 @@ export default function NewPurchase({
   // Close search dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      // Do not close if clicking inside any medicine input or inside the dropdown
+      const isInputClick = medInputRefs.current.some(input => input && input.contains(target));
+      if (!isInputClick && searchDropdownRef.current && !searchDropdownRef.current.contains(target)) {
         setActiveSearchRowIndex(null);
       }
     };
@@ -1260,8 +1263,6 @@ export default function NewPurchase({
                           borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent',
                           transition: 'background 0.15s'
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = isSelected ? 'rgba(2, 132, 199, 0.15)' : (selectedSupplierId === s.id ? 'rgba(20, 184, 166, 0.12)' : 'transparent'))}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
@@ -1385,7 +1386,11 @@ export default function NewPurchase({
         </div>
 
         {/* Responsive Inward Line Items Grid with Guaranteed Width & Zero Truncation */}
-        <div style={{ overflowX: 'auto', minHeight: '120px' }}>
+        <div style={{
+          overflowX: activeSearchRowIndex !== null ? 'visible' : 'auto',
+          minHeight: activeSearchRowIndex !== null ? '460px' : '140px',
+          position: 'relative'
+        }}>
           <table style={{ width: '100%', minWidth: '1280px', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.78rem', textTransform: 'uppercase' }}>
@@ -1412,12 +1417,14 @@ export default function NewPurchase({
                 const rowCalc = calculateRowTotal(row);
                 const isFocused = activeRowIndex === idx;
                 const cleanQuery = (searchQuery || '').trim().toLowerCase();
-                const filteredMedicines = medicines.filter(m =>
-                  !cleanQuery ||
-                  m.name.toLowerCase().includes(cleanQuery) ||
-                  m.sku.toLowerCase().includes(cleanQuery) ||
-                  (m.genericName && m.genericName.toLowerCase().includes(cleanQuery))
-                );
+                const filteredMedicines = medicines.filter(m => {
+                  if (!m) return false;
+                  if (!cleanQuery) return true;
+                  const nameMatch = (m.name || '').toLowerCase().includes(cleanQuery);
+                  const skuMatch = Boolean(m.sku && (m.sku || '').toLowerCase().includes(cleanQuery));
+                  const genMatch = Boolean(m.genericName && (m.genericName || '').toLowerCase().includes(cleanQuery));
+                  return nameMatch || skuMatch || genMatch;
+                }).slice(0, 40);
 
                 return (
                   <tr
@@ -1445,14 +1452,24 @@ export default function NewPurchase({
                           onFocus={() => {
                             setActiveSearchRowIndex(idx);
                             setActiveRowIndex(idx);
-                            setSearchQuery(row.medicineName);
+                            setSearchQuery(row.medicineName || '');
                             setMedDropdownIndex(0);
+                          }}
+                          onClick={() => {
+                            if (activeSearchRowIndex !== idx) {
+                              setActiveSearchRowIndex(idx);
+                              setActiveRowIndex(idx);
+                              setSearchQuery(row.medicineName || '');
+                              setMedDropdownIndex(0);
+                            }
                           }}
                           onChange={e => {
                             const val = e.target.value;
+                            setActiveSearchRowIndex(idx);
+                            setActiveRowIndex(idx);
                             setSearchQuery(val);
                             setMedDropdownIndex(0);
-                            const exactMatch = medicines.find(m => m.name.toLowerCase() === val.trim().toLowerCase());
+                            const exactMatch = medicines.find(m => (m.name || '').toLowerCase() === val.trim().toLowerCase());
                             if (exactMatch) {
                               const latestBatch = exactMatch.batches && exactMatch.batches.length > 0 ? exactMatch.batches[0] : null;
                               const existingMrp = latestBatch?.mrp ? String(latestBatch.mrp) : '';
@@ -1569,8 +1586,8 @@ export default function NewPurchase({
                             position: 'absolute',
                             top: 'calc(100% + 4px)',
                             left: '0.6rem',
-                            width: '400px',
-                            minWidth: '320px',
+                            width: '520px',
+                            maxWidth: '90vw',
                             background: 'var(--card-bg)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '8px',
@@ -1581,28 +1598,30 @@ export default function NewPurchase({
                           }}
                         >
                           {/* Option to create new if user typed something */}
-                          {searchQuery.trim().length > 0 && !medicines.some(m => m.name.toLowerCase() === searchQuery.trim().toLowerCase()) && (
+                          {searchQuery.trim().length > 0 && !medicines.some(m => (m.name || '').toLowerCase() === searchQuery.trim().toLowerCase()) && (
                             <div
                               onClick={() => handleCreateNewMedicineInline(idx, searchQuery)}
                               style={{
-                                padding: '0.6rem 0.8rem',
+                                padding: '0.7rem 1rem',
                                 borderBottom: '1px solid var(--border-color)',
                                 cursor: 'pointer',
                                 background: 'rgba(2, 132, 199, 0.08)',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.5rem'
+                                gap: '0.75rem'
                               }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.15)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.08)'}
                             >
-                              <Sparkles size={15} style={{ color: '#0284c7' }} />
-                              <div>
-                                <div style={{ fontWeight: '700', color: '#0284c7', fontSize: '0.82rem' }}>
-                                  + Create & Catalog new medicine: "{searchQuery.trim()}"
+                              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(2, 132, 199, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7', flexShrink: 0 }}>
+                                <Sparkles size={16} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: '700', color: '#0284c7', fontSize: '0.85rem' }}>
+                                  + Catalog New Medicine: "{searchQuery.trim()}"
                                 </div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                                  Will automatically be saved to Medicine Master on bill save
+                                  Press Enter or click to auto-save to Medicine Master upon bill save
                                 </div>
                               </div>
                             </div>
@@ -1611,6 +1630,7 @@ export default function NewPurchase({
                           {filteredMedicines.map((med, mIdx) => {
                             const latestB = med.batches && med.batches.length > 0 ? med.batches[0] : null;
                             const isSelected = mIdx === medDropdownIndex;
+                            const totalStock = med.totalStock ?? (med.batches || []).reduce((s, b) => s + (b.currentStock || 0), 0) ?? 0;
                             return (
                               <div
                                 key={med.id}
@@ -1622,36 +1642,56 @@ export default function NewPurchase({
                                   }
                                 }}
                                 style={{
-                                  padding: '0.55rem 0.8rem',
+                                  padding: '0.7rem 1rem',
                                   borderBottom: '1px solid var(--border-color)',
                                   cursor: 'pointer',
-                                  fontSize: '0.8rem',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
                                   background: isSelected ? 'rgba(2, 132, 199, 0.15)' : 'transparent',
-                                  borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent',
+                                  borderLeft: isSelected ? '4px solid #0284c7' : '4px solid transparent',
                                   transition: 'background 0.1s ease'
                                 }}
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{med.name}</span>
-                                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                                    {latestB && latestB.mrp > 0 && (
-                                      <span style={{ fontSize: '0.7rem', color: '#0284c7', background: 'rgba(2, 132, 199, 0.12)', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                                        MRP: ₹{latestB.mrp.toFixed(2)} {latestB.ptr ? `• Rate: ₹${latestB.ptr.toFixed(2)}` : ''}
+                                <div style={{ flex: 1, minWidth: 0, paddingRight: '0.8rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isSelected ? '#0284c7' : 'var(--text-primary)' }}>
+                                      {med.name}
+                                    </span>
+                                    {isSelected && (
+                                      <span style={{
+                                        background: '#0284c7',
+                                        color: '#ffffff',
+                                        fontSize: '0.68rem',
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        fontWeight: '700'
+                                      }}>
+                                        ↵ Press Enter
                                       </span>
                                     )}
-                                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '600' }}>Stock: {med.totalStock ?? 0}</span>
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                    {med.genericName ? `${med.genericName} • ` : ''}Pack: {med.conversionFactor > 1 ? `1*${med.conversionFactor}` : med.unit || '1*10'} {med.gstRate !== undefined ? `• GST: ${med.gstRate}%` : ''}
                                   </div>
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  {med.genericName ? `${med.genericName} • ` : ''}Pack: 1*{med.conversionFactor || 10} • SKU: {med.sku} • GST: {med.gstRate}%
+                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                  <div style={{ fontWeight: '800', fontSize: '0.82rem', color: totalStock > 0 ? '#10b981' : 'var(--text-muted)' }}>
+                                    {totalStock > 0 ? `${totalStock} in stock` : '0 in stock'}
+                                  </div>
+                                  {latestB && (
+                                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                      MRP: ₹{Number(latestB.mrp || 0).toFixed(2)} {latestB.ptr ? `| PTR: ₹${Number(latestB.ptr).toFixed(2)}` : ''}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
                           })}
 
                           {filteredMedicines.length === 0 && searchQuery.trim().length === 0 && (
-                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                              No medicines in catalog yet. Type a medicine name above to create one!
+                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              No medicines in catalog yet. Type a medicine name to create one!
                             </div>
                           )}
                         </div>
