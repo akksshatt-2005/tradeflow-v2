@@ -1068,7 +1068,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   }, 400);
 
                   if (filteredMedicines.length > 0) {
-                    setSelectedMedIndex(prev => (prev + 1) % filteredMedicines.length);
+                    setSelectedMedIndex(prev => Math.min(filteredMedicines.length - 1, prev + 1));
                   }
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault();
@@ -1082,7 +1082,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   }, 400);
 
                   if (filteredMedicines.length > 0) {
-                    setSelectedMedIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
+                    setSelectedMedIndex(prev => Math.max(0, prev - 1));
                   }
                 } else if (e.key === 'Enter') {
                   e.preventDefault();

@@ -1130,7 +1130,7 @@ export default function NewPurchase({
                     }, 400);
 
                     if (filteredSuppliers.length > 0) {
-                      setSupplierDropdownIndex(prev => (prev + 1) % filteredSuppliers.length);
+                      setSupplierDropdownIndex(prev => Math.min(filteredSuppliers.length - 1, prev + 1));
                     }
                   } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
@@ -1142,7 +1142,7 @@ export default function NewPurchase({
                     }, 400);
 
                     if (filteredSuppliers.length > 0) {
-                      setSupplierDropdownIndex(prev => (prev - 1 + filteredSuppliers.length) % filteredSuppliers.length);
+                      setSupplierDropdownIndex(prev => Math.max(0, prev - 1));
                     }
                   } else if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1522,7 +1522,7 @@ export default function NewPurchase({
                               }, 400);
 
                               if (filteredMedicines.length > 0) {
-                                setMedDropdownIndex(prev => (prev + 1) % filteredMedicines.length);
+                                setMedDropdownIndex(prev => Math.min(filteredMedicines.length - 1, prev + 1));
                               }
                             } else if (e.key === 'ArrowUp') {
                               e.preventDefault();
@@ -1536,7 +1536,7 @@ export default function NewPurchase({
                               }, 400);
 
                               if (filteredMedicines.length > 0) {
-                                setMedDropdownIndex(prev => (prev - 1 + filteredMedicines.length) % filteredMedicines.length);
+                                setMedDropdownIndex(prev => Math.max(0, prev - 1));
                               }
                             } else if (e.key === 'Enter') {
                               e.preventDefault();
