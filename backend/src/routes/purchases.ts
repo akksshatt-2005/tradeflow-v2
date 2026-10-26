@@ -349,9 +349,23 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         return;
       }
 
-      const packStr = (rawItem.pack || '').trim();
-      const parsedPack = parsePackingString(packStr, rawItem.unit || 'STRIP', rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : 10);
-      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : parsedPack.conversionFactor;
+      let itemRecord: any = null;
+      if (rawItem.itemId) {
+        itemRecord = await prisma.item.findFirst({
+          where: { id: rawItem.itemId, companyId }
+        });
+      } else if (medName) {
+        itemRecord = await prisma.item.findFirst({
+          where: { name: { equals: medName, mode: 'insensitive' }, companyId }
+        });
+      }
+
+      const defaultUnit = rawItem.unit || itemRecord?.unit || 'STRIP';
+      const defaultFactor = rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : (itemRecord?.conversionFactor || (medName.toUpperCase().includes('SYRUP') || medName.toUpperCase().includes('BOTTLE') || medName.toUpperCase().includes('INJ') ? 1 : 10));
+
+      const packStr = (rawItem.pack || itemRecord?.name || medName || '').trim();
+      const parsedPack = parsePackingString(packStr, defaultUnit, defaultFactor);
+      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : (itemRecord?.conversionFactor || parsedPack.conversionFactor);
 
       const parsedQty = parsePharmaQuantity(rawItem.quantity, factor);
       const parsedFree = parsePharmaQuantity(rawItem.freeQuantity, factor);
@@ -733,9 +747,23 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         return;
       }
 
-      const packStr = (rawItem.pack || '').trim();
-      const parsedPack = parsePackingString(packStr, rawItem.unit || 'STRIP', rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : 10);
-      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : parsedPack.conversionFactor;
+      let itemRecord: any = null;
+      if (rawItem.itemId) {
+        itemRecord = await prisma.item.findFirst({
+          where: { id: rawItem.itemId, companyId }
+        });
+      } else if (medName) {
+        itemRecord = await prisma.item.findFirst({
+          where: { name: { equals: medName, mode: 'insensitive' }, companyId }
+        });
+      }
+
+      const defaultUnit = rawItem.unit || itemRecord?.unit || 'STRIP';
+      const defaultFactor = rawItem.conversionFactor ? parseInt(rawItem.conversionFactor) : (itemRecord?.conversionFactor || (medName.toUpperCase().includes('SYRUP') || medName.toUpperCase().includes('BOTTLE') || medName.toUpperCase().includes('INJ') ? 1 : 10));
+
+      const packStr = (rawItem.pack || itemRecord?.name || medName || '').trim();
+      const parsedPack = parsePackingString(packStr, defaultUnit, defaultFactor);
+      const factor = rawItem.conversionFactor ? Math.max(1, parseInt(rawItem.conversionFactor)) : (itemRecord?.conversionFactor || parsedPack.conversionFactor);
 
       const parsedQty = parsePharmaQuantity(rawItem.quantity, factor);
       const parsedFree = parsePharmaQuantity(rawItem.freeQuantity, factor);
