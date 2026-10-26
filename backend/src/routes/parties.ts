@@ -600,9 +600,10 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     });
     const partyIds = Array.from(new Set(relatedParties.map(p => p.id)));
 
-    // Base conditions for this supplier / customer
+    // Base conditions for this supplier / customer (strictly exclude CANCELLED bills)
     const basePurchaseWhere: any = {
       companyId,
+      status: { not: 'CANCELLED' },
       OR: [
         { supplierId: { in: partyIds } },
         ...(firstWord.length >= 3 ? [{ supplier: { name: { contains: firstWord, mode: 'insensitive' as const } } }] : []),
@@ -619,6 +620,7 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
     };
     const baseInvoiceWhere: any = {
       companyId,
+      status: { not: 'CANCELLED' },
       OR: [
         { partyId: { in: partyIds } },
         ...(partyName ? [{ customerName: { equals: partyName, mode: 'insensitive' as const } }] : []),
@@ -681,7 +683,21 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
       allPartyPayments = await prisma.payment.findMany({
         where: {
           companyId,
-          partyId: { in: partyIds }
+          partyId: { in: partyIds },
+          AND: [
+            {
+              OR: [
+                { purchaseId: null },
+                { purchase: { status: { not: 'CANCELLED' } } }
+              ]
+            },
+            {
+              OR: [
+                { invoiceId: null },
+                { invoice: { status: { not: 'CANCELLED' } } }
+              ]
+            }
+          ]
         },
         orderBy: { paymentDate: 'asc' }
       });
@@ -1026,6 +1042,98 @@ router.get('/:id/statement', async (req: CompanyScopedRequest, res: Response) =>
   } catch (error: any) {
     console.error('Failed to load party statement:', error);
     res.status(500).json({ error: error.message || 'Failed to retrieve party statement' });
+  }
+});
+
+/**
+ * DELETE /parties/payments/:paymentId
+ * Void/delete an erroneous payment voucher directly from the ledger,
+ * restoring the supplier/customer outstanding balance and purchase/invoice paidAmount.
+ */
+router.delete('/payments/:paymentId', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { paymentId } = req.params;
+
+  try {
+    const payment = await prisma.payment.findFirst({
+      where: { id: paymentId, companyId }
+    });
+
+    if (!payment) {
+      res.status(404).json({ error: 'Payment voucher not found' });
+      return;
+    }
+
+    const paymentAmount = Number(payment.amount);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. If linked to purchase, update purchase paidAmount & status
+      if (payment.purchaseId) {
+        const purchase = await tx.purchase.findUnique({
+          where: { id: payment.purchaseId }
+        });
+
+        if (purchase) {
+          const currentPaid = Number(purchase.paidAmount);
+          const totalAmount = Number(purchase.totalAmount);
+          const newPaid = Math.max(0, Math.round((currentPaid - paymentAmount) * 100) / 100);
+          const newStatus = newPaid <= 0 ? 'UNPAID' : (newPaid >= totalAmount ? 'PAID' : 'PARTIAL');
+
+          await tx.purchase.update({
+            where: { id: purchase.id },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 2. If linked to invoice, update invoice paidAmount & status
+      if (payment.invoiceId) {
+        const invoice = await tx.invoice.findUnique({
+          where: { id: payment.invoiceId }
+        });
+
+        if (invoice) {
+          const currentPaid = Number(invoice.paidAmount);
+          const grandTotal = Number(invoice.grandTotal);
+          const newPaid = Math.max(0, Math.round((currentPaid - paymentAmount) * 100) / 100);
+          const newStatus = newPaid <= 0 ? 'UNPAID' : (newPaid >= grandTotal ? 'PAID' : 'PARTIAL');
+
+          await tx.invoice.update({
+            where: { id: invoice.id },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 3. Restore party outstanding balance
+      if (payment.partyId) {
+        await tx.party.update({
+          where: { id: payment.partyId },
+          data: {
+            outstandingBalance: { increment: paymentAmount }
+          }
+        });
+      }
+
+      // 4. Delete payment voucher
+      await tx.payment.delete({
+        where: { id: payment.id }
+      });
+    });
+
+    res.status(200).json({
+      message: `Payment voucher #${payment.voucherNo} of ₹${paymentAmount.toFixed(2)} voided successfully`,
+      deletedPaymentId: paymentId
+    });
+  } catch (error: any) {
+    console.error('Error voiding payment voucher:', error);
+    res.status(500).json({ error: error.message || 'Failed to void payment voucher' });
   }
 });
 

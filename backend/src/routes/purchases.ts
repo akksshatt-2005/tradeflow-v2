@@ -616,6 +616,24 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         });
       }
 
+      // 4. Create initial Payment transaction voucher if paid amount was entered on creation
+      if (numPaid > 0) {
+        await tx.payment.create({
+          data: {
+            companyId,
+            partyId: supplierId,
+            purchaseId: purchase.id,
+            voucherNo: `PAY-${cleanInvoiceNo}`,
+            paymentType: 'PAYMENT_OUT',
+            amount: numPaid,
+            paymentDate: parsedPurchaseDate,
+            paymentMode: String(paymentMode || 'CASH'),
+            notes: notes ? String(notes).trim() : `Payment for Bill #${cleanInvoiceNo} (${paymentMode || 'CASH'})`,
+            createdBy: userId
+          }
+        });
+      }
+
       return purchase;
     }, { maxWait: 15000, timeout: 30000 });
 
@@ -668,7 +686,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
   try {
     const existingPurchase = await prisma.purchase.findFirst({
       where: { id, companyId },
-      include: { items: true }
+      include: { items: true, payments: true }
     });
 
     if (!existingPurchase) {
@@ -1067,6 +1085,50 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         });
       }
 
+      // 5b. Synchronize payments table with finalPaid
+      const linkedPayments = await tx.payment.findMany({
+        where: { companyId, purchaseId: id },
+        orderBy: { paymentDate: 'asc' }
+      });
+      const linkedTotal = linkedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      if (finalPaid > linkedTotal) {
+        const diff = Math.round((finalPaid - linkedTotal) * 100) / 100;
+        const count = linkedPayments.length;
+        const vSuffix = count > 0 ? `-${count + 1}` : '';
+        await tx.payment.create({
+          data: {
+            companyId,
+            partyId: targetSupplierId,
+            purchaseId: id,
+            voucherNo: `PAY-${existingPurchase.invoiceNumber}${vSuffix}`,
+            paymentType: 'PAYMENT_OUT',
+            amount: diff,
+            paymentDate: parsedPurchaseDate,
+            paymentMode: String(paymentMode || 'CASH'),
+            notes: `Payment for Bill #${existingPurchase.invoiceNumber} (${paymentMode || 'CASH'})`,
+            createdBy: userId
+          }
+        });
+      } else if (finalPaid < linkedTotal) {
+        let excessToDeduct = Math.round((linkedTotal - finalPaid) * 100) / 100;
+        const reversedPayments = [...linkedPayments].reverse();
+        for (const pmt of reversedPayments) {
+          if (excessToDeduct <= 0) break;
+          const pmtAmt = Number(pmt.amount);
+          if (pmtAmt <= excessToDeduct) {
+            await tx.payment.delete({ where: { id: pmt.id } });
+            excessToDeduct = Math.round((excessToDeduct - pmtAmt) * 100) / 100;
+          } else {
+            await tx.payment.update({
+              where: { id: pmt.id },
+              data: { amount: Math.round((pmtAmt - excessToDeduct) * 100) / 100 }
+            });
+            excessToDeduct = 0;
+          }
+        }
+      }
+
       return purchase;
     }, { maxWait: 15000, timeout: 30000 });
 
@@ -1109,6 +1171,9 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           include: {
             item: { select: { id: true, name: true, sku: true, unit: true, conversionFactor: true, genericName: true, manufacturer: true } }
           }
+        },
+        payments: {
+          orderBy: { paymentDate: 'desc' }
         }
       }
     });
@@ -1161,6 +1226,17 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           gstRate: Number(i.gstRate),
           gstAmount: Number(i.gstAmount),
           totalAmount: Number(i.totalAmount)
+        })),
+        payments: (purchase.payments || []).map(p => ({
+          id: p.id,
+          voucherNo: p.voucherNo,
+          paymentType: p.paymentType,
+          amount: Number(p.amount),
+          paymentDate: p.paymentDate.toISOString(),
+          paymentMode: p.paymentMode,
+          referenceNo: p.referenceNo,
+          notes: p.notes,
+          createdAt: p.createdAt.toISOString()
         })),
         createdAt: purchase.createdAt.toISOString()
       }
@@ -1228,13 +1304,19 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
         }
       });
 
+      // Generate distinct voucher number
+      const existingPaymentsCount = await tx.payment.count({
+        where: { companyId, purchaseId: purchase.id }
+      });
+      const voucherSuffix = existingPaymentsCount > 0 ? `-${existingPaymentsCount + 1}` : '';
+
       // Create permanent Payment transaction voucher
       await tx.payment.create({
         data: {
           companyId,
           partyId: purchase.supplierId,
           purchaseId: purchase.id,
-          voucherNo: `PAY-${purchase.invoiceNumber}`,
+          voucherNo: `PAY-${purchase.invoiceNumber}${voucherSuffix}`,
           paymentType: 'PAYMENT_OUT',
           amount: actualPayment,
           paymentDate: effectivePaymentDate,
@@ -1262,6 +1344,75 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
   } catch (error: any) {
     console.error('Error recording purchase payment:', error);
     res.status(500).json({ error: error.message || 'Failed to record payment' });
+  }
+});
+
+/**
+ * DELETE /purchases/payments/:paymentId
+ * Voids/deletes a payment voucher, restores supplier outstanding balance, and synchronizes purchase paidAmount.
+ */
+router.delete('/payments/:paymentId', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { paymentId } = req.params;
+
+  try {
+    const payment = await prisma.payment.findFirst({
+      where: { id: paymentId, companyId }
+    });
+
+    if (!payment) {
+      res.status(404).json({ error: 'Payment voucher not found' });
+      return;
+    }
+
+    const paymentAmount = Number(payment.amount);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. If linked to purchase, update purchase paidAmount & status
+      if (payment.purchaseId) {
+        const purchase = await tx.purchase.findUnique({
+          where: { id: payment.purchaseId }
+        });
+
+        if (purchase) {
+          const currentPaid = Number(purchase.paidAmount);
+          const totalAmount = Number(purchase.totalAmount);
+          const newPaid = Math.max(0, Math.round((currentPaid - paymentAmount) * 100) / 100);
+          const newStatus = newPaid <= 0 ? 'UNPAID' : (newPaid >= totalAmount ? 'PAID' : 'PARTIAL');
+
+          await tx.purchase.update({
+            where: { id: purchase.id },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 2. Restore supplier outstanding balance
+      if (payment.partyId) {
+        await tx.party.update({
+          where: { id: payment.partyId },
+          data: {
+            outstandingBalance: { increment: paymentAmount }
+          }
+        });
+      }
+
+      // 3. Delete the payment voucher
+      await tx.payment.delete({
+        where: { id: payment.id }
+      });
+    });
+
+    res.status(200).json({
+      message: `Payment voucher #${payment.voucherNo} of ₹${paymentAmount.toFixed(2)} voided successfully`,
+      deletedPaymentId: paymentId
+    });
+  } catch (error: any) {
+    console.error('Error voiding payment:', error);
+    res.status(500).json({ error: error.message || 'Failed to void payment voucher' });
   }
 });
 
@@ -1366,6 +1517,13 @@ async function cancelPurchaseBill(purchase: any, companyId: string, userId: stri
         data: {
           outstandingBalance: { decrement: unpaidAmount }
         }
+      });
+    }
+
+    // 4. Void any payment vouchers associated with this cancelled bill
+    if (paidAmount > 0) {
+      await tx.payment.deleteMany({
+        where: { companyId, purchaseId: purchase.id }
       });
     }
   });

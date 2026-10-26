@@ -426,11 +426,29 @@ export default function Sales() {
 
   const handleOpenPayment = (inv: InvoiceListItem) => {
     setViewingInvoice(inv);
-    setPaymentAmount(String(inv.balanceAmount));
+    setPaymentAmount('');
     setPaymentDate(getLocalDateString());
     setPaymentMode('CASH');
     setReferenceNo('');
     setShowPaymentModal(true);
+  };
+
+  const handleVoidInvoicePayment = async (paymentId: string) => {
+    if (!activeCompany || !viewingInvoice) return;
+    if (!window.confirm('Are you sure you want to void / delete this payment voucher? The invoice balance and customer ledger will be updated automatically.')) {
+      return;
+    }
+    try {
+      await api.delete(`/api/invoices/payments/${paymentId}`, {
+        companyId: activeCompany.id
+      });
+      alert('Payment voucher voided successfully');
+      await handleViewInvoice(viewingInvoice.id);
+      fetchSalesData();
+    } catch (err: any) {
+      console.error('Failed to void payment:', err);
+      alert('Failed to void payment: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const handleRecordPayment = async () => {
@@ -1911,6 +1929,66 @@ export default function Sales() {
                   </div>
                 )}
               </div>
+
+              {/* PAYMENT VOUCHERS LIST */}
+              {viewingInvoice.payments && viewingInvoice.payments.length > 0 && (
+                <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Payment Vouchers Recorded
+                  </div>
+                  <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', textAlign: 'left' }}>
+                          <th style={{ padding: '0.4rem 0.6rem' }}>Voucher #</th>
+                          <th style={{ padding: '0.4rem 0.6rem' }}>Date</th>
+                          <th style={{ padding: '0.4rem 0.6rem' }}>Mode</th>
+                          <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Amount (₹)</th>
+                          <th style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewingInvoice.payments.map((p: any) => (
+                          <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: '0.4rem 0.6rem', fontFamily: 'monospace', fontWeight: 600 }}>{p.voucherNo}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', color: 'var(--text-secondary)' }}>
+                              {new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '0.4rem 0.6rem' }}>
+                              <span style={{ padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-secondary)', fontSize: '11px', fontWeight: 600 }}>
+                                {p.paymentMode}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: 'var(--accent-green)' }}>
+                              ₹{Number(p.amount).toFixed(2)}
+                            </td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleVoidInvoicePayment(p.id)}
+                                title="Void / Delete payment voucher"
+                                style={{
+                                  background: '#fee2e2',
+                                  border: '1px solid #fca5a5',
+                                  color: '#dc2626',
+                                  padding: '3px 6px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1950,10 +2028,27 @@ export default function Sales() {
             </div>
 
             <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-              <div>Invoice: <strong>{viewingInvoice.invoiceNumber}</strong></div>
-              <div>Customer: <strong>{viewingInvoice.customerName}</strong></div>
-              <div style={{ color: 'var(--accent-red)', marginTop: '0.4rem', fontWeight: '700' }}>
-                Outstanding Balance: ₹{Number(viewingInvoice.balanceAmount).toFixed(2)}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Invoice:</span>
+                <strong>{viewingInvoice.invoiceNumber}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Customer:</span>
+                <strong>{viewingInvoice.customerName}</strong>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', paddingTop: '0.6rem', borderTop: '1px dashed var(--border-color)', textAlign: 'center' }}>
+                <div style={{ background: 'var(--card-bg)', padding: '6px', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total Bill</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>₹{Number(viewingInvoice.grandTotal || 0).toFixed(2)}</div>
+                </div>
+                <div style={{ background: 'var(--card-bg)', padding: '6px', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Already Paid</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent-green)' }}>₹{Number(viewingInvoice.paidAmount || 0).toFixed(2)}</div>
+                </div>
+                <div style={{ background: 'var(--card-bg)', padding: '6px', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Balance Due</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--accent-red)' }}>₹{Number(viewingInvoice.balanceAmount || 0).toFixed(2)}</div>
+                </div>
               </div>
             </div>
 
@@ -2007,13 +2102,32 @@ export default function Sales() {
             </div>
 
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                Payment Amount (₹) *
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                  Payment Amount (₹) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setPaymentAmount(String(viewingInvoice.balanceAmount || 0))}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand-teal)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  Pay Full (₹{Number(viewingInvoice.balanceAmount || 0).toFixed(2)})
+                </button>
+              </div>
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
                 max={viewingInvoice.balanceAmount}
+                placeholder={`e.g. 10.00 (Max: ₹${Number(viewingInvoice.balanceAmount || 0).toFixed(2)})`}
                 value={paymentAmount}
                 onChange={e => setPaymentAmount(e.target.value)}
                 style={{

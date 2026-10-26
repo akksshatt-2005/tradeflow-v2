@@ -71,6 +71,15 @@ interface PurchaseBill {
   };
   createdByUser: string;
   itemsCount: number;
+  payments?: Array<{
+    id: string;
+    voucherNo: string;
+    amount: number;
+    paymentDate: string;
+    paymentMode: string;
+    referenceNo?: string | null;
+    notes?: string | null;
+  }>;
   createdAt: string;
 }
 
@@ -199,6 +208,31 @@ export default function Purchases() {
       await fetchPurchases();
     } catch (err: any) {
       setError(err.message || 'Failed to record payment');
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
+  const handleVoidPayment = async (paymentId: string, voucherNo: string, amount: number) => {
+    if (!activeCompany || !viewingPurchase) return;
+    const confirm = window.confirm(
+      `Are you sure you want to void payment voucher #${voucherNo} of ₹${amount.toFixed(2)}?\n\nThis will atomically:\n- Restore ₹${amount.toFixed(2)} to supplier outstanding balance\n- Update purchase bill balance due\n- Remove this payment entry from supplier ledger`
+    );
+    if (!confirm) return;
+
+    try {
+      setRecordingPayment(true);
+      setError(null);
+      await api.delete(`/api/purchases/payments/${paymentId}`, {
+        companyId: activeCompany.id
+      });
+      await handleOpenDetails(viewingPurchase.id);
+      await fetchPurchases();
+    } catch (err: any) {
+      console.error('Failed to void payment:', err);
+      const msg = err.message || 'Failed to void payment voucher';
+      setError(msg);
+      window.alert(msg);
     } finally {
       setRecordingPayment(false);
     }
@@ -705,14 +739,29 @@ export default function Purchases() {
                     <span style={{ color: 'var(--text-muted)' }}>Taxable Amount:</span>
                     <span>₹{viewingPurchase.taxableAmount?.toFixed(2)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>CGST (50%):</span>
-                    <span>₹{viewingPurchase.cgstAmount?.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>SGST (50%):</span>
-                    <span>₹{viewingPurchase.sgstAmount?.toFixed(2)}</span>
-                  </div>
+                  {viewingPurchase.igstAmount > 0 ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>IGST (Integrated Tax):</span>
+                      <span>₹{viewingPurchase.igstAmount?.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>CGST (Central Tax):</span>
+                        <span>₹{viewingPurchase.cgstAmount?.toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>SGST (State Tax):</span>
+                        <span>₹{viewingPurchase.sgstAmount?.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  {viewingPurchase.roundOff !== 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Round Off:</span>
+                      <span>₹{viewingPurchase.roundOff?.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div style={{ borderTop: '1px solid var(--border)', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '14px' }}>
                     <span>Grand Total:</span>
                     <span style={{ color: 'var(--brand-primary)' }}>₹{viewingPurchase.totalAmount?.toFixed(2)}</span>
@@ -729,6 +778,63 @@ export default function Purchases() {
                   )}
                 </div>
               </div>
+
+              {/* Payment Vouchers Table */}
+              {viewingPurchase.payments && viewingPurchase.payments.length > 0 && (
+                <div style={{ marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Payment Vouchers Recorded ({viewingPurchase.payments.length})</span>
+                    <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 800 }}>Total Paid: ₹{viewingPurchase.paidAmount?.toFixed(2)}</span>
+                  </div>
+                  <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', background: '#f8fafc', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', textAlign: 'left' }}>
+                        <th style={{ padding: '6px 8px' }}>Date</th>
+                        <th style={{ padding: '6px 8px' }}>Voucher #</th>
+                        <th style={{ padding: '6px 8px' }}>Mode</th>
+                        <th style={{ padding: '6px 8px' }}>Ref / Notes</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Amount (₹)</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'center', width: '50px' }}>Void</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewingPurchase.payments.map((pmt: any) => (
+                        <tr key={pmt.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '6px 8px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                            {new Date(pmt.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td style={{ padding: '6px 8px', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>{pmt.voucherNo}</td>
+                          <td style={{ padding: '6px 8px', color: '#475569' }}>{pmt.paymentMode}</td>
+                          <td style={{ padding: '6px 8px', color: '#64748b' }}>{pmt.notes || pmt.referenceNo || '—'}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>
+                            ₹{Number(pmt.amount).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleVoidPayment(pmt.id, pmt.voucherNo, Number(pmt.amount))}
+                              title="Void / Delete this payment voucher"
+                              style={{
+                                background: '#fee2e2',
+                                border: '1px solid #fca5a5',
+                                color: '#b91c1c',
+                                cursor: 'pointer',
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}
@@ -743,7 +849,8 @@ export default function Purchases() {
               {viewingPurchase.status !== 'PAID' ? (
                 <button
                   onClick={() => {
-                    setPaymentAmount(String(viewingPurchase.totalAmount - viewingPurchase.paidAmount));
+                    const remaining = Math.max(0, viewingPurchase.totalAmount - viewingPurchase.paidAmount);
+                    setPaymentAmount(remaining > 0 ? String(remaining) : '');
                     setShowPaymentModal(true);
                   }}
                   className="btn btn-primary btn-sm"
@@ -823,11 +930,22 @@ export default function Purchases() {
 
             <form onSubmit={handleRecordPayment} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', margin: 0 }}>
               <div className="modal-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                  Supplier: <strong>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong>
-                </div>
-                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                  Balance Due on Bill #{viewingPurchase.invoiceNumber}: <strong>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</strong>
+                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    Supplier: <strong style={{ color: '#0f172a' }}>{viewingPurchase.supplier?.mailTo || viewingPurchase.supplier?.name}</strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Bill Grand Total:</span>
+                    <strong style={{ color: '#0f172a' }}>₹{viewingPurchase.totalAmount.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#16a34a', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Already Paid:</span>
+                    <strong>₹{viewingPurchase.paidAmount.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700, display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '4px', marginTop: '2px' }}>
+                    <span>Balance Due:</span>
+                    <span>₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)}</span>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -857,15 +975,35 @@ export default function Purchases() {
                 </div>
 
                 <div className="form-group">
-                  <label className="label">Payment Amount (₹) *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label className="label" style={{ margin: 0 }}>Payment Amount (₹) *</label>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentAmount((viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2563eb',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    >
+                      Pay Full (₹{(viewingPurchase.totalAmount - viewingPurchase.paidAmount).toFixed(2)})
+                    </button>
+                  </div>
                   <input
                     type="number"
                     step="0.01"
-                    required
+                    min="0.01"
                     max={viewingPurchase.totalAmount - viewingPurchase.paidAmount}
+                    required
+                    placeholder="Enter amount to pay"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
                     className="input"
+                    autoFocus
                   />
                 </div>
 

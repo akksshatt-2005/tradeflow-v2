@@ -155,6 +155,25 @@ export default function Parties() {
     }
   };
 
+  const handleVoidStatementPayment = async (paymentId: string) => {
+    if (!window.confirm('Are you sure you want to void / delete this payment voucher? The party balance and bill payment status will be adjusted automatically.')) {
+      return;
+    }
+    try {
+      await api.delete(`/api/parties/payments/${paymentId}`, {
+        companyId: activeCompany?.id
+      });
+      alert('Payment voucher voided successfully.');
+      if (statementParty) {
+        handleOpenStatement(statementParty, statementStartDate, statementEndDate);
+      }
+      fetchParties();
+    } catch (err: any) {
+      console.error('Failed to void payment:', err);
+      alert('Failed to void payment voucher: ' + (err.message || 'Unknown error'));
+    }
+  };
+
   const handleExportStatementExcel = () => {
     if (!statementData || !statementParty) return;
 
@@ -2326,6 +2345,7 @@ export default function Parties() {
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Debit (₹)</th>
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Credit (₹)</th>
                           <th style={{ padding: '0.65rem 0.8rem', textAlign: 'right' }}>Balance (₹)</th>
+                          <th style={{ padding: '0.65rem 0.8rem', textAlign: 'center', width: '60px' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2358,6 +2378,31 @@ export default function Parties() {
                             </td>
                             <td style={{ padding: '0.65rem 0.8rem', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
                               ₹{t.runningBalance.toFixed(2)}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.8rem', textAlign: 'center' }}>
+                              {t.type === 'PAYMENT' && t.referenceId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleVoidStatementPayment(t.referenceId)}
+                                  title="Void / Delete Payment Voucher"
+                                  style={{
+                                    background: '#fee2e2',
+                                    border: '1px solid #fca5a5',
+                                    color: '#dc2626',
+                                    borderRadius: '4px',
+                                    padding: '4px 7px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              ) : (
+                                <span style={{ color: '#cbd5e1' }}>—</span>
+                              )}
                             </td>
                           </tr>
                         ))}

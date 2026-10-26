@@ -310,6 +310,9 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
         include: {
           party: true,
           creator: { select: { username: true } },
+          payments: {
+            orderBy: { paymentDate: 'desc' }
+          },
           items: {
             include: {
               item: { select: { id: true, name: true, genericName: true, sku: true, unit: true, hsnCode: true } },
@@ -372,6 +375,15 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           id: company.id,
           name: company.name
         } : null,
+        payments: (invoice.payments || []).map((p: any) => ({
+          id: p.id,
+          voucherNo: p.voucherNo,
+          amount: Number(p.amount),
+          paymentDate: p.paymentDate.toISOString(),
+          paymentMode: p.paymentMode,
+          referenceNo: p.referenceNo,
+          notes: p.notes
+        })),
         items: invoice.items.map(i => ({
           id: i.id,
           itemId: i.itemId,
@@ -755,6 +767,25 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
           where: { id: customerParty.id },
           data: {
             outstandingBalance: { increment: balanceAmount }
+          }
+        });
+      }
+
+      // 5. If initial payment was made and linked to a party ledger, record payment voucher
+      if (customerParty && finalPaid > 0) {
+        await tx.payment.create({
+          data: {
+            companyId,
+            partyId: customerParty.id,
+            invoiceId: invoice.id,
+            voucherNo: `REC-${finalInvoiceNumber}`,
+            paymentType: 'PAYMENT_IN',
+            amount: finalPaid,
+            paymentDate: invoiceDate ? new Date(invoiceDate) : new Date(),
+            paymentMode: String(paymentMode || 'CASH'),
+            referenceNo: null,
+            notes: `Initial payment on Invoice #${finalInvoiceNumber}`,
+            createdBy: userId
           }
         });
       }
@@ -1157,6 +1188,52 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         });
       }
 
+      // 6. SYNCHRONIZE PAYMENT VOUCHERS WITH finalPaid
+      if (customerParty) {
+        const linkedPayments = await tx.payment.findMany({
+          where: { invoiceId: invoice.id },
+          orderBy: { createdAt: 'desc' }
+        });
+        const linkedTotal = linkedPayments.reduce((acc, p) => acc + Number(p.amount), 0);
+
+        if (finalPaid > linkedTotal) {
+          const diff = Math.round((finalPaid - linkedTotal) * 100) / 100;
+          const existingCount = linkedPayments.length;
+          const suffix = existingCount > 0 ? `-${existingCount + 1}` : '';
+          await tx.payment.create({
+            data: {
+              companyId,
+              partyId: customerParty.id,
+              invoiceId: invoice.id,
+              voucherNo: `REC-${invoice.invoiceNumber}${suffix}`,
+              paymentType: 'PAYMENT_IN',
+              amount: diff,
+              paymentDate: invoiceDate ? new Date(invoiceDate) : new Date(),
+              paymentMode: String(paymentMode || 'CASH'),
+              referenceNo: null,
+              notes: `Adjustment payment on Invoice #${invoice.invoiceNumber}`,
+              createdBy: userId
+            }
+          });
+        } else if (finalPaid < linkedTotal) {
+          let excessToRemove = Math.round((linkedTotal - finalPaid) * 100) / 100;
+          for (const p of linkedPayments) {
+            if (excessToRemove <= 0) break;
+            const pAmt = Number(p.amount);
+            if (pAmt <= excessToRemove) {
+              await tx.payment.delete({ where: { id: p.id } });
+              excessToRemove = Math.round((excessToRemove - pAmt) * 100) / 100;
+            } else {
+              await tx.payment.update({
+                where: { id: p.id },
+                data: { amount: Math.round((pAmt - excessToRemove) * 100) / 100 }
+              });
+              excessToRemove = 0;
+            }
+          }
+        }
+      }
+
       return invoice;
     }, { maxWait: 15000, timeout: 30000 });
 
@@ -1239,13 +1316,18 @@ router.post('/:id/payment', idempotencyMiddleware, async (req: CompanyScopedRequ
           }
         });
 
+        const existingCount = await tx.payment.count({
+          where: { invoiceId: invoice.id }
+        });
+        const suffix = existingCount > 0 ? `-${existingCount + 1}` : '';
+
         // Create permanent Payment transaction voucher
         await tx.payment.create({
           data: {
             companyId,
             partyId: invoice.partyId,
             invoiceId: invoice.id,
-            voucherNo: `REC-${invoice.invoiceNumber}`,
+            voucherNo: `REC-${invoice.invoiceNumber}${suffix}`,
             paymentType: 'PAYMENT_IN',
             amount: actualPayment,
             paymentDate: effectivePaymentDate,
@@ -1364,6 +1446,11 @@ router.delete('/:id', async (req: CompanyScopedRequest, res: Response) => {
           });
         }
       }
+
+      // 4. Void / clean up payment vouchers linked to this cancelled invoice
+      await tx.payment.deleteMany({
+        where: { invoiceId: invoice.id }
+      });
     });
 
     res.status(200).json({
@@ -1447,6 +1534,11 @@ router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
           });
         }
       }
+
+      // Void / clean up payment vouchers linked to this cancelled invoice
+      await tx.payment.deleteMany({
+        where: { invoiceId: invoice.id }
+      });
     });
 
     res.status(200).json({
@@ -1456,6 +1548,71 @@ router.post('/:id/cancel', async (req: CompanyScopedRequest, res: Response) => {
   } catch (error: any) {
     console.error('Error cancelling invoice:', error);
     res.status(500).json({ error: error.message || 'Failed to cancel invoice' });
+  }
+});
+
+/**
+ * DELETE /api/invoices/payments/:paymentId
+ * Void / reverse a customer payment voucher atomically.
+ */
+router.delete('/payments/:paymentId', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { paymentId } = req.params;
+
+  try {
+    const payment = await prisma.payment.findFirst({
+      where: { id: paymentId, companyId }
+    });
+
+    if (!payment) {
+      res.status(404).json({ error: 'Payment voucher not found' });
+      return;
+    }
+
+    const paymentAmount = Number(payment.amount);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete payment record
+      await tx.payment.delete({
+        where: { id: paymentId }
+      });
+
+      // 2. If linked to an invoice, decrement invoice.paidAmount and update status
+      if (payment.invoiceId) {
+        const invoice = await tx.invoice.findUnique({
+          where: { id: payment.invoiceId }
+        });
+        if (invoice) {
+          const newPaid = Math.max(0, Number(invoice.paidAmount) - paymentAmount);
+          const total = Number(invoice.grandTotal);
+          const newStatus = newPaid <= 0 ? 'UNPAID' : (newPaid >= total ? 'PAID' : 'PARTIAL');
+          await tx.invoice.update({
+            where: { id: payment.invoiceId },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 3. Increment customer party outstanding balance
+      if (payment.partyId) {
+        await tx.party.update({
+          where: { id: payment.partyId },
+          data: {
+            outstandingBalance: { increment: paymentAmount }
+          }
+        });
+      }
+    });
+
+    res.status(200).json({
+      message: `Payment voucher #${payment.voucherNo} voided successfully`
+    });
+  } catch (error: any) {
+    console.error('Error voiding customer payment:', error);
+    res.status(500).json({ error: error.message || 'Failed to void payment voucher' });
   }
 });
 
