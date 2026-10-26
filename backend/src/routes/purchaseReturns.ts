@@ -264,29 +264,41 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const validatedItems: any[] = [];
 
     for (const raw of inputItems) {
-      const batchId = raw.batchId;
-      if (!batchId) {
-        res.status(400).json({ error: 'Batch ID is required for each returned line item' });
-        return;
+      let batchId = raw.batchId;
+      let batch: any = null;
+
+      if (batchId) {
+        batch = await prisma.batch.findFirst({
+          where: { id: batchId, companyId },
+          include: { item: true }
+        });
+      } else if (raw.batchNumber) {
+        batch = await prisma.batch.findFirst({
+          where: {
+            batchNumber: String(raw.batchNumber).trim().toUpperCase(),
+            companyId,
+            ...(raw.itemId ? { itemId: raw.itemId } : {})
+          },
+          include: { item: true }
+        });
+        if (batch) {
+          batchId = batch.id;
+        }
       }
 
-      const batch = await prisma.batch.findFirst({
-        where: { id: batchId, companyId },
-        include: { item: true }
-      });
-
       if (!batch) {
-        res.status(404).json({ error: `Batch ID ${batchId} not found` });
+        res.status(400).json({ error: 'Valid Batch ID or Batch Number is required for each returned line item' });
         return;
       }
 
       const factor = batch.item.conversionFactor || 1;
       const strips = Math.max(0, parseInt(raw.strips) || 0);
       const looseQty = Math.max(0, parseInt(raw.looseQty) || 0);
-      const totalUnits = (strips * factor) + looseQty;
+      const fallbackQty = Math.max(0, parseInt(raw.quantity) || parseInt(raw.qty) || 0);
+      const totalUnits = (strips * factor) + looseQty + (strips === 0 && looseQty === 0 ? fallbackQty : 0);
 
       if (totalUnits <= 0) {
-        res.status(400).json({ error: `Please specify returned strips or loose units for ${batch.item.name}` });
+        res.status(400).json({ error: `Please specify returned quantity for ${batch.item.name}` });
         return;
       }
 

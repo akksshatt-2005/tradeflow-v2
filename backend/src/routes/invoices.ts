@@ -507,16 +507,24 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const batchUpdates: { batchId: string; newStock: number; qtyDeducted: number; unitPrice: number; itemId: string; batchNumber: string }[] = [];
 
     for (const rawItem of items) {
-      if (!rawItem.itemId || !rawItem.batchId) {
-        res.status(400).json({ error: 'Each line item requires medicine item ID and batch ID' });
+      if (!rawItem.itemId || (!rawItem.batchId && !rawItem.batchNumber)) {
+        res.status(400).json({ error: 'Each line item requires medicine item ID and batch ID or Batch Number' });
         return;
       }
 
       // Fetch batch from DB with lock / check stock
-      const batch = await prisma.batch.findFirst({
-        where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
-        include: { item: { select: { name: true, conversionFactor: true, unit: true, gstRate: true } } }
-      });
+      let batch: any = null;
+      if (rawItem.batchId) {
+        batch = await prisma.batch.findFirst({
+          where: { id: rawItem.batchId, itemId: rawItem.itemId, companyId },
+          include: { item: { select: { name: true, conversionFactor: true, unit: true, gstRate: true } } }
+        });
+      } else if (rawItem.batchNumber) {
+        batch = await prisma.batch.findFirst({
+          where: { batchNumber: String(rawItem.batchNumber).trim().toUpperCase(), itemId: rawItem.itemId, companyId },
+          include: { item: { select: { name: true, conversionFactor: true, unit: true, gstRate: true } } }
+        });
+      }
 
       if (!batch) {
         res.status(404).json({ error: `Batch not found for selected item` });

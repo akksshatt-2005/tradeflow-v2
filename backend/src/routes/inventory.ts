@@ -132,6 +132,61 @@ router.get('/expiring', async (req: CompanyScopedRequest, res: Response) => {
 });
 
 /**
+ * GET /inventory/batches
+ * List or search all batches in the company with stock, pricing, and item details
+ */
+router.get('/batches', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
+  try {
+    const where: any = { companyId };
+    if (search) {
+      where.OR = [
+        { batchNumber: { contains: search, mode: 'insensitive' } },
+        { item: { name: { contains: search, mode: 'insensitive' } } },
+        { item: { sku: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const batches = await prisma.batch.findMany({
+      where,
+      include: {
+        item: {
+          select: { id: true, sku: true, name: true, unit: true, genericName: true, conversionFactor: true }
+        }
+      },
+      orderBy: [
+        { currentStock: 'desc' },
+        { expiryDate: 'asc' }
+      ]
+    });
+
+    const formatted = batches.map(b => ({
+      id: b.id,
+      batchId: b.id,
+      itemId: b.item.id,
+      medicineName: b.item.name,
+      genericName: b.item.genericName,
+      sku: b.item.sku,
+      batchNumber: b.batchNumber,
+      expiryDate: b.expiryDate.toISOString(),
+      currentStock: b.currentStock,
+      conversionFactor: b.item.conversionFactor || 1,
+      unit: b.item.unit,
+      mrp: Number(b.mrp),
+      ptr: Number(b.ptr),
+      pts: Number(b.pts)
+    }));
+
+    res.status(200).json({ batches: formatted });
+  } catch (error: any) {
+    console.error('Error fetching inventory batches:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory batches' });
+  }
+});
+
+/**
  * GET /inventory/ledger
  * Append-only stock ledger audit history
  */

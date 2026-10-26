@@ -361,7 +361,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
         return;
       }
 
-      const ptr = parseFloat(rawItem.purchaseRate) || 0; // PTR
+      const ptr = parseFloat(rawItem.purchaseRate || rawItem.unitPrice || rawItem.rate || rawItem.ptr) || 0; // PTR
       const mrp = parseFloat(rawItem.mrp) || ptr;
       const pts = parseFloat(rawItem.pts) || mrp;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
@@ -408,7 +408,7 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const numPaid = Math.min(computedTotal, Math.max(0, parseFloat(paidAmount) || 0));
 
     let status = 'UNPAID';
-    if (numPaid >= computedTotal) {
+    if (computedTotal > 0 && numPaid >= computedTotal) {
       status = 'PAID';
     } else if (numPaid > 0) {
       status = 'PARTIAL';
@@ -745,7 +745,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
         return;
       }
 
-      const purchaseRate = parseFloat(rawItem.purchaseRate) || 0;
+      const purchaseRate = parseFloat(rawItem.purchaseRate || rawItem.unitPrice || rawItem.rate || rawItem.ptr) || 0;
       const mrp = parseFloat(rawItem.mrp) || purchaseRate;
       const discountPct = Math.max(0, Math.min(100, parseFloat(rawItem.discountPercent) || 0));
       const gstRate = parseFloat(rawItem.gstRate) || 5.0;
@@ -808,7 +808,7 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     const balanceAmount = Math.max(0, computedTotal - finalPaid);
 
     let status = 'UNPAID';
-    if (balanceAmount <= 0) {
+    if (computedTotal > 0 && balanceAmount <= 0) {
       status = 'PAID';
     } else if (finalPaid > 0) {
       status = 'PARTIAL';
