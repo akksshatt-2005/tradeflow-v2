@@ -86,6 +86,13 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const [copyMode, setCopyMode] = useState<CopyMode>('CUSTOMER');
   const [showVouchers, setShowVouchers] = useState(false);
 
+  React.useEffect(() => {
+    document.body.classList.add('tax-invoice-open');
+    return () => {
+      document.body.classList.remove('tax-invoice-open');
+    };
+  }, []);
+
   // Active company details
   const comp = invoice.company || activeCompany || {};
   const companyName = comp.name || 'NEURO HARMONY CLINIC';

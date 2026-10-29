@@ -772,8 +772,41 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     print-color-adjust: exact !important;
   }
 
-  /* Completely suppress all web navigation, sidebars, wake banner, banners, modals other than invoice */
+  /* When printing the tax invoice modal: isolate and display ONLY the invoice */
+  body.tax-invoice-open * {
+    visibility: hidden;
+  }
+
+  body.tax-invoice-open .tax-invoice-print-container,
+  body.tax-invoice-open .tax-invoice-print-container *,
+  body.tax-invoice-open .tax-invoice-sheet,
+  body.tax-invoice-open .tax-invoice-sheet * {
+    visibility: visible !important;
+  }
+
+  /* Reset layout wrappers so parents don't hide, clip, or offset the modal */
+  .app-layout,
+  .main-wrapper,
+  .page-content,
+  .sales-container,
+  .pos-billing-page {
+    display: block !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Completely suppress all web navigation, sidebars, wake banner, buttons, toasts */
   .sidebar,
+  .top-navbar,
   .topbar,
   header,
   nav,
@@ -783,7 +816,6 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
   [class*="wake-banner"],
   [class*="server-wake"],
   .server-wake-banner,
-  .app-layout > *:not(.invoice-modal-backdrop),
   .no-print,
   button,
   .btn,
@@ -813,14 +845,20 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     box-shadow: none !important;
   }
 
-  /* Target Print Container */
+  /* Target Print Container - pin directly at top of printed page */
   .tax-invoice-print-container,
   #printable-tax-invoice {
     display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
+    background: transparent !important;
     box-shadow: none !important;
     border: none !important;
     page-break-after: avoid !important;
@@ -829,6 +867,8 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
   }
 
   .tax-invoice-sheet {
+    display: block !important;
+    visibility: visible !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
@@ -839,7 +879,6 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     break-inside: avoid !important;
     background: #ffffff !important;
     color: #000000 !important;
-    display: block !important;
     box-sizing: border-box !important;
   }
 
