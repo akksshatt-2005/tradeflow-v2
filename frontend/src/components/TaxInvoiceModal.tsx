@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Printer, Edit2, Trash2, X, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { Company } from '../context/AuthContext';
-import { numberToIndianWords, resolveStateCode, GST_STATE_CODE_MAP } from '../utils/numberToWords';
+import { numberToIndianWords, normalizeIndianState } from '../utils/numberToWords';
 
 export interface InvoiceModalItem {
   id?: string;
@@ -85,28 +85,49 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 }) => {
   const [copyMode, setCopyMode] = useState<CopyMode>('CUSTOMER');
   const [showVouchers, setShowVouchers] = useState(false);
+  const [showSignatory, setShowSignatory] = useState(false);
 
   // Active company details with fallbacks
   const comp = invoice.company || activeCompany || {};
-  const companyName = comp.name || 'Trade Flow Pharmacy & Retail';
-  const companyAddress = comp.address
-    ? `${comp.address}${comp.city ? `, ${comp.city}` : ''}${comp.state ? `, ${comp.state}` : ''}${comp.pincode ? ` - ${comp.pincode}` : ''}`
-    : '22, Main Road, Near Medical College';
-  const companyState = comp.state || 'Madhya Pradesh';
-  const companyGstin = comp.gstin || '27AACXXXX950145';
-  const companyStateCode = resolveStateCode(companyState, companyGstin);
-  const companyPhone = comp.phone || '985751452, 958745874';
-  const companyEmail = comp.email || 'care@tradeflowpharmacy.com';
-  const companyDlNo = comp.drugLicenseNo || '20B/21B-UP-2026-90412';
+  const companyName = comp.name || 'NEURO HARMONY CLINIC';
+  const companyAddress = comp.address && comp.address.trim()
+    ? `${comp.address.trim()}${comp.city ? `, ${comp.city.trim()}` : ''}${comp.pincode ? ` - ${comp.pincode.trim()}` : ''}`
+    : '';
+
+  // Correct state spelling to UTTAR PRADESH and state code to 09
+  const { stateName: companyState, stateCode: companyStateCode } = normalizeIndianState(comp.state, comp.gstin);
+
+  // Phone number (enforce Contact : 9703533694 only)
+  let companyPhone = '9703533694';
+  if (comp.phone && comp.phone.trim()) {
+    companyPhone = comp.phone.trim().replace('9703433694', '9703533694');
+  }
+
+  // Only display email if explicitly configured and not dummy domain
+  const companyEmail = comp.email && !comp.email.includes('tradeflowpharmacy.com') && !comp.email.includes('abctestmail')
+    ? comp.email.trim()
+    : '';
+
+  // Only display GSTIN or DL Number if actually provided and not dummy placeholder
+  const companyGstin = comp.gstin && !comp.gstin.includes('XXXX') && comp.gstin.trim().length > 5
+    ? comp.gstin.trim()
+    : '';
+  const companyDlNo = comp.drugLicenseNo && !comp.drugLicenseNo.includes('2026-90412') && comp.drugLicenseNo.trim().length > 3
+    ? comp.drugLicenseNo.trim()
+    : '';
 
   // Buyer details
   const party = invoice.party || {};
   const buyerName = invoice.customerName || party.name || 'Walk-in Customer';
-  const buyerAddress = invoice.customerAddress || party.address || (party.city ? `${party.city}, ${party.state || ''}` : 'Local');
-  const buyerState = party.state || companyState;
-  const buyerGstin = invoice.customerGstin || party.gstin || '';
-  const buyerPan = party.panNo || '';
-  const buyerStateCode = resolveStateCode(buyerState, buyerGstin || companyGstin);
+  const buyerAddress = invoice.customerAddress || party.address || '';
+  const { stateName: buyerState, stateCode: buyerStateCode } = normalizeIndianState(
+    party.state || invoice.patientAddress || comp.state,
+    invoice.customerGstin
+  );
+  const buyerGstin = invoice.customerGstin && !invoice.customerGstin.includes('URP') && invoice.customerGstin.trim().length > 3
+    ? invoice.customerGstin.trim()
+    : (party.gstin && !party.gstin.includes('URP') && party.gstin.trim().length > 3 ? party.gstin.trim() : '');
+  const buyerPan = party.panNo && party.panNo.trim().length > 3 ? party.panNo.trim() : '';
   const buyerPhone = invoice.customerPhone || party.phone || party.mobile || '';
 
   // Doctor & Patient details
@@ -125,13 +146,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const discountAmt = Number(invoice.billDiscountAmt || 0);
   const discountPct = Number(invoice.billDiscountPct || 0);
   const grandTotal = Number(invoice.grandTotal || 0);
-  const paidAmount = Number(invoice.paidAmount || 0);
-  const balanceAmount = Number(invoice.balanceAmount || Math.max(0, grandTotal - paidAmount));
   const roundOff = Number(invoice.roundOff || 0);
-
-  // Outstanding Party Balances
-  const prevBalance = Number(party.outstandingBalance || 0);
-  const totalBalanceDue = balanceAmount + (prevBalance > 0 ? prevBalance : 0);
 
   // Group items for HSN/SAC Tax Summary
   const hsnGroups = React.useMemo(() => {
@@ -276,26 +291,29 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
           </h1>
         </div>
 
-        <div style={{ fontSize: '10.5px', marginTop: '2px', color: '#111' }}>
-          {companyAddress}
-        </div>
+        {companyAddress && (
+          <div style={{ fontSize: '10.5px', marginTop: '2px', color: '#111' }}>
+            {companyAddress}
+          </div>
+        )}
         <div style={{ fontSize: '10.5px', marginTop: '1px', fontWeight: 500 }}>
           <span>State Name : <strong>{companyState}</strong></span>
           <span style={{ margin: '0 10px' }}>&nbsp;</span>
           <span>State Code : <strong>{companyStateCode}</strong></span>
         </div>
-        <div style={{ fontSize: '10px', marginTop: '1px', color: '#222' }}>
-          Contact : <strong>{companyPhone}</strong> &nbsp;|&nbsp; E-Mail : <strong>{companyEmail}</strong>
-        </div>
-        <div style={{ fontSize: '10.5px', marginTop: '2px', fontWeight: 700 }}>
-          <span>GSTIN/UIN: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyGstin}</span></span>
-          {companyDlNo && (
-            <>
-              <span style={{ margin: '0 8px' }}>|</span>
-              <span>D.L. No.: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyDlNo}</span></span>
-            </>
+        <div style={{ fontSize: '10.5px', marginTop: '1px', color: '#111' }}>
+          Contact : <strong>{companyPhone}</strong>
+          {companyEmail && (
+            <span style={{ marginLeft: '12px' }}>E-Mail : <strong>{companyEmail}</strong></span>
           )}
         </div>
+        {(companyGstin || companyDlNo) && (
+          <div style={{ fontSize: '10.5px', marginTop: '2px', fontWeight: 700 }}>
+            {companyGstin && <span>GSTIN/UIN: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyGstin}</span></span>}
+            {companyGstin && companyDlNo && <span style={{ margin: '0 8px' }}>|</span>}
+            {companyDlNo && <span>D.L. No.: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyDlNo}</span></span>}
+          </div>
+        )}
       </div>
 
       {/* ── DETAILS FOR BUYER & INVOICE META (TWO COLUMNS) ── */}
@@ -308,17 +326,23 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
           <div style={{ fontSize: '12.5px', fontWeight: 900, color: '#000', textTransform: 'uppercase' }}>
             {buyerName}
           </div>
-          <div style={{ color: '#222', marginTop: '1px' }}>{buyerAddress}</div>
+          {buyerAddress && buyerAddress !== 'Local' && (
+            <div style={{ color: '#222', marginTop: '1px' }}>{buyerAddress}</div>
+          )}
           <div style={{ marginTop: '2px' }}>
             State Name : <strong>{buyerState}</strong> &nbsp;&nbsp;&nbsp; Code : <strong>{buyerStateCode}</strong>
           </div>
-          <div style={{ marginTop: '2px' }}>
-            <span>GSTIN No : <strong>{buyerGstin || 'URP'}</strong></span>
-            {buyerPan && <span style={{ marginLeft: '12px' }}>PAN No : <strong>{buyerPan}</strong></span>}
-          </div>
-          <div style={{ marginTop: '2px' }}>
-            Contact Details : <strong>{buyerPhone || '—'}</strong>
-          </div>
+          {buyerGstin && (
+            <div style={{ marginTop: '2px' }}>
+              <span>GSTIN No : <strong>{buyerGstin}</strong></span>
+              {buyerPan && <span style={{ marginLeft: '12px' }}>PAN No : <strong>{buyerPan}</strong></span>}
+            </div>
+          )}
+          {buyerPhone && (
+            <div style={{ marginTop: '2px' }}>
+              Contact Details : <strong>{buyerPhone}</strong>
+            </div>
+          )}
 
           {/* Doctor / Patient Prescription Details for Pharmacy compliance */}
           <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #ccc', fontSize: '10px', color: '#111' }}>
@@ -575,100 +599,22 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       </div>
 
       {/* ── AMOUNT IN WORDS ── */}
-      <div style={{ padding: '5px 10px', borderBottom: '1.5px solid #000000', fontSize: '10.5px' }}>
+      <div style={{ padding: '6px 10px', fontSize: '10.5px' }}>
         <strong>Amount In Words :</strong> {numberToIndianWords(grandTotal)}
       </div>
 
-      {/* ── FOOTER: BALANCES, BANK DETAILS & SIGNATORY (THREE COLUMNS) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '40% 32% 28%' }}>
-        {/* Outstanding Balances & Declaration */}
-        <div style={{ padding: '6px 8px', borderRight: '1.5px solid #000000', fontSize: '9.5px' }}>
-          <div style={{ fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px', fontSize: '9px' }}>
-            Party's Outstanding Balance :
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', marginBottom: '4px' }}>
-            <tbody>
-              <tr>
-                <td style={{ color: '#444' }}>Previous Balance</td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                  : ₹{Math.abs(prevBalance).toFixed(2)} {prevBalance >= 0 ? 'Dr' : 'Cr'}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ color: '#444' }}>Bill Amount</td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace' }}>
-                  : ₹{grandTotal.toFixed(2)} Dr
-                </td>
-              </tr>
-              <tr>
-                <td style={{ color: '#047857', fontWeight: 700 }}>Received Amount</td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>
-                  : ₹{paidAmount.toFixed(2)}
-                </td>
-              </tr>
-              <tr style={{ borderTop: '1px dashed #ccc', fontWeight: 800 }}>
-                <td>Balance Due</td>
-                <td style={{ textAlign: 'right', fontFamily: 'monospace', color: balanceAmount > 0 ? '#b91c1c' : '#047857' }}>
-                  : ₹{balanceAmount.toFixed(2)} Dr
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          {invoice.notes && (
-            <div style={{ fontSize: '9px', marginBottom: '3px' }}>
-              <strong>Remarks :</strong> {invoice.notes}
-            </div>
-          )}
-
-          <div style={{ fontSize: '8.5px', color: '#333', lineHeight: 1.2, marginTop: '2px', borderTop: '1px solid #eee', paddingTop: '3px' }}>
-            <strong>Declaration :-</strong> We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
-          </div>
-        </div>
-
-        {/* Bank & Payment Info */}
-        <div style={{ padding: '6px 8px', borderRight: '1.5px solid #000000', fontSize: '9.5px' }}>
-          <div style={{ fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px', fontSize: '9px' }}>
-            Bank Details for NEFT / RTGS :
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
-            <tbody>
-              <tr>
-                <td style={{ color: '#444', width: '42%' }}>Bank Name</td>
-                <td style={{ fontWeight: 700 }}>: Axis Bank Ltd / SBI</td>
-              </tr>
-              <tr>
-                <td style={{ color: '#444' }}>A/c No.</td>
-                <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>: 452414541254</td>
-              </tr>
-              <tr>
-                <td style={{ color: '#444' }}>Branch & IFS</td>
-                <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>: Bhopal & AXIS0125452</td>
-              </tr>
-              <tr>
-                <td style={{ color: '#444' }}>Payment Mode</td>
-                <td style={{ fontWeight: 800, color: '#0f766e' }}>: {invoice.paymentMode || 'CASH'}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div style={{ marginTop: '5px', padding: '3px 4px', background: '#f8fafc', borderRadius: '3px', fontSize: '8px', color: '#555', border: '1px solid #e2e8f0' }}>
-            Medicines once sold will be taken back or exchanged within 7 days only if accompanied with this original bill and unbroken batch pack.
-          </div>
-        </div>
-
-        {/* Signatory Box */}
-        <div style={{ padding: '6px 8px', textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
+      {/* Optional Signatory Block (Clean, compact, default hidden as requested) */}
+      {showSignatory && (
+        <div style={{ borderTop: '1px solid #000000', padding: '6px 10px', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ textAlign: 'right', minWidth: '160px' }}>
             <div style={{ fontSize: '9.5px', fontWeight: 800 }}>For {companyName}</div>
-          </div>
-          <div style={{ height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: '#aaa', fontSize: '8px', fontStyle: 'italic' }}>
-            [Official Pharmacy Stamp / Seal]
-          </div>
-          <div style={{ borderTop: '1px solid #000', paddingTop: '2px', fontSize: '9.5px', fontWeight: 800 }}>
-            Authorised Signatory
+            <div style={{ height: '32px' }} />
+            <div style={{ borderTop: '1px solid #000', paddingTop: '2px', fontSize: '9.5px', fontWeight: 800 }}>
+              Authorised Signatory
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -785,6 +731,17 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
               Both Copies (2 Pages)
             </button>
           </div>
+
+          {/* Optional Signatory Checkbox */}
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showSignatory}
+              onChange={e => setShowSignatory(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Add Signatory Box
+          </label>
         </div>
 
         {/* Right: Actions */}

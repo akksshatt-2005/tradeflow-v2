@@ -118,28 +118,88 @@ export const GST_STATE_CODE_MAP: Record<string, string> = {
 };
 
 /**
- * Extract or lookup 2-digit GST State Code from GSTIN or state name
+ * Normalizes Indian state spelling (e.g. UTTAR PRADES -> UTTAR PRADESH)
+ * and resolves its official 2-digit GST state code.
  */
-export function resolveStateCode(stateName?: string | null, gstin?: string | null): string {
-  if (gstin && gstin.trim().length >= 2) {
-    const prefix = gstin.trim().substring(0, 2);
+export function normalizeIndianState(rawState?: string | null, rawGstin?: string | null): { stateName: string; stateCode: string } {
+  // If a genuine 15-character GSTIN is provided (not dummy with XXXX), use its 2-digit code
+  const cleanGstin = rawGstin ? rawGstin.trim().toUpperCase() : '';
+  let gstinCode: string | null = null;
+  if (cleanGstin.length >= 2 && !cleanGstin.includes('XXXX') && !cleanGstin.includes('URP')) {
+    const prefix = cleanGstin.substring(0, 2);
     if (/^\d{2}$/.test(prefix)) {
-      return prefix;
+      gstinCode = prefix;
     }
   }
 
-  if (stateName && stateName.trim()) {
-    const normalized = stateName.trim().toUpperCase();
-    if (GST_STATE_CODE_MAP[normalized]) {
-      return GST_STATE_CODE_MAP[normalized];
+  const raw = (rawState || '').trim().toUpperCase().replace(/[^A-Z\s]/g, '');
+
+  // 1. Common spelling typos and abbreviations
+  if (raw.includes('UTTAR') || raw === 'UP' || raw.includes('PRADES') || raw === 'UTTER PRADESH') {
+    return { stateName: 'UTTAR PRADESH', stateCode: gstinCode || '09' };
+  }
+  if (raw.includes('MADHYA') || raw === 'MP') {
+    return { stateName: 'MADHYA PRADESH', stateCode: gstinCode || '23' };
+  }
+  if (raw.includes('DELHI') || raw === 'DL') {
+    return { stateName: 'DELHI', stateCode: gstinCode || '07' };
+  }
+  if (raw.includes('MAHARASHTRA') || raw === 'MH') {
+    return { stateName: 'MAHARASHTRA', stateCode: gstinCode || '27' };
+  }
+  if (raw.includes('HARYANA') || raw === 'HR') {
+    return { stateName: 'HARYANA', stateCode: gstinCode || '06' };
+  }
+  if (raw.includes('RAJASTHAN') || raw === 'RJ') {
+    return { stateName: 'RAJASTHAN', stateCode: gstinCode || '08' };
+  }
+  if (raw.includes('BIHAR') || raw === 'BR') {
+    return { stateName: 'BIHAR', stateCode: gstinCode || '10' };
+  }
+  if (raw.includes('PUNJAB') || raw === 'PB') {
+    return { stateName: 'PUNJAB', stateCode: gstinCode || '03' };
+  }
+  if (raw.includes('GUJARAT') || raw === 'GJ') {
+    return { stateName: 'GUJARAT', stateCode: gstinCode || '24' };
+  }
+  if (raw.includes('KARNATAKA') || raw === 'KA') {
+    return { stateName: 'KARNATAKA', stateCode: gstinCode || '29' };
+  }
+  if (raw.includes('TAMIL') || raw === 'TN') {
+    return { stateName: 'TAMIL NADU', stateCode: gstinCode || '33' };
+  }
+  if (raw.includes('BENGAL') || raw === 'WB') {
+    return { stateName: 'WEST BENGAL', stateCode: gstinCode || '19' };
+  }
+
+  // 2. Exact match in official map
+  if (GST_STATE_CODE_MAP[raw]) {
+    return { stateName: raw, stateCode: gstinCode || GST_STATE_CODE_MAP[raw] };
+  }
+
+  // 3. Partial match in official map
+  for (const [key, code] of Object.entries(GST_STATE_CODE_MAP)) {
+    if (raw.includes(key) || key.includes(raw)) {
+      return { stateName: key, stateCode: gstinCode || code };
     }
-    // Partial search
+  }
+
+  // 4. Fallback to GSTIN code if valid, or default to Uttar Pradesh
+  if (gstinCode) {
     for (const [key, code] of Object.entries(GST_STATE_CODE_MAP)) {
-      if (normalized.includes(key) || key.includes(normalized)) {
-        return code;
+      if (code === gstinCode) {
+        return { stateName: key, stateCode: gstinCode };
       }
     }
   }
 
-  return '09'; // Default UP/India standard fallback
+  return { stateName: 'UTTAR PRADESH', stateCode: '09' };
 }
+
+/**
+ * Extract or lookup 2-digit GST State Code from GSTIN or state name
+ */
+export function resolveStateCode(stateName?: string | null, gstin?: string | null): string {
+  return normalizeIndianState(stateName, gstin).stateCode;
+}
+

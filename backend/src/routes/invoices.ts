@@ -376,11 +376,11 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
           name: company.name,
           gstin: company.gstin,
           drugLicenseNo: company.drugLicenseNo,
-          phone: company.phone,
+          phone: company.phone ? company.phone.replace('9703433694', '9703533694') : '9703533694',
           email: company.email,
           address: company.address,
           city: company.city,
-          state: company.state,
+          state: (company.state || '').toUpperCase().includes('UTTAR') ? 'UTTAR PRADESH' : (company.state || 'UTTAR PRADESH'),
           pincode: company.pincode
         } : null,
         payments: (invoice.payments || []).map((p: any) => ({

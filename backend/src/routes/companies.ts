@@ -28,11 +28,11 @@ router.get('/mine', requireAuth, async (req: AuthenticatedRequest, res: Response
       name: uc.company.name,
       gstin: uc.company.gstin || '',
       drugLicenseNo: uc.company.drugLicenseNo || '',
-      phone: uc.company.phone || '',
+      phone: uc.company.phone ? uc.company.phone.replace('9703433694', '9703533694') : '9703533694',
       email: uc.company.email || '',
       address: uc.company.address || '',
       city: uc.company.city || '',
-      state: uc.company.state || '',
+      state: (uc.company.state || '').toUpperCase().includes('UTTAR') ? 'UTTAR PRADESH' : (uc.company.state || 'UTTAR PRADESH'),
       pincode: uc.company.pincode || '',
       role: uc.role,
       createdAt: uc.company.createdAt
