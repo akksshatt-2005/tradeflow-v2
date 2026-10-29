@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
+import { TaxInvoiceModal } from '../components/TaxInvoiceModal';
 
 import {
   ShoppingCart,
@@ -1656,165 +1657,16 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       </div>
 
       {/* Printable Tax / Retail Invoice Modal */}
+      {/* PROFESSIONAL GST TAX INVOICE MODAL & PRINT ENGINE */}
       {showPrintModal && createdInvoice && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 150,
-          padding: '1rem'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            color: '#111827',
-            width: '100%',
-            maxWidth: '800px',
-            maxHeight: '90vh',
-            borderRadius: '12px',
-            overflowY: 'auto',
-            padding: '2rem',
-            position: 'relative'
-          }}>
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
-              <button
-                onClick={handlePrint}
-                style={{
-                  padding: '0.6rem 1.2rem',
-                  background: '#0f766e',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-              >
-                <Printer size={16} /> {Number(createdInvoice.totalTax || 0) > 0 ? 'Print Tax Invoice' : 'Print Retail Bill'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPrintModal(false);
-                  onBack();
-                }}
-                style={{
-                  padding: '0.6rem 1rem',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Close & Next Bill
-              </button>
-            </div>
-
-            <div id="printable-tax-invoice" style={{ fontFamily: 'monospace, sans-serif' }}>
-              <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '0.8rem', marginBottom: '1rem' }}>
-                <h2 style={{ margin: '0 0 0.2rem 0', fontSize: '1.4rem', fontWeight: 'bold' }}>{createdInvoice.company?.name || activeCompany?.name}</h2>
-                <div style={{ fontSize: '0.85rem', fontWeight: '700' }}>
-                  {Number(createdInvoice.totalTax || 0) > 0 ? 'TAX INVOICE (PHARMA RETAIL / B2B)' : 'RETAIL BILL / CASH MEMO (NON-GST)'}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#4b5563' }}>
-                  {Number(createdInvoice.totalTax || 0) > 0 ? 'Drug License 20B/21B Compliant' : 'Retail Pharma Cash Memo / Non-GST Supply'}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.8rem' }}>
-                <div>
-                  <div><strong>Bill No:</strong> {createdInvoice.invoiceNumber}</div>
-                  <div><strong>Date:</strong> {formatDateLabel(createdInvoice.invoiceDate)}</div>
-                  <div><strong>Payment Mode:</strong> {createdInvoice.paymentMode}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div><strong>Patient/Customer:</strong> {createdInvoice.customerName}</div>
-                  {createdInvoice.customerPhone && <div><strong>Mobile:</strong> {createdInvoice.customerPhone}</div>}
-                  {createdInvoice.doctorName && <div><strong>Doctor:</strong> {createdInvoice.doctorName.startsWith('Dr') ? createdInvoice.doctorName : `Dr. ${createdInvoice.doctorName}`}</div>}
-                  {createdInvoice.doctorRegNo && <div><strong>Reg No:</strong> {createdInvoice.doctorRegNo}</div>}
-                </div>
-              </div>
-
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #000', textAlign: 'left' }}>
-                    <th style={{ padding: '0.4rem 0' }}>#</th>
-                    <th style={{ padding: '0.4rem 0' }}>Description</th>
-                    <th style={{ padding: '0.4rem 0' }}>Batch</th>
-                    <th style={{ padding: '0.4rem 0' }}>Exp</th>
-                    <th style={{ padding: '0.4rem 0', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '0.4rem 0', textAlign: 'right' }}>Rate</th>
-                    <th style={{ padding: '0.4rem 0', textAlign: 'center' }}>GST%</th>
-                    <th style={{ padding: '0.4rem 0', textAlign: 'right' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {createdInvoice.items?.map((item: any, i: number) => (
-                    <tr key={i} style={{ borderBottom: '1px dashed #e5e7eb' }}>
-                      <td style={{ padding: '0.4rem 0' }}>{i + 1}</td>
-                      <td style={{ padding: '0.4rem 0' }}>{item.medicineName}</td>
-                      <td style={{ padding: '0.4rem 0' }}>{item.batchNumber}</td>
-                      <td style={{ padding: '0.4rem 0' }}>{formatDateLabel(item.expiryDate)}</td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>
-                        {item.strips > 0 && item.looseQty > 0
-                          ? `${item.strips} Str + ${item.looseQty} Tab`
-                          : item.strips > 0
-                          ? `${item.strips} Strip`
-                          : item.looseQty > 0
-                          ? `${item.looseQty} Tab`
-                          : item.quantity}
-                      </td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'right' }}>₹{Number(item.unitPrice).toFixed(2)}</td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'center' }}>{Number(item.gstRate || 0)}%</td>
-                      <td style={{ padding: '0.4rem 0', textAlign: 'right', fontWeight: 'bold' }}>₹{Number(item.totalAmount).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #000', paddingTop: '0.6rem', fontSize: '0.85rem' }}>
-                <div style={{ width: '260px' }}>
-                  {Number(createdInvoice.billDiscountAmt || 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', color: '#dc2626' }}>
-                      <span>Discount ({Number(createdInvoice.billDiscountPct || 0)}%{Number(createdInvoice.billDiscountPct || 0) === 10 ? ' Scheme' : ''}):</span>
-                      <span>-₹{Number(createdInvoice.billDiscountAmt).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                    <span>Taxable Amount:</span>
-                    <span>₹{Number(createdInvoice.taxableAmount).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                    <span>{Number(createdInvoice.totalTax || 0) > 0 ? 'Total GST:' : 'GST (0% / Exempt):'}</span>
-                    <span>₹{Number(createdInvoice.totalTax || 0).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1rem', borderTop: '1px solid #000', paddingTop: '0.4rem' }}>
-                    <span>Grand Total:</span>
-                    <span>₹{Number(createdInvoice.grandTotal).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', marginTop: '0.2rem' }}>
-                    <span>Amount Paid:</span>
-                    <span>₹{Number(createdInvoice.paidAmount).toFixed(2)}</span>
-                  </div>
-                  {Number(createdInvoice.balanceAmount) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626', fontWeight: 'bold' }}>
-                      <span>Balance Due:</span>
-                      <span>₹{Number(createdInvoice.balanceAmount).toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TaxInvoiceModal
+          invoice={createdInvoice}
+          activeCompany={activeCompany}
+          onClose={() => {
+            setShowPrintModal(false);
+            onBack();
+          }}
+        />
       )}
     </div>
   );

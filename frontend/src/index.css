@@ -747,3 +747,98 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     font-size: 12px;
   }
 }
+
+/* ==========================================================================
+   GST TAX INVOICE PRINT ENGINE
+   Ensures single-page customer copy fitting & eliminates web UI elements
+   ========================================================================== */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    font-size: 10px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide entire web navigation, sidebar, banners, modals other than invoice */
+  .sidebar,
+  .topbar,
+  header,
+  nav,
+  .app-layout > *:not(.invoice-modal-backdrop),
+  .no-print,
+  button,
+  .btn,
+  .pagination,
+  .toast,
+  .server-wake-banner {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Unwrap Modal Backdrop to print as standard document */
+  .invoice-modal-backdrop {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  /* Target Print Container */
+  .tax-invoice-print-container,
+  #printable-tax-invoice {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .tax-invoice-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border: 1.5px solid #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Keep table borders razor sharp */
+  .tax-invoice-sheet table {
+    border-collapse: collapse !important;
+  }
+
+  .tax-invoice-sheet th,
+  .tax-invoice-sheet td {
+    color: #000000 !important;
+  }
+}
+

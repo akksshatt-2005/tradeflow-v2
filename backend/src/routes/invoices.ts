@@ -373,7 +373,15 @@ router.get('/:id', async (req: CompanyScopedRequest, res: Response) => {
         createdByUser: invoice.creator.username,
         company: company ? {
           id: company.id,
-          name: company.name
+          name: company.name,
+          gstin: company.gstin,
+          drugLicenseNo: company.drugLicenseNo,
+          phone: company.phone,
+          email: company.email,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+          pincode: company.pincode
         } : null,
         payments: (invoice.payments || []).map((p: any) => ({
           id: p.id,
