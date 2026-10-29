@@ -822,6 +822,8 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
   .tax-invoice-sheet {
     width: 100% !important;
     max-width: 100% !important;
+    min-height: 277mm !important;
+    height: 277mm !important;
     margin: 0 !important;
     border: 1.5px solid #000000 !important;
     box-shadow: none !important;
@@ -829,6 +831,9 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     break-inside: avoid !important;
     background: #ffffff !important;
     color: #000000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
 
   /* Keep table borders razor sharp */

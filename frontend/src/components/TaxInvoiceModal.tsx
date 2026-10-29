@@ -85,9 +85,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 }) => {
   const [copyMode, setCopyMode] = useState<CopyMode>('CUSTOMER');
   const [showVouchers, setShowVouchers] = useState(false);
-  const [showSignatory, setShowSignatory] = useState(false);
 
-  // Active company details with fallbacks
+  // Active company details
   const comp = invoice.company || activeCompany || {};
   const companyName = comp.name || 'NEURO HARMONY CLINIC';
   const companyAddress = comp.address && comp.address.trim()
@@ -147,6 +146,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const discountPct = Number(invoice.billDiscountPct || 0);
   const grandTotal = Number(invoice.grandTotal || 0);
   const roundOff = Number(invoice.roundOff || 0);
+
+  // Full-page A4 presence calculation (Standard A4 printable height ~277mm)
+  // Section breakdown:
+  // Header: ~36mm, Buyer/Meta: ~35mm, Table Header: ~8mm, Total Row: ~8mm,
+  // Tax Summary & Calculations: ~36mm, Amount in Words: ~8mm, Clinic Footer: ~43mm.
+  // Fixed non-items height = ~174mm. Available height for items table body = 277mm - 174mm = ~103mm.
+  const currentItems = invoice.items || [];
+  const itemsTotalHeightMm = currentItems.length * 8.5;
+  const fillerRowHeightMm = Math.max(15, Math.round(103 - itemsTotalHeightMm));
 
   // Group items for HSN/SAC Tax Summary
   const hsnGroups = React.useMemo(() => {
@@ -243,6 +251,11 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       boxSizing: 'border-box',
       width: '100%',
       maxWidth: '210mm',
+      minHeight: '277mm',
+      height: '277mm',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
       margin: '0 auto',
       background: '#ffffff',
       color: '#000000',
@@ -253,368 +266,412 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       pageBreakInside: 'avoid',
       breakInside: 'avoid'
     }}>
-      {/* ── TOP HEADER ── */}
-      <div style={{ position: 'relative', borderBottom: '1.5px solid #000000', padding: '6px 10px 8px 10px', textAlign: 'center' }}>
-        {/* Copy Indicator */}
-        <div style={{ position: 'absolute', right: '10px', top: '6px', textAlign: 'right' }}>
-          <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {copyTitle}
+      {/* ── UPPER CONTAINER (Header + Buyer & Meta + Table + Tax Breakdown) ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* TOP HEADER */}
+        <div style={{ position: 'relative', borderBottom: '1.5px solid #000000', padding: '8px 12px 10px 12px', textAlign: 'center' }}>
+          {/* Copy Indicator */}
+          <div style={{ position: 'absolute', right: '12px', top: '8px', textAlign: 'right' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {copyTitle}
+            </div>
+            <div style={{ fontSize: '9px', fontWeight: 600, color: '#333333' }}>
+              {copySubtitle}
+            </div>
           </div>
-          <div style={{ fontSize: '9px', fontWeight: 600, color: '#333333' }}>
-            {copySubtitle}
-          </div>
-        </div>
 
-        {/* Invoice Title */}
-        <div style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '2px' }}>
-          TAX INVOICE
-        </div>
+          {/* Invoice Title */}
+          <div style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '2px' }}>
+            TAX INVOICE
+          </div>
 
-        {/* Company Identity */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <div style={{
-            width: '26px',
-            height: '26px',
-            borderRadius: '50%',
-            background: '#0f766e',
-            color: '#fff',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: '15px'
-          }}>
-            ✚
+          {/* Company Identity */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <div style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              background: '#0f766e',
+              color: '#fff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 900,
+              fontSize: '15px'
+            }}>
+              ✚
+            </div>
+            <h1 style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {companyName}
+            </h1>
           </div>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {companyName}
-          </h1>
-        </div>
 
-        {companyAddress && (
-          <div style={{ fontSize: '10.5px', marginTop: '2px', color: '#111' }}>
-            {companyAddress}
-          </div>
-        )}
-        <div style={{ fontSize: '10.5px', marginTop: '1px', fontWeight: 500 }}>
-          <span>State Name : <strong>{companyState}</strong></span>
-          <span style={{ margin: '0 10px' }}>&nbsp;</span>
-          <span>State Code : <strong>{companyStateCode}</strong></span>
-        </div>
-        <div style={{ fontSize: '10.5px', marginTop: '1px', color: '#111' }}>
-          Contact : <strong>{companyPhone}</strong>
-          {companyEmail && (
-            <span style={{ marginLeft: '12px' }}>E-Mail : <strong>{companyEmail}</strong></span>
-          )}
-        </div>
-        {(companyGstin || companyDlNo) && (
-          <div style={{ fontSize: '10.5px', marginTop: '2px', fontWeight: 700 }}>
-            {companyGstin && <span>GSTIN/UIN: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyGstin}</span></span>}
-            {companyGstin && companyDlNo && <span style={{ margin: '0 8px' }}>|</span>}
-            {companyDlNo && <span>D.L. No.: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyDlNo}</span></span>}
-          </div>
-        )}
-      </div>
-
-      {/* ── DETAILS FOR BUYER & INVOICE META (TWO COLUMNS) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '56% 44%', borderBottom: '1.5px solid #000000' }}>
-        {/* Buyer Details */}
-        <div style={{ padding: '6px 10px', borderRight: '1.5px solid #000000', fontSize: '10.5px' }}>
-          <div style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px', borderBottom: '1px solid #ddd', paddingBottom: '2px', marginBottom: '4px', letterSpacing: '0.3px' }}>
-            Details for Buyer (Billed & Shipped To)
-          </div>
-          <div style={{ fontSize: '12.5px', fontWeight: 900, color: '#000', textTransform: 'uppercase' }}>
-            {buyerName}
-          </div>
-          {buyerAddress && buyerAddress !== 'Local' && (
-            <div style={{ color: '#222', marginTop: '1px' }}>{buyerAddress}</div>
-          )}
-          <div style={{ marginTop: '2px' }}>
-            State Name : <strong>{buyerState}</strong> &nbsp;&nbsp;&nbsp; Code : <strong>{buyerStateCode}</strong>
-          </div>
-          {buyerGstin && (
-            <div style={{ marginTop: '2px' }}>
-              <span>GSTIN No : <strong>{buyerGstin}</strong></span>
-              {buyerPan && <span style={{ marginLeft: '12px' }}>PAN No : <strong>{buyerPan}</strong></span>}
+          {companyAddress && (
+            <div style={{ fontSize: '10.5px', marginTop: '2px', color: '#111' }}>
+              {companyAddress}
             </div>
           )}
-          {buyerPhone && (
-            <div style={{ marginTop: '2px' }}>
-              Contact Details : <strong>{buyerPhone}</strong>
+          <div style={{ fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+            <span>State Name : <strong>{companyState}</strong></span>
+            <span style={{ margin: '0 10px' }}>&nbsp;</span>
+            <span>State Code : <strong>{companyStateCode}</strong></span>
+          </div>
+          <div style={{ fontSize: '11px', marginTop: '2px', color: '#111', fontWeight: 600 }}>
+            Contact : <strong>{companyPhone}</strong>
+            {companyEmail && (
+              <span style={{ marginLeft: '12px' }}>E-Mail : <strong>{companyEmail}</strong></span>
+            )}
+          </div>
+          {(companyGstin || companyDlNo) && (
+            <div style={{ fontSize: '10.5px', marginTop: '2px', fontWeight: 700 }}>
+              {companyGstin && <span>GSTIN/UIN: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyGstin}</span></span>}
+              {companyGstin && companyDlNo && <span style={{ margin: '0 8px' }}>|</span>}
+              {companyDlNo && <span>D.L. No.: <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{companyDlNo}</span></span>}
             </div>
           )}
-
-          {/* Doctor / Patient Prescription Details for Pharmacy compliance */}
-          <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #ccc', fontSize: '10px', color: '#111' }}>
-            <div>Doctor : <strong>{doctorName}</strong> {doctorRegNo && <span style={{ color: '#333' }}>(Reg No: <strong>{doctorRegNo}</strong>)</span>}</div>
-            <div>Patient : <strong>{patientName}</strong></div>
-          </div>
         </div>
 
-        {/* Invoice Meta */}
-        <div style={{ padding: '6px 10px', fontSize: '10.5px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px' }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333', width: '42%' }}>Invoice No.</td>
-                <td style={{ padding: '2px 0', fontWeight: 900, fontFamily: 'monospace', fontSize: '12px' }}>: {invoice.invoiceNumber}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>Dated</td>
-                <td style={{ padding: '2px 0', fontWeight: 700 }}>: {formatDate(invoice.invoiceDate)}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>Terms of Delivery</td>
-                <td style={{ padding: '2px 0', fontWeight: 600 }}>: IMMEDIATE / COUNTER SALE</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>Mode of Payment</td>
-                <td style={{ padding: '2px 0', fontWeight: 800 }}>: {invoice.paymentMode || 'CASH'}</td>
-              </tr>
-              {invoice.dueDate && (
+        {/* DETAILS FOR BUYER & INVOICE META (TWO COLUMNS) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '56% 44%', borderBottom: '1.5px solid #000000' }}>
+          {/* Buyer Details */}
+          <div style={{ padding: '8px 12px', borderRight: '1.5px solid #000000', fontSize: '11px' }}>
+            <div style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '5px', letterSpacing: '0.3px' }}>
+              Details for Buyer (Billed & Shipped To)
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 900, color: '#000', textTransform: 'uppercase' }}>
+              {buyerName}
+            </div>
+            {buyerAddress && buyerAddress !== 'Local' && (
+              <div style={{ color: '#222', marginTop: '2px' }}>{buyerAddress}</div>
+            )}
+            <div style={{ marginTop: '3px' }}>
+              State Name : <strong>{buyerState}</strong> &nbsp;&nbsp;&nbsp; Code : <strong>{buyerStateCode}</strong>
+            </div>
+            {buyerGstin && (
+              <div style={{ marginTop: '2px' }}>
+                <span>GSTIN No : <strong>{buyerGstin}</strong></span>
+                {buyerPan && <span style={{ marginLeft: '12px' }}>PAN No : <strong>{buyerPan}</strong></span>}
+              </div>
+            )}
+            {buyerPhone && (
+              <div style={{ marginTop: '2px' }}>
+                Contact Details : <strong>{buyerPhone}</strong>
+              </div>
+            )}
+
+            {/* Doctor / Patient Prescription Details */}
+            <div style={{ marginTop: '5px', paddingTop: '5px', borderTop: '1px dashed #ccc', fontSize: '10.5px', color: '#111' }}>
+              <div>Doctor : <strong>{doctorName}</strong> {doctorRegNo && <span style={{ color: '#333' }}>(Reg No: <strong>{doctorRegNo}</strong>)</span>}</div>
+              <div>Patient : <strong>{patientName}</strong></div>
+            </div>
+          </div>
+
+          {/* Invoice Meta */}
+          <div style={{ padding: '8px 12px', fontSize: '11px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <tbody>
                 <tr>
-                  <td style={{ padding: '2px 0', color: '#333' }}>Due Date</td>
-                  <td style={{ padding: '2px 0', fontWeight: 700, color: '#b91c1c' }}>: {formatDate(invoice.dueDate)}</td>
+                  <td style={{ padding: '3px 0', color: '#333', width: '42%' }}>Invoice No.</td>
+                  <td style={{ padding: '3px 0', fontWeight: 900, fontFamily: 'monospace', fontSize: '12.5px' }}>: {invoice.invoiceNumber}</td>
                 </tr>
-              )}
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>Place of Supply</td>
-                <td style={{ padding: '2px 0', fontWeight: 600 }}>: {buyerState} ({buyerStateCode})</td>
-              </tr>
-            </tbody>
-          </table>
+                <tr>
+                  <td style={{ padding: '3px 0', color: '#333' }}>Dated</td>
+                  <td style={{ padding: '3px 0', fontWeight: 700 }}>: {formatDate(invoice.invoiceDate)}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '3px 0', color: '#333' }}>Terms of Delivery</td>
+                  <td style={{ padding: '3px 0', fontWeight: 600 }}>: IMMEDIATE / COUNTER SALE</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '3px 0', color: '#333' }}>Mode of Payment</td>
+                  <td style={{ padding: '3px 0', fontWeight: 800 }}>: {invoice.paymentMode || 'CASH'}</td>
+                </tr>
+                {invoice.dueDate && (
+                  <tr>
+                    <td style={{ padding: '3px 0', color: '#333' }}>Due Date</td>
+                    <td style={{ padding: '3px 0', fontWeight: 700, color: '#b91c1c' }}>: {formatDate(invoice.dueDate)}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td style={{ padding: '3px 0', color: '#333' }}>Place of Supply</td>
+                  <td style={{ padding: '3px 0', fontWeight: 600 }}>: {buyerState} ({buyerStateCode})</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* ── ITEMS GRID TABLE ── */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-        <thead>
-          <tr style={{ borderBottom: '1.5px solid #000000', background: '#f8fafc', fontWeight: 800 }}>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '28px', textAlign: 'center' }}>Sr<br/>No</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'left' }}>Item Description</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '56px', textAlign: 'center' }}>HSN<br/>Code</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '68px', textAlign: 'center' }}>Batch</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '50px', textAlign: 'center' }}>Exp</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '68px', textAlign: 'center' }}>Billed<br/>Qty</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '40px', textAlign: 'center' }}>Per</th>
-            <th style={{ borderRight: '1px solid #000000', padding: '4px 6px', width: '64px', textAlign: 'right' }}>Rate<br/>(₹)</th>
-            <th style={{ padding: '4px 6px', width: '80px', textAlign: 'right' }}>Gross<br/>Amount (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(invoice.items || []).map((item, idx) => {
-            const expFormatted = item.expiryDate
-              ? new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
-              : '—';
+        {/* ITEMS GRID TABLE (WITH FILLER ROWS FOR FULL-PAGE PRESENCE) */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1.5px solid #000000', background: '#f8fafc', fontWeight: 800 }}>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '32px', textAlign: 'center' }}>Sr<br/>No</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 8px', textAlign: 'left' }}>Item Description</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '60px', textAlign: 'center' }}>HSN<br/>Code</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '75px', textAlign: 'center' }}>Batch</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '56px', textAlign: 'center' }}>Exp</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '76px', textAlign: 'center' }}>Billed<br/>Qty</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 4px', width: '45px', textAlign: 'center' }}>Per</th>
+              <th style={{ borderRight: '1px solid #000000', padding: '5px 8px', width: '70px', textAlign: 'right' }}>Rate<br/>(₹)</th>
+              <th style={{ padding: '5px 8px', width: '85px', textAlign: 'right' }}>Gross<br/>Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentItems.map((item, idx) => {
+              const expFormatted = item.expiryDate
+                ? new Date(item.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+                : '—';
 
-            // Determine unit label
-            const perLabel = item.strips && item.strips > 0
-              ? 'Strip'
-              : (item.looseQty && item.looseQty > 0 ? 'Tab' : (item.unit || 'pcs'));
+              const perLabel = item.strips && item.strips > 0
+                ? 'Strip'
+                : (item.looseQty && item.looseQty > 0 ? 'Tab' : (item.unit || 'pcs'));
 
-            const qtyLabel = (item.strips && item.strips > 0 && item.looseQty && item.looseQty > 0)
-              ? `${item.strips} Str + ${item.looseQty} Tab`
-              : (item.strips && item.strips > 0
-                ? `${item.strips} Strip`
-                : (item.looseQty && item.looseQty > 0
-                  ? `${item.looseQty} Tab`
-                  : `${item.quantity || 1} pcs`));
+              const qtyLabel = (item.strips && item.strips > 0 && item.looseQty && item.looseQty > 0)
+                ? `${item.strips} Str + ${item.looseQty} Tab`
+                : (item.strips && item.strips > 0
+                  ? `${item.strips} Strip`
+                  : (item.looseQty && item.looseQty > 0
+                    ? `${item.looseQty} Tab`
+                    : `${item.quantity || 1} pcs`));
 
-            return (
-              <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 3px', textAlign: 'center', verticalAlign: 'top', color: '#444' }}>
-                  {idx + 1}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 6px', verticalAlign: 'top' }}>
-                  <div style={{ fontWeight: 800, fontSize: '11px', color: '#000' }}>
-                    {item.medicineName || 'Medicine Item'}
-                  </div>
-                  {(item.sku || item.genericName) && (
-                    <div style={{ fontSize: '9px', color: '#444' }}>
-                      {item.sku} {item.genericName ? `• ${item.genericName}` : ''}
+              return (
+                <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', color: '#444' }}>
+                    {idx + 1}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 8px', verticalAlign: 'top' }}>
+                    <div style={{ fontWeight: 800, fontSize: '11px', color: '#000' }}>
+                      {item.medicineName || 'Medicine Item'}
                     </div>
-                  )}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'center', verticalAlign: 'top', fontFamily: 'monospace' }}>
-                  {item.hsnCode || '3004'}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'center', verticalAlign: 'top', fontFamily: 'monospace', fontWeight: 600 }}>
-                  {item.batchNumber || '—'}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'center', verticalAlign: 'top', color: '#222' }}>
-                  {expFormatted}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'center', verticalAlign: 'top', fontWeight: 700 }}>
-                  {qtyLabel}
-                  {Number(item.freeQuantity || 0) > 0 && (
-                    <div style={{ fontSize: '8.5px', color: '#047857' }}>+{item.freeQuantity} free</div>
-                  )}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'center', verticalAlign: 'top', color: '#555' }}>
-                  {perLabel}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3.5px 6px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>
-                  {Number(item.unitPrice || 0).toFixed(2)}
-                </td>
-                <td style={{ padding: '3.5px 6px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800, fontFamily: 'monospace' }}>
-                  {Number(item.totalAmount || 0).toFixed(2)}
-                </td>
-              </tr>
-            );
-          })}
+                    {(item.sku || item.genericName) && (
+                      <div style={{ fontSize: '9px', color: '#555', marginTop: '1px' }}>
+                        {item.sku} {item.genericName ? `• ${item.genericName}` : ''}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', fontFamily: 'monospace' }}>
+                    {item.hsnCode || '3004'}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', fontFamily: 'monospace', fontWeight: 600 }}>
+                    {item.batchNumber || '—'}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', color: '#222' }}>
+                    {expFormatted}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', fontWeight: 700 }}>
+                    {qtyLabel}
+                    {Number(item.freeQuantity || 0) > 0 && (
+                      <div style={{ fontSize: '8.5px', color: '#047857' }}>+{item.freeQuantity} free</div>
+                    )}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', color: '#555' }}>
+                    {perLabel}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>
+                    {Number(item.unitPrice || 0).toFixed(2)}
+                  </td>
+                  <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 800, fontFamily: 'monospace' }}>
+                    {Number(item.totalAmount || 0).toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
 
-          {/* TOTAL ROW */}
-          <tr style={{ borderBottom: '1.5px solid #000000', background: '#f8fafc', fontWeight: 900 }}>
-            <td colSpan={5} style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'center', letterSpacing: '1px' }}>
-              TOTAL
-            </td>
-            <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'center' }}>
-              {totalQuantitySum}
-            </td>
-            <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'center' }}>
-              —
-            </td>
-            <td style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'right' }}>
-              —
-            </td>
-            <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', fontSize: '11px' }}>
-              ₹{subtotal.toFixed(2)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            {/* CONTINUOUS EXTENDED VERTICAL COLUMN DIVIDERS (AUTHENTIC TALLY / MARG ERP PHARMA STYLE) */}
+            <tr style={{ height: `${fillerRowHeightMm}mm` }}>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+              <td>&nbsp;</td>
+            </tr>
 
-      {/* ── TAX BREAKDOWN & AMOUNT CALCULATIONS (TWO COLUMNS) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '58% 42%', borderBottom: '1.5px solid #000000' }}>
-        {/* Left: HSN/SAC Tax Summary Table */}
-        <div style={{ borderRight: '1.5px solid #000000' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', textAlign: 'center' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #000000', background: '#f1f5f9', fontWeight: 800 }}>
-                <th rowSpan={2} style={{ borderRight: '1px solid #000000', padding: '3px 2px', width: '50px' }}>HSN/SAC</th>
-                <th rowSpan={2} style={{ borderRight: '1px solid #000000', padding: '3px 4px' }}>Taxable<br/>Value (₹)</th>
-                <th colSpan={2} style={{ borderRight: '1px solid #000000', padding: '2px 2px', borderBottom: '1px solid #000000' }}>Central Tax</th>
-                <th colSpan={2} style={{ borderRight: '1px solid #000000', padding: '2px 2px', borderBottom: '1px solid #000000' }}>State Tax</th>
-                <th rowSpan={2} style={{ padding: '3px 4px', width: '60px' }}>Total Tax<br/>Amount (₹)</th>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #000000', background: '#f1f5f9', fontWeight: 700, fontSize: '9px' }}>
-                <th style={{ borderRight: '1px solid #000000', padding: '2px 2px', width: '32px' }}>Rate</th>
-                <th style={{ borderRight: '1px solid #000000', padding: '2px 4px' }}>Amount</th>
-                <th style={{ borderRight: '1px solid #000000', padding: '2px 2px', width: '32px' }}>Rate</th>
-                <th style={{ borderRight: '1px solid #000000', padding: '2px 4px' }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hsnGroups.map((grp, gIdx) => {
-                const halfRate = (grp.gstRate / 2).toFixed(2);
-                return (
-                  <tr key={gIdx} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 2px', fontFamily: 'monospace' }}>{grp.hsn}</td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                      {grp.taxable.toFixed(2)}
-                    </td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 2px' }}>{halfRate}%</td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                      {grp.cgst.toFixed(2)}
-                    </td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 2px' }}>{halfRate}%</td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                      {grp.sgst.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '3px 4px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
-                      {grp.totalTax.toFixed(2)}
+            {/* TOTAL ROW */}
+            <tr style={{ borderBottom: '1.5px solid #000000', background: '#f8fafc', fontWeight: 900 }}>
+              <td colSpan={5} style={{ borderRight: '1px solid #000000', padding: '5px 8px', textAlign: 'center', letterSpacing: '1px' }}>
+                TOTAL
+              </td>
+              <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center' }}>
+                {totalQuantitySum}
+              </td>
+              <td style={{ borderRight: '1px solid #000000', padding: '5px 4px', textAlign: 'center' }}>
+                —
+              </td>
+              <td style={{ borderRight: '1px solid #000000', padding: '5px 8px', textAlign: 'right' }}>
+                —
+              </td>
+              <td style={{ padding: '5px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: '11.5px' }}>
+                ₹{subtotal.toFixed(2)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* TAX BREAKDOWN & AMOUNT CALCULATIONS (TWO COLUMNS) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '58% 42%', borderBottom: '1.5px solid #000000' }}>
+          {/* Left: HSN/SAC Tax Summary Table */}
+          <div style={{ borderRight: '1.5px solid #000000' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', textAlign: 'center' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #000000', background: '#f1f5f9', fontWeight: 800 }}>
+                  <th rowSpan={2} style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '50px' }}>HSN/SAC</th>
+                  <th rowSpan={2} style={{ borderRight: '1px solid #000000', padding: '4px 6px' }}>Taxable<br/>Value (₹)</th>
+                  <th colSpan={2} style={{ borderRight: '1px solid #000000', padding: '3px 2px', borderBottom: '1px solid #000000' }}>Central Tax</th>
+                  <th colSpan={2} style={{ borderRight: '1px solid #000000', padding: '3px 2px', borderBottom: '1px solid #000000' }}>State Tax</th>
+                  <th rowSpan={2} style={{ padding: '4px 6px', width: '65px' }}>Total Tax<br/>Amount (₹)</th>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #000000', background: '#f1f5f9', fontWeight: 700, fontSize: '9px' }}>
+                  <th style={{ borderRight: '1px solid #000000', padding: '3px 2px', width: '32px' }}>Rate</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '3px 4px' }}>Amount</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '3px 2px', width: '32px' }}>Rate</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '3px 4px' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hsnGroups.map((grp, gIdx) => {
+                  const halfRate = (grp.gstRate / 2).toFixed(2);
+                  return (
+                    <tr key={gIdx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 2px', fontFamily: 'monospace' }}>{grp.hsn}</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                        {grp.taxable.toFixed(2)}
+                      </td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 2px' }}>{halfRate}%</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                        {grp.cgst.toFixed(2)}
+                      </td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 2px' }}>{halfRate}%</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '3.5px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                        {grp.sgst.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '3.5px 4px', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
+                        {grp.totalTax.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* Tax Total Row */}
+                <tr style={{ borderTop: '1px solid #000000', background: '#f8fafc', fontWeight: 900 }}>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 4px' }}>Total</td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    {taxableAmount.toFixed(2)}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 2px' }}>—</td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    {cgstAmount.toFixed(2)}
+                  </td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 2px' }}>—</td>
+                  <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    {sgstAmount.toFixed(2)}
+                  </td>
+                  <td style={{ padding: '4px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    {totalTax.toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right: Calculations & Invoice Total */}
+          <div style={{ padding: '6px 12px', fontSize: '11px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '2.5px 0', color: '#333' }}>Total Amount Before Tax</td>
+                  <td style={{ padding: '2.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                    ₹{taxableAmount.toFixed(2)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '2.5px 0', color: '#333' }}>CGST (Central Tax)</td>
+                  <td style={{ padding: '2.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>
+                    ₹{cgstAmount.toFixed(2)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '2.5px 0', color: '#333' }}>SGST (State Tax)</td>
+                  <td style={{ padding: '2.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>
+                    ₹{sgstAmount.toFixed(2)}
+                  </td>
+                </tr>
+                {discountAmt > 0 && (
+                  <tr style={{ color: '#b91c1c' }}>
+                    <td style={{ padding: '2.5px 0' }}>Discount {discountPct > 0 ? `(${discountPct}%)` : ''}</td>
+                    <td style={{ padding: '2.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                      -₹{discountAmt.toFixed(2)}
                     </td>
                   </tr>
-                );
-              })}
-              {/* Tax Total Row */}
-              <tr style={{ borderTop: '1px solid #000000', background: '#f8fafc', fontWeight: 900 }}>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 4px' }}>Total</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {taxableAmount.toFixed(2)}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 2px' }}>—</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {cgstAmount.toFixed(2)}
-                </td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 2px' }}>—</td>
-                <td style={{ borderRight: '1px solid #000000', padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {sgstAmount.toFixed(2)}
-                </td>
-                <td style={{ padding: '3px 4px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {totalTax.toFixed(2)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Right: Calculations & Invoice Total */}
-        <div style={{ padding: '4px 8px', fontSize: '10.5px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>Total Amount Before Tax</td>
-                <td style={{ padding: '2px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
-                  ₹{taxableAmount.toFixed(2)}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>CGST (Central Tax)</td>
-                <td style={{ padding: '2px 0', textAlign: 'right', fontFamily: 'monospace' }}>
-                  ₹{cgstAmount.toFixed(2)}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: '2px 0', color: '#333' }}>SGST (State Tax)</td>
-                <td style={{ padding: '2px 0', textAlign: 'right', fontFamily: 'monospace' }}>
-                  ₹{sgstAmount.toFixed(2)}
-                </td>
-              </tr>
-              {discountAmt > 0 && (
-                <tr style={{ color: '#b91c1c' }}>
-                  <td style={{ padding: '2px 0' }}>Discount {discountPct > 0 ? `(${discountPct}%)` : ''}</td>
-                  <td style={{ padding: '2px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
-                    -₹{discountAmt.toFixed(2)}
+                )}
+                {roundOff !== 0 && (
+                  <tr>
+                    <td style={{ padding: '2.5px 0', color: '#333' }}>Round Off</td>
+                    <td style={{ padding: '2.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>
+                      {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                    </td>
+                  </tr>
+                )}
+                <tr style={{ borderTop: '1.5px solid #000000' }}>
+                  <td style={{ padding: '6px 0 2px 0', fontSize: '13px', fontWeight: 900 }}>Invoice Total</td>
+                  <td style={{ padding: '6px 0 2px 0', textAlign: 'right', fontSize: '15px', fontWeight: 900, fontFamily: 'monospace' }}>
+                    ₹{grandTotal.toFixed(2)}
                   </td>
                 </tr>
-              )}
-              {roundOff !== 0 && (
-                <tr>
-                  <td style={{ padding: '2px 0', color: '#333' }}>Round Off</td>
-                  <td style={{ padding: '2px 0', textAlign: 'right', fontFamily: 'monospace' }}>
-                    {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
-                  </td>
-                </tr>
-              )}
-              <tr style={{ borderTop: '1.5px solid #000000' }}>
-                <td style={{ padding: '5px 0 2px 0', fontSize: '12.5px', fontWeight: 900 }}>Invoice Total</td>
-                <td style={{ padding: '5px 0 2px 0', textAlign: 'right', fontSize: '14px', fontWeight: 900, fontFamily: 'monospace' }}>
-                  ₹{grandTotal.toFixed(2)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* ── AMOUNT IN WORDS ── */}
-      <div style={{ padding: '6px 10px', fontSize: '10.5px' }}>
-        <strong>Amount In Words :</strong> {numberToIndianWords(grandTotal)}
-      </div>
+      {/* ── LOWER CONTAINER (Amount in Words + Authentic Clinic Terms & Signatory) ── */}
+      <div>
+        {/* Amount in Words */}
+        <div style={{
+          borderBottom: '1.5px solid #000000',
+          padding: '7px 12px',
+          fontSize: '11px',
+          background: '#fafafa'
+        }}>
+          <strong>Amount In Words :</strong> {numberToIndianWords(grandTotal)}
+        </div>
 
-      {/* Optional Signatory Block (Clean, compact, default hidden as requested) */}
-      {showSignatory && (
-        <div style={{ borderTop: '1px solid #000000', padding: '6px 10px', display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ textAlign: 'right', minWidth: '160px' }}>
-            <div style={{ fontSize: '9.5px', fontWeight: 800 }}>For {companyName}</div>
-            <div style={{ height: '32px' }} />
-            <div style={{ borderTop: '1px solid #000', paddingTop: '2px', fontSize: '9.5px', fontWeight: 800 }}>
+        {/* Clean, Authentic Clinic Terms & Signatory Box */}
+        <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', minHeight: '48mm' }}>
+          {/* Clinic Dispensing Policy & Terms */}
+          <div style={{ padding: '8px 12px', borderRight: '1.5px solid #000000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px', marginBottom: '4px', letterSpacing: '0.4px', color: '#111' }}>
+                Terms & Conditions :
+              </div>
+              <ol style={{ margin: 0, paddingLeft: '16px', fontSize: '9px', lineHeight: 1.5, color: '#222' }}>
+                <li>Medicines dispensed strictly against a registered medical practitioner's prescription.</li>
+                <li>Store medicines in a cool, dry place protected from heat and direct sunlight.</li>
+                <li>Unbroken items in original packaging may be exchanged within 7 days against this bill.</li>
+                <li>Please consult your treating doctor for dosage instructions and regular follow-up.</li>
+              </ol>
+            </div>
+            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#0f766e', fontWeight: 700, marginTop: '6px' }}>
+              ✦ Thank you for visiting! Wishing you a speedy recovery & good health.
+            </div>
+          </div>
+
+          {/* Authorised Signatory */}
+          <div style={{ padding: '8px 12px', textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 800 }}>For {companyName}</div>
+            </div>
+            <div style={{ height: '46px' }}>
+              {/* Clean physical signature whitespace */}
+            </div>
+            <div style={{ borderTop: '1px solid #000000', paddingTop: '4px', fontSize: '10.5px', fontWeight: 800 }}>
               Authorised Signatory
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 
@@ -690,9 +747,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Prints 1 single page marked Original for Recipient"
+              title="Prints 1 single full-page marked Original for Recipient"
             >
-              Customer Copy (1 Page)
+              Customer Copy (1 Full Page)
             </button>
             <button
               type="button"
@@ -708,7 +765,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Prints 1 page marked Duplicate for Supplier"
+              title="Prints 1 full page marked Duplicate for Supplier"
             >
               Shop Copy
             </button>
@@ -731,17 +788,6 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
               Both Copies (2 Pages)
             </button>
           </div>
-
-          {/* Optional Signatory Checkbox */}
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showSignatory}
-              onChange={e => setShowSignatory(e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Add Signatory Box
-          </label>
         </div>
 
         {/* Right: Actions */}
