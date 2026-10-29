@@ -147,14 +147,10 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const grandTotal = Number(invoice.grandTotal || 0);
   const roundOff = Number(invoice.roundOff || 0);
 
-  // Full-page A4 presence calculation (Standard A4 printable height ~277mm)
-  // Section breakdown:
-  // Header: ~36mm, Buyer/Meta: ~35mm, Table Header: ~8mm, Total Row: ~8mm,
-  // Tax Summary & Calculations: ~36mm, Amount in Words: ~8mm, Clinic Footer: ~43mm.
-  // Fixed non-items height = ~174mm. Available height for items table body = 277mm - 174mm = ~103mm.
+  // Proportional ERP filler row calculation (ensures clean column lines down to TOTAL row without page overflow)
   const currentItems = invoice.items || [];
-  const itemsTotalHeightMm = currentItems.length * 8.5;
-  const fillerRowHeightMm = Math.max(15, Math.round(103 - itemsTotalHeightMm));
+  // For 1 item: 45mm, 3 items: 35mm, 5 items: 25mm, 8 items: 15mm, 10+ items: 10mm
+  const fillerRowHeightMm = Math.max(10, Math.round(50 - (currentItems.length * 5)));
 
   // Group items for HSN/SAC Tax Summary
   const hsnGroups = React.useMemo(() => {
@@ -251,11 +247,6 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       boxSizing: 'border-box',
       width: '100%',
       maxWidth: '210mm',
-      minHeight: '277mm',
-      height: '277mm',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
       margin: '0 auto',
       background: '#ffffff',
       color: '#000000',
@@ -266,9 +257,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       pageBreakInside: 'avoid',
       breakInside: 'avoid'
     }}>
-      {/* ── UPPER CONTAINER (Header + Buyer & Meta + Table + Tax Breakdown) ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* TOP HEADER */}
+      {/* TOP HEADER */}
         <div style={{ position: 'relative', borderBottom: '1.5px solid #000000', padding: '8px 12px 10px 12px', textAlign: 'center' }}>
           {/* Copy Indicator */}
           <div style={{ position: 'absolute', right: '12px', top: '8px', textAlign: 'right' }}>
@@ -624,10 +613,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             </table>
           </div>
         </div>
-      </div>
 
-      {/* ── LOWER CONTAINER (Amount in Words + Authentic Clinic Terms & Signatory) ── */}
-      <div>
         {/* Amount in Words */}
         <div style={{
           borderBottom: '1.5px solid #000000',
@@ -639,21 +625,21 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         </div>
 
         {/* Clean, Authentic Clinic Terms & Signatory Box */}
-        <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', minHeight: '48mm' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '60% 40%' }}>
           {/* Clinic Dispensing Policy & Terms */}
           <div style={{ padding: '8px 12px', borderRight: '1.5px solid #000000', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px', marginBottom: '4px', letterSpacing: '0.4px', color: '#111' }}>
                 Terms & Conditions :
               </div>
-              <ol style={{ margin: 0, paddingLeft: '16px', fontSize: '9px', lineHeight: 1.5, color: '#222' }}>
+              <ol style={{ margin: 0, paddingLeft: '16px', fontSize: '9px', lineHeight: 1.45, color: '#222' }}>
                 <li>Medicines dispensed strictly against a registered medical practitioner's prescription.</li>
                 <li>Store medicines in a cool, dry place protected from heat and direct sunlight.</li>
                 <li>Unbroken items in original packaging may be exchanged within 7 days against this bill.</li>
                 <li>Please consult your treating doctor for dosage instructions and regular follow-up.</li>
               </ol>
             </div>
-            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#0f766e', fontWeight: 700, marginTop: '6px' }}>
+            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#0f766e', fontWeight: 700, marginTop: '8px', paddingBottom: '4px' }}>
               ✦ Thank you for visiting! Wishing you a speedy recovery & good health.
             </div>
           </div>
@@ -663,16 +649,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             <div>
               <div style={{ fontSize: '11px', fontWeight: 800 }}>For {companyName}</div>
             </div>
-            <div style={{ height: '46px' }}>
+            <div style={{ height: '36px' }}>
               {/* Clean physical signature whitespace */}
             </div>
-            <div style={{ borderTop: '1px solid #000000', paddingTop: '4px', fontSize: '10.5px', fontWeight: 800 }}>
+            <div style={{ borderTop: '1px solid #000000', paddingTop: '4px', paddingBottom: '4px', fontSize: '10.5px', fontWeight: 800 }}>
               Authorised Signatory
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 
   return (

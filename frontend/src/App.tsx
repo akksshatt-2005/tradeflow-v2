@@ -32,7 +32,7 @@ function MainApp() {
   if (!user) {
     return (
       <div>
-        <ServerWakeBanner />
+        <div className="no-print"><ServerWakeBanner /></div>
         {authMode === 'login' ? (
           <Login onSwitchToSignup={() => setAuthMode('signup')} />
         ) : (
@@ -46,7 +46,7 @@ function MainApp() {
   if (!activeCompany || forceCompanySelection) {
     return (
       <div>
-        <ServerWakeBanner />
+        <div className="no-print"><ServerWakeBanner /></div>
         <SelectCompany onCompanySelected={() => setForceCompanySelection(false)} />
       </div>
     );
@@ -55,7 +55,7 @@ function MainApp() {
   // Authenticated Dashboard
   return (
     <div>
-      <ServerWakeBanner />
+      <div className="no-print"><ServerWakeBanner /></div>
       <Dashboard onSwitchCompany={() => setForceCompanySelection(true)} />
     </div>
   );

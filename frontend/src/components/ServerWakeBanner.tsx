@@ -32,7 +32,7 @@ export default function ServerWakeBanner() {
   };
 
   return (
-    <div className="wake-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="wake-banner no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {state.error ? (
           <AlertCircle size={16} color="#dc2626" />
