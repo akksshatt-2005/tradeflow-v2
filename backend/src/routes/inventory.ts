@@ -309,6 +309,7 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
         let patientName = 'Cash Customer';
         let reason = 'Patient Return / Refund';
         let refundAmount = 0;
+        let discountPercent = 0;
         let strips = Math.floor(units / factor);
         let looseQty = units % factor;
 
@@ -320,6 +321,7 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
               if (parsed.patientName) patientName = parsed.patientName;
               if (parsed.reason) reason = parsed.reason;
               if (parsed.refundAmount !== undefined) refundAmount = Number(parsed.refundAmount);
+              if (parsed.discountPercent !== undefined) discountPercent = Number(parsed.discountPercent);
               if (parsed.strips !== undefined) strips = Number(parsed.strips);
               if (parsed.looseQty !== undefined) looseQty = Number(parsed.looseQty);
             } else {
@@ -374,6 +376,7 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
         unitsReturned: units,
         strips,
         looseQty,
+        discountPercent,
         refundAmount,
         patientName,
         reason,
@@ -408,6 +411,89 @@ router.get('/patient-returns', async (req: CompanyScopedRequest, res: Response) 
 });
 
 /**
+ * DELETE /inventory/patient-returns/:voucherNumber
+ * Deletes an erroneous patient return voucher, reverses the restored stock from the batches,
+ * and removes the return ledger entries.
+ */
+router.delete('/patient-returns/:voucherNumber', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { voucherNumber } = req.params;
+
+  if (!voucherNumber) {
+    res.status(400).json({ error: 'Return voucher number or ID is required' });
+    return;
+  }
+
+  try {
+    // Find all return entries associated with this voucher or ID
+    const ledgers = await prisma.stockLedger.findMany({
+      where: {
+        companyId,
+        entryType: 'SALE_RETURN',
+        OR: [
+          { referenceId: voucherNumber },
+          { id: voucherNumber }
+        ]
+      },
+      include: {
+        batch: true,
+        item: true
+      }
+    });
+
+    if (ledgers.length === 0) {
+      res.status(404).json({ error: `Patient return voucher "${voucherNumber}" not found` });
+      return;
+    }
+
+    // Atomic transaction: reverse stock and delete return ledger entries
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Allow ledger cleanup in PostgreSQL session
+      await tx.$executeRawUnsafe("SET LOCAL app.allow_ledger_cleanup = 'on';");
+
+      const reversedItems: Array<{ medicineName: string; batchNumber: string; unitsDeducted: number }> = [];
+
+      // 2. Decrement stock back from batches (reverse the return inward)
+      for (const entry of ledgers) {
+        if (entry.batchId && entry.quantity > 0) {
+          await tx.batch.update({
+            where: { id: entry.batchId },
+            data: {
+              currentStock: { decrement: entry.quantity }
+            }
+          });
+          reversedItems.push({
+            medicineName: entry.item?.name || 'Medicine',
+            batchNumber: entry.batch?.batchNumber || 'N/A',
+            unitsDeducted: entry.quantity
+          });
+        }
+      }
+
+      // 3. Delete the stockLedger records
+      const ledgerIds = ledgers.map(l => l.id);
+      await tx.stockLedger.deleteMany({
+        where: {
+          id: { in: ledgerIds }
+        }
+      });
+
+      return { reversedItems, count: ledgers.length };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully deleted return voucher "${voucherNumber}". ${result.reversedItems.length} medicine(s) stock reversed.`,
+      voucherNumber,
+      reversedItems: result.reversedItems
+    });
+  } catch (error: any) {
+    console.error(`Error deleting patient return voucher ${voucherNumber}:`, error);
+    res.status(500).json({ error: error.message || 'Failed to delete patient return voucher' });
+  }
+});
+
+/**
  * POST /inventory/quick-return
  * Multi-Item / 1-Click Patient Medicine Return & Stock Inward with audit logging
  */
@@ -432,10 +518,11 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
     strips?: number;
     looseQty?: number;
     quantity?: number;
+    discountPercent?: number;
     refundAmount?: number;
   }> = Array.isArray(items) && items.length > 0
     ? items
-    : (batchId ? [{ batchId, strips, looseQty, quantity, refundAmount }] : []);
+    : (batchId ? [{ batchId, strips, looseQty, quantity, discountPercent: req.body.discountPercent, refundAmount }] : []);
 
   if (rawItemsList.length === 0) {
     res.status(400).json({ error: 'At least one medicine item is required for patient return' });
@@ -460,6 +547,7 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
       looseQty: number;
       unitsToAdd: number;
       unitRetailPrice: number;
+      discountPercent: number;
       calculatedRefund: number;
     }> = [];
 
@@ -484,6 +572,7 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
       const numStrips = Math.max(0, parseInt(String(raw.strips || 0)) || 0);
       const numLoose = Math.max(0, parseInt(String(raw.looseQty || 0)) || 0);
       const directQty = Math.max(0, parseInt(String(raw.quantity || 0)) || 0);
+      const discountPercent = Math.max(0, Math.min(100, parseFloat(String(raw.discountPercent || 0)) || 0));
 
       const totalUnitsToAdd = (numStrips > 0 || numLoose > 0)
         ? (numStrips * factor) + numLoose
@@ -495,9 +584,11 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
       }
 
       const unitRetailPrice = Number(batch.mrp) > 0 ? Number(batch.mrp) : Number(batch.pts || 0);
+      const grossPrice = (numStrips * unitRetailPrice) + (numLoose * (unitRetailPrice / factor));
+      const defaultCalculatedRefund = Math.round((grossPrice - (grossPrice * (discountPercent / 100))) * 100) / 100;
       const itemRefund = (raw.refundAmount !== undefined && raw.refundAmount !== null && Number(raw.refundAmount) >= 0 && String(raw.refundAmount).trim() !== '')
         ? Number(raw.refundAmount)
-        : Math.round(((numStrips * unitRetailPrice) + (numLoose * (unitRetailPrice / factor))) * 100) / 100;
+        : defaultCalculatedRefund;
 
       processedItems.push({
         batchId: batch.id,
@@ -512,6 +603,7 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
         looseQty: numLoose,
         unitsToAdd: totalUnitsToAdd,
         unitRetailPrice,
+        discountPercent,
         calculatedRefund: itemRefund
       });
     }
@@ -551,6 +643,7 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
           strips: item.strips,
           looseQty: item.looseQty,
           units: item.unitsToAdd,
+          discountPercent: item.discountPercent,
           refundAmount: item.calculatedRefund,
           itemIndex: i + 1,
           totalItemsInReturn: processedItems.length
@@ -597,6 +690,7 @@ router.post('/quick-return', async (req: CompanyScopedRequest, res: Response) =>
         looseQty: p.looseQty,
         unitsAdded: p.unitsToAdd,
         mrp: p.unitRetailPrice,
+        discountPercent: p.discountPercent,
         refundAmount: p.calculatedRefund
       }))
     });

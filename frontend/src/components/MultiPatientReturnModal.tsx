@@ -29,6 +29,7 @@ export interface ReturnCartItem {
   looseQty: number;
   unitsToAdd: number;
   unitRetailPrice: number;
+  discountPercent: number;
   itemRefund: number;
 }
 
@@ -51,6 +52,7 @@ export interface MultiItemReturnSlip {
     looseQty: number;
     unitsAdded: number;
     mrp: number;
+    discountPercent?: number;
     refundAmount: number;
   }>;
 }
@@ -83,6 +85,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
   const [selectedReturnBatch, setSelectedReturnBatch] = useState<any | null>(null);
   const [returnStrips, setReturnStrips] = useState<string>('1');
   const [returnLoose, setReturnLoose] = useState<string>('0');
+  const [returnDiscount, setReturnDiscount] = useState<string>('0');
   const [currentItemRefund, setCurrentItemRefund] = useState<string>('');
 
   // Voucher Slip View
@@ -171,12 +174,13 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
     }
     setReturnStrips('1');
     setReturnLoose('0');
+    setReturnDiscount('0');
     setCurrentItemRefund('');
     setReturnError(null);
   };
 
-  // Auto calculate item refund based on MRP
-  const calculatedCurrentItemRefund = React.useMemo(() => {
+  // Gross MRP calculation before discount
+  const grossCurrentItemAmount = React.useMemo(() => {
     if (!selectedReturnBatch || !selectedReturnItem) return 0;
     const factor = selectedReturnItem.conversionFactor || 1;
     const strips = Math.max(0, parseInt(returnStrips) || 0);
@@ -188,6 +192,14 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
     const total = strips * mrp + loose * (mrp / factor);
     return Math.round(total * 100) / 100;
   }, [selectedReturnBatch, selectedReturnItem, returnStrips, returnLoose]);
+
+  // Auto calculate item refund based on MRP minus discount
+  const calculatedCurrentItemRefund = React.useMemo(() => {
+    const gross = grossCurrentItemAmount;
+    const disc = Math.max(0, Math.min(100, parseFloat(returnDiscount) || 0));
+    const net = gross - (gross * (disc / 100));
+    return Math.round(net * 100) / 100;
+  }, [grossCurrentItemAmount, returnDiscount]);
 
   const effectiveCurrentItemRefund =
     currentItemRefund.trim() !== ''
@@ -216,6 +228,8 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
         ? Number(selectedReturnBatch.mrp)
         : Number(selectedReturnBatch.pts || 0);
 
+    const discPct = Math.max(0, Math.min(100, parseFloat(returnDiscount) || 0));
+
     const newItem: ReturnCartItem = {
       id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       batchId: selectedReturnBatch.id,
@@ -230,6 +244,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
       looseQty: loose,
       unitsToAdd: totalUnits,
       unitRetailPrice: unitPrice,
+      discountPercent: discPct,
       itemRefund: effectiveCurrentItemRefund
     };
 
@@ -241,6 +256,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
     setReturnSearchQuery('');
     setReturnStrips('1');
     setReturnLoose('0');
+    setReturnDiscount('0');
     setCurrentItemRefund('');
     setReturnError(null);
   };
@@ -277,6 +293,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
           Number(selectedReturnBatch.mrp) > 0
             ? Number(selectedReturnBatch.mrp)
             : Number(selectedReturnBatch.pts || 0);
+        const discPct = Math.max(0, Math.min(100, parseFloat(returnDiscount) || 0));
         itemsToSubmit.push({
           id: `cart-auto-${Date.now()}`,
           batchId: selectedReturnBatch.id,
@@ -291,6 +308,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
           looseQty: loose,
           unitsToAdd: totalUnits,
           unitRetailPrice: unitPrice,
+          discountPercent: discPct,
           itemRefund: effectiveCurrentItemRefund
         });
       }
@@ -319,6 +337,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
             strips: i.strips,
             looseQty: i.looseQty,
             quantity: i.unitsToAdd,
+            discountPercent: i.discountPercent || 0,
             refundAmount: i.itemRefund
           }))
         },
@@ -352,6 +371,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
           looseQty: i.looseQty,
           unitsAdded: i.unitsToAdd,
           mrp: i.unitRetailPrice,
+          discountPercent: i.discountPercent,
           refundAmount: i.itemRefund
         }))
       };
@@ -1083,7 +1103,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1.2fr auto',
+                        gridTemplateColumns: '1fr 1fr 1fr 1.3fr auto',
                         gap: '0.8rem',
                         alignItems: 'flex-end'
                       }}
@@ -1158,8 +1178,48 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
                             marginBottom: '0.3rem'
                           }}
                         >
-                          Item Refund (₹)
+                          Disc %
                         </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          placeholder="0"
+                          value={returnDiscount}
+                          onChange={e => setReturnDiscount(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.55rem',
+                            background: 'var(--card-bg, #ffffff)',
+                            border: '1px solid var(--border-color, #cbd5e1)',
+                            borderRadius: '6px',
+                            color: parseFloat(returnDiscount) > 0 ? '#0284c7' : 'var(--text-primary, #0f172a)',
+                            fontWeight: '700',
+                            fontSize: '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                          <label
+                            style={{
+                              display: 'block',
+                              fontSize: '0.78rem',
+                              fontWeight: '700',
+                              color: 'var(--text-secondary, #64748b)',
+                              margin: 0
+                            }}
+                          >
+                            Item Refund (₹)
+                          </label>
+                          {parseFloat(returnDiscount) > 0 && (
+                            <span style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: '700' }}>
+                              −{returnDiscount}% applied
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="number"
                           step="0.01"
@@ -1280,6 +1340,7 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
                         <th style={{ padding: '0.6rem 0.8rem' }}>Batch & Exp</th>
                         <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Return Qty</th>
                         <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>MRP Rate</th>
+                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Disc %</th>
                         <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>Refund (₹)</th>
                         <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Remove</th>
                       </tr>
@@ -1335,6 +1396,16 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
                             }}
                           >
                             ₹{item.unitRetailPrice.toFixed(2)}
+                          </td>
+                          <td
+                            style={{
+                              padding: '0.65rem 0.8rem',
+                              textAlign: 'center',
+                              fontWeight: item.discountPercent > 0 ? '700' : '400',
+                              color: item.discountPercent > 0 ? '#0284c7' : '#94a3b8'
+                            }}
+                          >
+                            {item.discountPercent > 0 ? `${item.discountPercent}%` : '0%'}
                           </td>
                           <td
                             style={{

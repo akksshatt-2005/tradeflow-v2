@@ -132,6 +132,7 @@ export const MultiItemReturnSlipModal: React.FC<MultiItemReturnSlipModalProps> =
               <th style={{ padding: '0.6rem 0.8rem' }}>Batch & Exp</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Qty Returned</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>MRP Rate</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Disc %</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'right' }}>Refund (₹)</th>
             </tr>
           </thead>
@@ -160,6 +161,9 @@ export const MultiItemReturnSlipModal: React.FC<MultiItemReturnSlipModalProps> =
                 </td>
                 <td style={{ padding: '0.6rem 0.8rem', textAlign: 'right', color: '#64748b' }}>
                   ₹{itm.mrp.toFixed(2)}
+                </td>
+                <td style={{ padding: '0.6rem 0.8rem', textAlign: 'center', color: (itm.discountPercent || 0) > 0 ? '#0284c7' : '#94a3b8', fontWeight: (itm.discountPercent || 0) > 0 ? '700' : '400' }}>
+                  {(itm.discountPercent || 0) > 0 ? `${itm.discountPercent}%` : '0%'}
                 </td>
                 <td
                   style={{

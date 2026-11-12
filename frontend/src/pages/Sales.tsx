@@ -86,6 +86,7 @@ export interface PatientReturnItem {
   batchNumber: string;
   expiryDate?: string | null;
   mrp: number;
+  discountPercent?: number;
   ptr?: number;
   pts: number;
   currentStock: number;
@@ -513,6 +514,31 @@ export default function Sales() {
     } catch (err: any) {
       console.error('Failed to cancel invoice:', err);
       setError(err.response?.data?.error || err.message || 'Failed to cancel invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReturnVoucher = async (voucherNumber: string, refundAmount: number) => {
+    if (!activeCompany) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete Patient Return Voucher "${voucherNumber}" (Refund ₹${refundAmount.toFixed(2)})?\n\n` +
+      `This will permanently remove this return record and reverse/deduct the restored medicine stock back out of your inventory.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.delete(`/api/inventory/patient-returns/${encodeURIComponent(voucherNumber)}`, {
+        companyId: activeCompany.id
+      });
+      setSuccessMessage(`Patient Return Voucher "${voucherNumber}" was successfully deleted and restored stock was reversed.`);
+      await fetchSalesData();
+    } catch (err: any) {
+      console.error('Failed to delete return voucher:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to delete return voucher');
     } finally {
       setLoading(false);
     }
@@ -1577,6 +1603,7 @@ export default function Sales() {
                                       looseQty: r.looseQty,
                                       unitsAdded: r.unitsReturned,
                                       mrp: r.mrp,
+                                      discountPercent: r.discountPercent || 0,
                                       refundAmount: r.refundAmount
                                     }))
                                   });
@@ -1594,8 +1621,28 @@ export default function Sales() {
                                   fontSize: '0.75rem',
                                   fontWeight: '600'
                                 }}
+                                title="Print return voucher slip"
                               >
                                 <Printer size={13} /> Slip
+                              </button>
+                              <button
+                                onClick={() => handleDeleteReturnVoucher(grp.voucherNumber, grp.totalRefundAmount)}
+                                style={{
+                                  padding: '0.28rem 0.55rem',
+                                  background: 'rgba(239, 68, 68, 0.12)',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  borderRadius: '5px',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '600'
+                                }}
+                                title="Delete this return voucher and reverse stock"
+                              >
+                                <Trash2 size={13} /> Delete
                               </button>
                             </div>
                           </td>
@@ -1639,6 +1686,7 @@ export default function Sales() {
                                       <th style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>Return Packaging</th>
                                       <th style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>Units Added to Stock</th>
                                       <th style={{ padding: '0.5rem 0.8rem', textAlign: 'right' }}>MRP / Unit</th>
+                                      <th style={{ padding: '0.5rem 0.8rem', textAlign: 'center' }}>Disc %</th>
                                       <th style={{ padding: '0.5rem 0.8rem', textAlign: 'right' }}>Line Refund (₹)</th>
                                     </tr>
                                   </thead>
@@ -1669,6 +1717,9 @@ export default function Sales() {
                                         <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
                                           ₹{itm.mrp.toFixed(2)}
                                         </td>
+                                        <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', color: (itm.discountPercent || 0) > 0 ? '#0284c7' : 'var(--text-muted)', fontWeight: (itm.discountPercent || 0) > 0 ? '700' : '400' }}>
+                                          {(itm.discountPercent || 0) > 0 ? `${itm.discountPercent}%` : '0%'}
+                                        </td>
                                         <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', fontWeight: '700', color: '#e11d48' }}>
                                           −₹{itm.refundAmount.toFixed(2)}
                                         </td>
@@ -1681,6 +1732,7 @@ export default function Sales() {
                                       <td style={{ padding: '0.5rem 0.8rem', textAlign: 'center', color: 'var(--accent-green)' }}>
                                         +{grp.totalUnitsReturned} units
                                       </td>
+                                      <td></td>
                                       <td></td>
                                       <td style={{ padding: '0.5rem 0.8rem', textAlign: 'right', color: '#e11d48', fontSize: '0.9rem' }}>
                                         −₹{grp.totalRefundAmount.toFixed(2)}

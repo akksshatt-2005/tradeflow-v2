@@ -1,0 +1,371 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "medicine-database-software",
+    "description": "Full-stack Pharmacy ERP & Medical Billing System built with React, Vite, Node.js, Express, and Prisma PostgreSQL.",
+    "languages": ["TypeScript", "JavaScript", "CSS"],
+    "frameworks": ["React", "Express", "Prisma", "PostgreSQL", "Vite", "TailwindCSS"],
+    "analyzedAt": "2026-11-08T16:45:00.000Z",
+    "gitCommitHash": "aac625491ba56f69c42db1146e0c5ea89bc39b74"
+  },
+  "nodes": [
+    {
+      "id": "file:frontend/src/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "filePath": "frontend/src/App.tsx",
+      "summary": "Main client routing and application shell with authentication guards and layout wrappers.",
+      "tags": ["frontend", "routing", "ui"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/POSBilling.tsx",
+      "type": "file",
+      "name": "POSBilling.tsx",
+      "filePath": "frontend/src/pages/POSBilling.tsx",
+      "summary": "High-speed point-of-sale checkout page for dispensing medicines, calculating GST, and creating invoices.",
+      "tags": ["frontend", "billing", "pos", "sales"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:frontend/src/pages/Purchases.tsx",
+      "type": "file",
+      "name": "Purchases.tsx",
+      "filePath": "frontend/src/pages/Purchases.tsx",
+      "summary": "Supplier purchase order history, inventory inwarding, and supplier invoice verification.",
+      "tags": ["frontend", "purchases", "inventory"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/NewPurchase.tsx",
+      "type": "file",
+      "name": "NewPurchase.tsx",
+      "filePath": "frontend/src/pages/NewPurchase.tsx",
+      "summary": "Multi-item inward stock entry with batch numbers, expiry dates, purchase rates, MRP, and GST rates.",
+      "tags": ["frontend", "purchases", "batch"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:frontend/src/pages/Medicines.tsx",
+      "type": "file",
+      "name": "Medicines.tsx",
+      "filePath": "frontend/src/pages/Medicines.tsx",
+      "summary": "Master item catalog management, packaging specifications, and drug schedule tracking.",
+      "tags": ["frontend", "catalog", "medicines"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/Batches.tsx",
+      "type": "file",
+      "name": "Batches.tsx",
+      "filePath": "frontend/src/pages/Batches.tsx",
+      "summary": "Live batch-level inventory tracking, near-expiry alerts, and stock adjustments.",
+      "tags": ["frontend", "inventory", "batches"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/Parties.tsx",
+      "type": "file",
+      "name": "Parties.tsx",
+      "filePath": "frontend/src/pages/Parties.tsx",
+      "summary": "Supplier and customer ledger management, contact info, and GSTIN registration details.",
+      "tags": ["frontend", "parties", "crm"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/CreditNotes.tsx",
+      "type": "file",
+      "name": "CreditNotes.tsx",
+      "filePath": "frontend/src/pages/CreditNotes.tsx",
+      "summary": "Purchase return vouchers, credit note generation, and supplier debit adjustments.",
+      "tags": ["frontend", "returns", "credit-notes"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/Settlements.tsx",
+      "type": "file",
+      "name": "Settlements.tsx",
+      "filePath": "frontend/src/pages/Settlements.tsx",
+      "summary": "Financial settlements tracking payments across invoices, purchases, and supplier accounts.",
+      "tags": ["frontend", "finance", "accounting"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/components/TaxInvoiceModal.tsx",
+      "type": "file",
+      "name": "TaxInvoiceModal.tsx",
+      "filePath": "frontend/src/components/TaxInvoiceModal.tsx",
+      "summary": "Printable and exportable GST Tax Invoice modal with A4 ERP layout, continuous vertical column dividers, and clinic terms.",
+      "tags": ["frontend", "invoice", "print", "gst"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:frontend/src/components/MultiPatientReturnModal.tsx",
+      "type": "file",
+      "name": "MultiPatientReturnModal.tsx",
+      "filePath": "frontend/src/components/MultiPatientReturnModal.tsx",
+      "summary": "Patient returns modal allowing multiple batch returns against billed sales invoices.",
+      "tags": ["frontend", "returns", "sales"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/server.ts",
+      "type": "file",
+      "name": "server.ts",
+      "filePath": "backend/src/server.ts",
+      "summary": "Express application bootstrap configuring CORS, security headers, rate limiting, and registering REST route mounts.",
+      "tags": ["backend", "express", "api-gateway"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/invoices.ts",
+      "type": "file",
+      "name": "invoices.ts",
+      "filePath": "backend/src/routes/invoices.ts",
+      "summary": "Sales invoice processing, atomic stock deduction, GST calculations, and payment tracking.",
+      "tags": ["backend", "sales", "invoicing", "stock-decrement"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:backend/src/routes/purchases.ts",
+      "type": "file",
+      "name": "purchases.ts",
+      "filePath": "backend/src/routes/purchases.ts",
+      "summary": "Handles supplier purchase invoices, auto-creates batch records, increments inventory, and logs stock ledgers.",
+      "tags": ["backend", "purchases", "inventory-increment"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:backend/src/routes/purchaseReturns.ts",
+      "type": "file",
+      "name": "purchaseReturns.ts",
+      "filePath": "backend/src/routes/purchaseReturns.ts",
+      "summary": "Processes supplier return shipments, decrements active batch stock, creates debit notes, and tracks return reasons.",
+      "tags": ["backend", "returns", "inventory"],
+      "complexity": "high"
+    },
+    {
+      "id": "file:backend/src/routes/items.ts",
+      "type": "file",
+      "name": "items.ts",
+      "filePath": "backend/src/routes/items.ts",
+      "summary": "CRUD endpoints for master item catalog, composition, HSN codes, and auto-catalog suggestion algorithms.",
+      "tags": ["backend", "catalog", "items"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/inventory.ts",
+      "type": "file",
+      "name": "inventory.ts",
+      "filePath": "backend/src/routes/inventory.ts",
+      "summary": "Inventory auditing, batch expiry reports, low-stock threshold queries, and stock valuation.",
+      "tags": ["backend", "inventory", "stock"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/parties.ts",
+      "type": "file",
+      "name": "parties.ts",
+      "filePath": "backend/src/routes/parties.ts",
+      "summary": "Endpoints for managing pharmaceutical suppliers, distributors, hospitals, and retail customers.",
+      "tags": ["backend", "parties", "crm"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/gst.ts",
+      "type": "file",
+      "name": "gst.ts",
+      "filePath": "backend/src/routes/gst.ts",
+      "summary": "GST compliance report generation, HSN-wise summary, GSTR-1, and GSTR-3B tax data extraction.",
+      "tags": ["backend", "gst", "tax", "reports"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/settlements.ts",
+      "type": "file",
+      "name": "settlements.ts",
+      "filePath": "backend/src/routes/settlements.ts",
+      "summary": "Supplier and customer balance settlements, partial payments, and ledger reconciliations.",
+      "tags": ["backend", "finance", "settlements"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/routes/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "backend/src/routes/auth.ts",
+      "summary": "JWT authentication, login attempts tracking, password hashing, and user company associations.",
+      "tags": ["backend", "auth", "security"],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:backend/src/prisma.ts",
+      "type": "file",
+      "name": "prisma.ts",
+      "filePath": "backend/src/prisma.ts",
+      "summary": "Prisma client singleton instance with query logging and connection pooling management.",
+      "tags": ["backend", "database", "orm"],
+      "complexity": "low"
+    },
+    {
+      "id": "file:backend/prisma/schema.prisma",
+      "type": "file",
+      "name": "schema.prisma",
+      "filePath": "backend/prisma/schema.prisma",
+      "summary": "Comprehensive PostgreSQL schema containing 19 relational models for pharma inventory, billing, multi-company, and accounting.",
+      "tags": ["database", "schema", "prisma"],
+      "complexity": "high"
+    },
+    {
+      "id": "table:prisma:Invoice",
+      "type": "table",
+      "name": "Invoice",
+      "summary": "Stores POS and customer sales invoices with subtotal, tax amounts, discount, and payment status.",
+      "tags": ["database", "sales", "invoices"],
+      "complexity": "medium"
+    },
+    {
+      "id": "table:prisma:Purchase",
+      "type": "table",
+      "name": "Purchase",
+      "summary": "Stores inward supplier purchase records with invoice numbers, supplier IDs, and tax breakdowns.",
+      "tags": ["database", "purchases"],
+      "complexity": "medium"
+    },
+    {
+      "id": "table:prisma:Batch",
+      "type": "table",
+      "name": "Batch",
+      "summary": "Tracks unique stock lots per medicine item with batch numbers, expiry dates, purchase rates, and available quantities.",
+      "tags": ["database", "inventory", "batches"],
+      "complexity": "high"
+    },
+    {
+      "id": "table:prisma:StockLedger",
+      "type": "table",
+      "name": "StockLedger",
+      "summary": "Immutable audit log of all stock movements (IN, OUT, RETURN, ADJUSTMENT) ensuring inventory accountability.",
+      "tags": ["database", "audit", "inventory"],
+      "complexity": "medium"
+    },
+    {
+      "id": "table:prisma:PurchaseReturn",
+      "type": "table",
+      "name": "PurchaseReturn",
+      "summary": "Supplier return documentation with debit notes, returned quantities, and refund calculations.",
+      "tags": ["database", "returns"],
+      "complexity": "medium"
+    }
+  ],
+  "edges": [
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/POSBilling.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/Purchases.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/NewPurchase.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/Medicines.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/Batches.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/Parties.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/CreditNotes.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/App.tsx", "target": "file:frontend/src/pages/Settlements.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/pages/POSBilling.tsx", "target": "file:frontend/src/components/TaxInvoiceModal.tsx", "type": "imports", "direction": "directed" },
+    { "source": "file:frontend/src/pages/POSBilling.tsx", "target": "file:backend/src/routes/invoices.ts", "type": "calls", "direction": "directed" },
+    { "source": "file:frontend/src/pages/NewPurchase.tsx", "target": "file:backend/src/routes/purchases.ts", "type": "calls", "direction": "directed" },
+    { "source": "file:frontend/src/pages/CreditNotes.tsx", "target": "file:backend/src/routes/purchaseReturns.ts", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/auth.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/invoices.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/purchases.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/purchaseReturns.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/items.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/inventory.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/parties.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/gst.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/server.ts", "target": "file:backend/src/routes/settlements.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/routes/invoices.ts", "target": "file:backend/src/prisma.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchases.ts", "target": "file:backend/src/prisma.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchaseReturns.ts", "target": "file:backend/src/prisma.ts", "type": "imports", "direction": "directed" },
+    { "source": "file:backend/src/prisma.ts", "target": "file:backend/prisma/schema.prisma", "type": "depends_on", "direction": "directed" },
+    { "source": "file:backend/src/routes/invoices.ts", "target": "table:prisma:Invoice", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/invoices.ts", "target": "table:prisma:Batch", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/invoices.ts", "target": "table:prisma:StockLedger", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchases.ts", "target": "table:prisma:Purchase", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchases.ts", "target": "table:prisma:Batch", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchaseReturns.ts", "target": "table:prisma:PurchaseReturn", "type": "calls", "direction": "directed" },
+    { "source": "file:backend/src/routes/purchaseReturns.ts", "target": "table:prisma:Batch", "type": "calls", "direction": "directed" }
+  ],
+  "layers": [
+    {
+      "id": "layer-ui",
+      "name": "Presentation / Frontend UI",
+      "description": "React single-page application components, POS interface, and reporting views",
+      "nodeIds": [
+        "file:frontend/src/App.tsx",
+        "file:frontend/src/pages/POSBilling.tsx",
+        "file:frontend/src/pages/Purchases.tsx",
+        "file:frontend/src/pages/NewPurchase.tsx",
+        "file:frontend/src/pages/Medicines.tsx",
+        "file:frontend/src/pages/Batches.tsx",
+        "file:frontend/src/pages/Parties.tsx",
+        "file:frontend/src/pages/CreditNotes.tsx",
+        "file:frontend/src/pages/Settlements.tsx",
+        "file:frontend/src/components/TaxInvoiceModal.tsx",
+        "file:frontend/src/components/MultiPatientReturnModal.tsx"
+      ]
+    },
+    {
+      "id": "layer-api",
+      "name": "API & Route Controllers",
+      "description": "Express HTTP endpoints handling validation, business calculations, and transactional operations",
+      "nodeIds": [
+        "file:backend/src/server.ts",
+        "file:backend/src/routes/invoices.ts",
+        "file:backend/src/routes/purchases.ts",
+        "file:backend/src/routes/purchaseReturns.ts",
+        "file:backend/src/routes/items.ts",
+        "file:backend/src/routes/inventory.ts",
+        "file:backend/src/routes/parties.ts",
+        "file:backend/src/routes/gst.ts",
+        "file:backend/src/routes/settlements.ts",
+        "file:backend/src/routes/auth.ts"
+      ]
+    },
+    {
+      "id": "layer-data",
+      "name": "Data & Persistence",
+      "description": "Prisma ORM models and PostgreSQL relational schema handling ACID transactions and inventory tracking",
+      "nodeIds": [
+        "file:backend/src/prisma.ts",
+        "file:backend/prisma/schema.prisma",
+        "table:prisma:Invoice",
+        "table:prisma:Purchase",
+        "table:prisma:Batch",
+        "table:prisma:StockLedger",
+        "table:prisma:PurchaseReturn"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "1. System Entry Point & Architecture",
+      "description": "Explore the Express backend bootstrap (server.ts) and the React frontend router (App.tsx).",
+      "nodeIds": ["file:backend/src/server.ts", "file:frontend/src/App.tsx"]
+    },
+    {
+      "order": 2,
+      "title": "2. Procurement & Inward Stock Ingestion",
+      "description": "Trace how stock enters the pharmacy through NewPurchase.tsx, purchases.ts, creating new Batch rows and incrementing StockLedger.",
+      "nodeIds": ["file:frontend/src/pages/NewPurchase.tsx", "file:backend/src/routes/purchases.ts", "table:prisma:Batch", "table:prisma:StockLedger"]
+    },
+    {
+      "order": 3,
+      "title": "3. Point of Sale & GST Invoicing",
+      "description": "Observe rapid checkout dispensing in POSBilling.tsx, server-side atomic stock deductions in invoices.ts, and printable A4 TaxInvoiceModal.tsx.",
+      "nodeIds": ["file:frontend/src/pages/POSBilling.tsx", "file:backend/src/routes/invoices.ts", "file:frontend/src/components/TaxInvoiceModal.tsx", "table:prisma:Invoice"]
+    },
+    {
+      "order": 4,
+      "title": "4. Purchase Returns & Financial Settlements",
+      "description": "Understand credit notes and reverse logistics handling for expired/damaged stock returning to distributors via purchaseReturns.ts and settlements.ts.",
+      "nodeIds": ["file:frontend/src/pages/CreditNotes.tsx", "file:backend/src/routes/purchaseReturns.ts", "file:backend/src/routes/settlements.ts", "table:prisma:PurchaseReturn"]
+    }
+  ]
+}
