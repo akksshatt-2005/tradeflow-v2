@@ -8,6 +8,7 @@ import Purchases from './Purchases';
 import Sales from './Sales';
 import CreditNotes from './CreditNotes';
 import Settlements from './Settlements';
+import GstReports from './GstReports';
 import MultiPatientReturnModal from '../components/MultiPatientReturnModal';
 import {
   Building2,
@@ -40,7 +41,8 @@ import {
   Printer,
   Trash2,
   Receipt,
-  FileCheck
+  FileCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface InventorySummary {
@@ -91,7 +93,7 @@ interface SupplierReturnItem {
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements' | 'gst-reports'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
@@ -162,6 +164,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     { id: 'parties', label: 'Suppliers & Clients', icon: Users },
     { id: 'credit-notes', label: 'Credit Notes (CN)', icon: RotateCcw, hotkey: 'Alt+C' },
     { id: 'settlements', label: 'Supplier Settlements', icon: Handshake, hotkey: 'Alt+T' },
+    { id: 'gst-reports', label: 'GST & CA Reports', icon: FileSpreadsheet, hotkey: 'Alt+G' },
   ];
 
   // Global Navigation Hotkeys (Option A)
@@ -194,6 +197,9 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         } else if (k === 't' || k === 'l') {
           e.preventDefault();
           setActiveTab('settlements');
+        } else if (k === 'g') {
+          e.preventDefault();
+          setActiveTab('gst-reports');
         }
       }
     };
@@ -1126,6 +1132,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           {activeTab === 'parties' && <Parties />}
           {activeTab === 'credit-notes' && <CreditNotes />}
           {activeTab === 'settlements' && <Settlements />}
+          {activeTab === 'gst-reports' && <GstReports />}
         </main>
       </div>
 
