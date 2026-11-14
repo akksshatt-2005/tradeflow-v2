@@ -6,7 +6,6 @@ import {
   Download,
   Calendar,
   Search,
-  Filter,
   CheckCircle2,
   AlertCircle,
   TrendingUp,
@@ -19,7 +18,8 @@ import {
   Building,
   Hash,
   Clock,
-  Printer
+  Printer,
+  ChevronRight
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://tradeflow-v2-1.onrender.com');
@@ -40,7 +40,6 @@ export default function GstReports() {
   // Loading & Data states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [hsnType, setHsnType] = useState<'sales' | 'purchase'>('sales');
 
   // Report payloads
@@ -76,7 +75,6 @@ export default function GstReports() {
       setStartDate(start.toISOString().split('T')[0]);
       setEndDate(end.toISOString().split('T')[0]);
     } else if (type === 'fy-all') {
-      // Indian FY starts April 1
       const fyStartYear = currMonth >= 3 ? currYear : currYear - 1;
       const start = new Date(fyStartYear, 3, 1);
       const end = new Date(fyStartYear + 1, 2, 31);
@@ -85,7 +83,6 @@ export default function GstReports() {
     }
   };
 
-  // Fetch Report Data on Tab or Date change
   const fetchReportData = async () => {
     if (!activeCompany?.id) return;
     setLoading(true);
@@ -161,309 +158,422 @@ export default function GstReports() {
     }
   };
 
+  const navTabs = [
+    { id: 'gstr3b', label: 'GSTR-3B Summary', icon: DollarSign },
+    { id: 'gstr1', label: 'GSTR-1 (Sales)', icon: FileText },
+    { id: 'gstr2', label: 'GSTR-2 (Purchases/ITC)', icon: Layers },
+    { id: 'hsn', label: 'HSN Summary', icon: Hash },
+    { id: 'datewise', label: 'Date-wise Sales/Pur', icon: Clock },
+    { id: 'partywise', label: 'Date/Party-wise GST', icon: Building },
+    { id: 'gstr4', label: 'GSTR-4 (Composition)', icon: CheckCircle2 },
+  ];
+
   return (
-    <div className="space-y-4">
-      {/* Top Header & Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div style={{ maxWidth: '1440px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px', color: '#0f172a' }}>
+      
+      {/* Top Banner Card */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '16px 20px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-teal-700" />
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">GST & Statutory Tax Portal</h1>
-              <span className="px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200 rounded">
-                GSTIN: {activeCompany?.gstin || 'UNREGISTERED'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ backgroundColor: '#0f766e', color: '#ffffff', padding: '6px', borderRadius: '6px', display: 'flex' }}>
+                <FileSpreadsheet size={20} />
+              </div>
+              <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                GST & Statutory Tax Compliance Portal
+              </h1>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                backgroundColor: '#f0fdf4',
+                color: '#166534',
+                border: '1px solid #bbf7d0',
+                padding: '2px 8px',
+                borderRadius: '4px'
+              }}>
+                GSTIN: {activeCompany?.gstin || 'UNREGISTERED / COMPOSITION'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Statutory GST returns, Input Tax Credit (ITC) reconciliation, HSN breakdown, and Chartered Accountant export.
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              Official monthly GST returns, Input Tax Credit (ITC) reconciliation, HSN breakdown, and Chartered Accountant export.
             </p>
           </div>
 
-          {/* Action buttons & Date range */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs">
-              <span className="text-slate-500 font-medium">From:</span>
+          {/* Action Toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Date Pickers */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '12px'
+            }}>
+              <span style={{ color: '#64748b', fontWeight: 600 }}>From:</span>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-teal-600 font-mono"
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '3px 6px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  backgroundColor: '#ffffff'
+                }}
               />
-              <span className="text-slate-500 font-medium ml-1">To:</span>
+              <span style={{ color: '#64748b', fontWeight: 600, marginLeft: '4px' }}>To:</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-700 focus:outline-teal-600 font-mono"
+                style={{
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '3px 6px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  backgroundColor: '#ffffff'
+                }}
               />
             </div>
 
+            {/* Refresh Button */}
             <button
               onClick={() => fetchReportData()}
-              className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded border border-slate-200 transition-colors"
-              title="Refresh Report"
+              title="Refresh Report Data"
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#475569',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-teal-600' : ''}`} />
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
 
+            {/* Download Excel Button */}
             <button
               onClick={handleDownloadExcel}
               disabled={downloadingExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded text-xs font-semibold transition-colors shadow-xs disabled:opacity-50"
+              style={{
+                backgroundColor: '#0f766e',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '7px 14px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: downloadingExcel ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                opacity: downloadingExcel ? 0.6 : 1
+              }}
+              onMouseEnter={(e) => { if (!downloadingExcel) e.currentTarget.style.backgroundColor = '#115e59'; }}
+              onMouseLeave={(e) => { if (!downloadingExcel) e.currentTarget.style.backgroundColor = '#0f766e'; }}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download size={14} />
               {downloadingExcel ? 'Exporting...' : 'Export Excel for CA'}
             </button>
           </div>
         </div>
 
-        {/* Quick Date Presets */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
-          <span className="text-slate-400 font-medium">Quick Filters:</span>
-          <button
-            onClick={() => applyQuickDate('this-month')}
-            className="px-2 py-0.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => applyQuickDate('last-month')}
-            className="px-2 py-0.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
-          >
-            Last Month
-          </button>
-          <button
-            onClick={() => applyQuickDate('this-quarter')}
-            className="px-2 py-0.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
-          >
-            This Quarter
-          </button>
-          <button
-            onClick={() => applyQuickDate('fy-all')}
-            className="px-2 py-0.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
-          >
-            Full Financial Year (FY 26-27)
-          </button>
+        {/* Quick Date Presets Row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginTop: '12px',
+          paddingTop: '12px',
+          borderTop: '1px solid #f1f5f9',
+          fontSize: '11.5px'
+        }}>
+          <span style={{ color: '#94a3b8', fontWeight: 600 }}>Quick Presets:</span>
+          {[
+            { id: 'this-month', label: 'This Month' },
+            { id: 'last-month', label: 'Last Month' },
+            { id: 'this-quarter', label: 'This Quarter' },
+            { id: 'fy-all', label: 'Full Financial Year (FY 26-27)' }
+          ].map(p => (
+            <button
+              key={p.id}
+              onClick={() => applyQuickDate(p.id as any)}
+              style={{
+                backgroundColor: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontSize: '11.5px',
+                color: '#334155',
+                cursor: 'pointer',
+                fontWeight: 500
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Sub-Tab Navigation Bar */}
-      <div className="flex flex-wrap items-center gap-1 bg-white border border-slate-200 rounded p-1 shadow-xs">
-        <button
-          onClick={() => setActiveSubTab('gstr3b')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'gstr3b'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <DollarSign className="w-3.5 h-3.5" />
-          GSTR-3B Summary
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('gstr1')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'gstr1'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          GSTR-1 (Sales)
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('gstr2')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'gstr2'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          GSTR-2 (Purchases / ITC)
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('hsn')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'hsn'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Hash className="w-3.5 h-3.5" />
-          HSN Summary
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('datewise')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'datewise'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          Date-wise Sales/Purchase
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('partywise')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'partywise'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Building className="w-3.5 h-3.5" />
-          Date/Party-wise GST
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('gstr4')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-            activeSubTab === 'gstr4'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          GSTR-4 (Composition 1%)
-        </button>
+      {/* Sub-Tab Navigation Strip */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '5px',
+        overflowX: 'auto'
+      }}>
+        {navTabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: isActive ? '#0f766e' : 'transparent',
+                color: isActive ? '#ffffff' : '#475569',
+                fontSize: '12px',
+                fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = '#f1f5f9';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <Icon size={14} color={isActive ? '#ffffff' : '#64748b'} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main Content Pane */}
+      {/* Main Tab Content */}
       {loading ? (
-        <div className="bg-white border border-slate-200 rounded p-12 text-center text-slate-500 text-xs">
-          <RefreshCw className="w-6 h-6 animate-spin text-teal-600 mx-auto mb-2" />
-          Computing statutory GST registers and Input Tax Credit balances...
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '60px 20px',
+          textAlign: 'center',
+          color: '#64748b',
+          fontSize: '13px'
+        }}>
+          <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: '#0f766e' }} />
+          Calculating statutory GST liability and Input Tax Credit balances...
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-700 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          padding: '14px 18px',
+          color: '#b91c1c',
+          fontSize: '12.5px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <AlertCircle size={18} />
           <span>Error loading GST data: {error}</span>
         </div>
       ) : (
         <div>
           {/* TAB 1: GSTR-3B SUMMARY */}
           {activeSubTab === 'gstr3b' && gstr3bData && (
-            <div className="space-y-4">
-              {/* Top 3 Metric Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-200 rounded p-3 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* 3 Master Metric Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                {/* Outward Tax Liability Card */}
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#64748b', fontSize: '11.5px', fontWeight: 600 }}>
                     <span>1. Outward Tax Liability (Sales)</span>
-                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <TrendingUp size={16} color="#059669" />
                   </div>
-                  <div className="text-xl font-bold text-slate-900 font-mono">
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace', margin: '4px 0 2px' }}>
                     ₹{gstr3bData.outwardSupplies.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
-                    Taxable: ₹{gstr3bData.outwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({gstr3bData.outwardSupplies.invoiceCount} bills)
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Taxable: ₹{gstr3bData.outwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({gstr3bData.outwardSupplies.invoiceCount} sales bills)
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded p-3 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                {/* Net Eligible ITC Card */}
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#64748b', fontSize: '11.5px', fontWeight: 600 }}>
                     <span>2. Net Eligible ITC (Purchases)</span>
-                    <TrendingDown className="w-4 h-4 text-blue-600" />
+                    <TrendingDown size={16} color="#2563eb" />
                   </div>
-                  <div className="text-xl font-bold text-blue-700 font-mono">
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#1d4ed8', fontFamily: 'monospace', margin: '4px 0 2px' }}>
                     ₹{gstr3bData.netEligibleITC.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
                     Gross Purchases ITC: ₹{gstr3bData.inwardSupplies.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({gstr3bData.inwardSupplies.purchaseCount} bills)
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded p-3 shadow-xs">
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                {/* Net Cash Payable Card */}
+                <div style={{
+                  backgroundColor: gstr3bData.netTaxPayable.totalPayable > 0 ? '#fffbeb' : '#f0fdf4',
+                  border: `1px solid ${gstr3bData.netTaxPayable.totalPayable > 0 ? '#fde68a' : '#bbf7d0'}`,
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#64748b', fontSize: '11.5px', fontWeight: 600 }}>
                     <span>3. Net Cash Payable to Govt</span>
-                    <DollarSign className="w-4 h-4 text-amber-600" />
+                    <DollarSign size={16} color={gstr3bData.netTaxPayable.totalPayable > 0 ? '#d97706' : '#16a34a'} />
                   </div>
-                  <div className={`text-xl font-bold font-mono ${gstr3bData.netTaxPayable.totalPayable > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                  <div style={{
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    color: gstr3bData.netTaxPayable.totalPayable > 0 ? '#b45309' : '#15803d',
+                    fontFamily: 'monospace',
+                    margin: '4px 0 2px'
+                  }}>
                     ₹{gstr3bData.netTaxPayable.totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
                     {gstr3bData.itcCarryForward.totalBalance > 0
                       ? `Excess ITC to carry forward: ₹${gstr3bData.itcCarryForward.totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-                      : 'All tax offset by eligible inward purchases.'}
+                      : 'All tax covered by eligible purchases.'}
                   </div>
                 </div>
               </div>
 
-              {/* Master Table 3.1 & Table 4 Breakdown */}
-              <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800 flex items-center justify-between">
-                  <span>GSTR-3B Statutory Tax Matrix ({gstr3bData.period.startDate} to {gstr3bData.period.endDate})</span>
-                  <span className="text-slate-500 font-normal">All amounts in Indian Rupees (INR)</span>
+              {/* Master Statutory Grid Table */}
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  padding: '10px 16px',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
+                    GSTR-3B Statutory Tax Matrix ({gstr3bData.period.startDate} to {gstr3bData.period.endDate})
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>All figures in Indian Rupees (INR)</span>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
-                      <tr className="bg-slate-100/75 border-b border-slate-200 text-slate-700 font-bold">
-                        <th className="py-2 px-3">Description / Statutory Head</th>
-                        <th className="py-2 px-3 text-right">Taxable Value (₹)</th>
-                        <th className="py-2 px-3 text-right">CGST (₹)</th>
-                        <th className="py-2 px-3 text-right">SGST (₹)</th>
-                        <th className="py-2 px-3 text-right">IGST (₹)</th>
-                        <th className="py-2 px-3 text-right">Total Tax (₹)</th>
+                      <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600 }}>
+                        <th style={{ padding: '9px 14px', textAlign: 'left' }}>Description / Statutory Head</th>
+                        <th style={{ padding: '9px 14px', textAlign: 'right' }}>Taxable Value (₹)</th>
+                        <th style={{ padding: '9px 14px', textAlign: 'right' }}>CGST (₹)</th>
+                        <th style={{ padding: '9px 14px', textAlign: 'right' }}>SGST (₹)</th>
+                        <th style={{ padding: '9px 14px', textAlign: 'right' }}>IGST (₹)</th>
+                        <th style={{ padding: '9px 14px', textAlign: 'right' }}>Total Tax (₹)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      <tr>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                    <tbody style={{ fontFamily: 'monospace' }}>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 14px', fontFamily: 'sans-serif', fontWeight: 600, color: '#1e293b' }}>
                           (A) Outward Taxable Supplies (Table 3.1a - Active Sales)
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono">{gstr3bData.outwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-semibold">{gstr3bData.outwardSupplies.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-semibold">{gstr3bData.outwardSupplies.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-semibold">{gstr3bData.outwardSupplies.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">{gstr3bData.outwardSupplies.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>{gstr3bData.outwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>{gstr3bData.outwardSupplies.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>{gstr3bData.outwardSupplies.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>{gstr3bData.outwardSupplies.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{gstr3bData.outwardSupplies.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
-                      <tr>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 14px', fontFamily: 'sans-serif', fontWeight: 600, color: '#1e293b' }}>
                           (B) Eligible Inward ITC (Table 4A - Inward Purchases from Suppliers)
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono">{gstr3bData.inwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-700 font-semibold">{gstr3bData.inwardSupplies.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-700 font-semibold">{gstr3bData.inwardSupplies.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-700 font-semibold">{gstr3bData.inwardSupplies.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-blue-700">{gstr3bData.inwardSupplies.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>{gstr3bData.inwardSupplies.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{gstr3bData.inwardSupplies.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{gstr3bData.inwardSupplies.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{gstr3bData.inwardSupplies.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#1d4ed8' }}>{gstr3bData.inwardSupplies.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
+
                       {gstr3bData.itcReversal.totalReversal > 0 && (
-                        <tr className="text-red-700 bg-red-50/50">
-                          <td className="py-2.5 px-3 font-semibold">
+                        <tr style={{ borderBottom: '1px solid #fecaca', backgroundColor: '#fff5f5', color: '#b91c1c' }}>
+                          <td style={{ padding: '10px 14px', fontFamily: 'sans-serif', fontWeight: 600 }}>
                             (C) ITC Reversal (Table 4B - Supplier Debit Notes / Returns)
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono">-{gstr3bData.itcReversal.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold">-{gstr3bData.itcReversal.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold">-{gstr3bData.itcReversal.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold">-{gstr3bData.itcReversal.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold">-{gstr3bData.itcReversal.totalReversal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>-{gstr3bData.itcReversal.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>-{gstr3bData.itcReversal.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>-{gstr3bData.itcReversal.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>-{gstr3bData.itcReversal.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>-{gstr3bData.itcReversal.totalReversal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       )}
-                      <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
-                        <td className="py-2.5 px-3 text-slate-900">
+
+                      <tr style={{ borderBottom: '2px solid #cbd5e1', backgroundColor: '#f8fafc', fontWeight: 700 }}>
+                        <td style={{ padding: '10px 14px', fontFamily: 'sans-serif', color: '#0f172a' }}>
                           (D) Net Eligible ITC Available (B - C)
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono">-</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-800">{gstr3bData.netEligibleITC.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-800">{gstr3bData.netEligibleITC.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-800">{gstr3bData.netEligibleITC.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-blue-800 font-bold">{gstr3bData.netEligibleITC.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#64748b' }}>-</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1e40af' }}>{gstr3bData.netEligibleITC.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1e40af' }}>{gstr3bData.netEligibleITC.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1e40af' }}>{gstr3bData.netEligibleITC.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', color: '#1e40af', fontSize: '13px' }}>{gstr3bData.netEligibleITC.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
-                      <tr className="bg-amber-50/75 border-t border-amber-200 font-bold">
-                        <td className="py-3 px-3 text-amber-900">
+
+                      <tr style={{ backgroundColor: '#fffbeb', borderTop: '2px solid #fde68a', fontWeight: 800 }}>
+                        <td style={{ padding: '12px 14px', fontFamily: 'sans-serif', color: '#92400e' }}>
                           (E) NET TAX PAYABLE IN CASH (Table 6.1 - Payment of Tax)
                         </td>
-                        <td className="py-3 px-3 text-right font-mono">-</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-800">{gstr3bData.netTaxPayable.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-800">{gstr3bData.netTaxPayable.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-800">{gstr3bData.netTaxPayable.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-900 text-sm font-black">{gstr3bData.netTaxPayable.totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#64748b' }}>-</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#b45309' }}>{gstr3bData.netTaxPayable.cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#b45309' }}>{gstr3bData.netTaxPayable.sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#b45309' }}>{gstr3bData.netTaxPayable.igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right', color: '#92400e', fontSize: '14px' }}>₹{gstr3bData.netTaxPayable.totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -474,70 +584,70 @@ export default function GstReports() {
 
           {/* TAB 2: GSTR-1 OUTWARD SALES */}
           {activeSubTab === 'gstr1' && gstr1Data && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                <div className="bg-white border border-slate-200 rounded p-3">
-                  <div className="text-slate-500">Table 4: B2B Invoices</div>
-                  <div className="text-lg font-bold text-slate-900 font-mono mt-0.5">{gstr1Data.b2b.count} bills</div>
-                  <div className="text-slate-500 font-mono mt-1">Tax: ₹{gstr1Data.b2b.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Table 4: B2B Invoices</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', margin: '2px 0' }}>{gstr1Data.b2b.count} bills</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>Tax: ₹{gstr1Data.b2b.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded p-3">
-                  <div className="text-slate-500">Table 7: B2C Retail Bills</div>
-                  <div className="text-lg font-bold text-slate-900 font-mono mt-0.5">{gstr1Data.b2cSmall.count} bills</div>
-                  <div className="text-slate-500 font-mono mt-1">Tax: ₹{gstr1Data.b2cSmall.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Table 7: B2C Retail Bills</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', margin: '2px 0' }}>{gstr1Data.b2cSmall.count} bills</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>Tax: ₹{gstr1Data.b2cSmall.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded p-3">
-                  <div className="text-slate-500">Cancelled Invoices</div>
-                  <div className="text-lg font-bold text-red-600 font-mono mt-0.5">{gstr1Data.cancelled.count} bills</div>
-                  <div className="text-slate-500 mt-1">Zero tax liability</div>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Cancelled Invoices</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'monospace', color: '#dc2626', margin: '2px 0' }}>{gstr1Data.cancelled.count} bills</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Zero tax liability</div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded p-3">
-                  <div className="text-slate-500">Table 13: Doc Range</div>
-                  <div className="text-xs font-bold text-slate-800 font-mono mt-1">{gstr1Data.documentSummary.startingNumber}</div>
-                  <div className="text-xs text-slate-500 font-mono">to {gstr1Data.documentSummary.endingNumber}</div>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Table 13: Doc Range</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', marginTop: '4px' }}>{gstr1Data.documentSummary.startingNumber}</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>to {gstr1Data.documentSummary.endingNumber}</div>
                 </div>
               </div>
 
               {/* B2B Table */}
-              <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
                   Table 4: B2B Sales (Registered Doctors, Chemists & Hospitals)
                 </div>
                 {gstr1Data.b2b.invoices.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400">
-                    No B2B sales with GSTIN recorded in this date range.
+                  <div style={{ padding: '36px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                    No B2B sales with GSTIN recorded in this date range. Counter walk-in patient retail bills are captured in GSTR-1 Table 7.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto max-h-96">
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 font-bold text-slate-700">
+                  <div style={{ overflowX: 'auto', maxHeight: '450px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600 }}>
                         <tr>
-                          <th className="py-2 px-3">Invoice No</th>
-                          <th className="py-2 px-3">Date</th>
-                          <th className="py-2 px-3">Customer / Buyer</th>
-                          <th className="py-2 px-3">Recipient GSTIN</th>
-                          <th className="py-2 px-3 text-right">Taxable (₹)</th>
-                          <th className="py-2 px-3 text-right">CGST (₹)</th>
-                          <th className="py-2 px-3 text-right">SGST (₹)</th>
-                          <th className="py-2 px-3 text-right">Total GST (₹)</th>
-                          <th className="py-2 px-3 text-right">Total (₹)</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left' }}>Invoice No</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left' }}>Date</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left' }}>Customer / Buyer</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left' }}>Recipient GSTIN</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Taxable (₹)</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>CGST (₹)</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>SGST (₹)</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total GST (₹)</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (₹)</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 font-mono">
+                      <tbody style={{ fontFamily: 'monospace' }}>
                         {gstr1Data.b2b.invoices.map((inv: any) => (
-                          <tr key={inv.id} className="hover:bg-slate-50">
-                            <td className="py-2 px-3 font-semibold text-slate-800">{inv.invoiceNumber}</td>
-                            <td className="py-2 px-3 text-slate-600">{inv.invoiceDate}</td>
-                            <td className="py-2 px-3 font-sans text-slate-800">{inv.customerName}</td>
-                            <td className="py-2 px-3 text-teal-700 font-bold">{inv.gstin}</td>
-                            <td className="py-2 px-3 text-right">{inv.taxableAmount.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right text-emerald-700">{inv.cgstAmount.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right text-emerald-700">{inv.sgstAmount.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right font-bold text-slate-900">{inv.totalTax.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right font-bold text-slate-900">{inv.grandTotal.toFixed(2)}</td>
+                          <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>{inv.invoiceNumber}</td>
+                            <td style={{ padding: '8px 12px', color: '#64748b' }}>{inv.invoiceDate}</td>
+                            <td style={{ padding: '8px 12px', fontFamily: 'sans-serif', color: '#1e293b' }}>{inv.customerName}</td>
+                            <td style={{ padding: '8px 12px', color: '#0f766e', fontWeight: 700 }}>{inv.gstin}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>{inv.taxableAmount.toFixed(2)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', color: '#059669' }}>{inv.cgstAmount.toFixed(2)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', color: '#059669' }}>{inv.sgstAmount.toFixed(2)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{inv.totalTax.toFixed(2)}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{inv.grandTotal.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -550,50 +660,65 @@ export default function GstReports() {
 
           {/* TAB 3: GSTR-2 INWARD PURCHASES */}
           {activeSubTab === 'gstr2' && gstr2Data && (
-            <div className="space-y-4">
-              <div className="bg-white border border-slate-200 rounded p-3 flex items-center justify-between text-xs">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '12px'
+              }}>
                 <div>
-                  <span className="font-bold text-slate-900">Total Purchase Bills:</span> {gstr2Data.summary.count} |{' '}
-                  <span className="font-bold text-slate-900">Gross Taxable:</span> ₹{gstr2Data.summary.totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>Total Purchase Bills:</span> {gstr2Data.summary.count} |{' '}
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>Gross Taxable:</span> ₹{gstr2Data.summary.totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
                 <div>
-                  <span className="font-bold text-blue-700">Total Input Tax Credit (ITC):</span> ₹{gstr2Data.summary.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <span style={{ fontWeight: 700, color: '#1d4ed8' }}>Total Input Tax Credit (ITC):</span> ₹{gstr2Data.summary.totalITC.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-                <div className="overflow-x-auto max-h-[500px]">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 font-bold text-slate-700">
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto', maxHeight: '500px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600 }}>
                       <tr>
-                        <th className="py-2 px-3">Bill No</th>
-                        <th className="py-2 px-3">Date</th>
-                        <th className="py-2 px-3">Distributor / Supplier</th>
-                        <th className="py-2 px-3">Supplier GSTIN</th>
-                        <th className="py-2 px-3 text-right">Taxable (₹)</th>
-                        <th className="py-2 px-3 text-right">CGST (₹)</th>
-                        <th className="py-2 px-3 text-right">SGST (₹)</th>
-                        <th className="py-2 px-3 text-right">Eligible ITC (₹)</th>
-                        <th className="py-2 px-3 text-right">Total (₹)</th>
-                        <th className="py-2 px-3 text-center">Status</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Bill No</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Date</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Distributor / Supplier</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Supplier GSTIN</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Taxable (₹)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>CGST (₹)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>SGST (₹)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Eligible ITC (₹)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (₹)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 font-mono">
+                    <tbody style={{ fontFamily: 'monospace' }}>
                       {gstr2Data.purchases.map((pur: any) => (
-                        <tr key={pur.id} className="hover:bg-slate-50">
-                          <td className="py-2 px-3 font-semibold text-slate-800">{pur.invoiceNumber}</td>
-                          <td className="py-2 px-3 text-slate-600">{pur.purchaseDate}</td>
-                          <td className="py-2 px-3 font-sans text-slate-800">{pur.supplierName}</td>
-                          <td className="py-2 px-3 text-teal-700 font-bold">{pur.supplierGstin || 'UNREGISTERED'}</td>
-                          <td className="py-2 px-3 text-right">{pur.taxableAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right text-blue-700">{pur.cgstAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right text-blue-700">{pur.sgstAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-blue-800">{pur.totalTax.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900">{pur.totalAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-center">
-                            <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${
-                              pur.status === 'PAID' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}>
+                        <tr key={pur.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>{pur.invoiceNumber}</td>
+                          <td style={{ padding: '8px 12px', color: '#64748b' }}>{pur.purchaseDate}</td>
+                          <td style={{ padding: '8px 12px', fontFamily: 'sans-serif', color: '#1e293b' }}>{pur.supplierName}</td>
+                          <td style={{ padding: '8px 12px', color: '#0f766e', fontWeight: 700 }}>{pur.supplierGstin || 'UNREGISTERED'}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>{pur.taxableAmount.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', color: '#2563eb' }}>{pur.cgstAmount.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', color: '#2563eb' }}>{pur.sgstAmount.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#1d4ed8' }}>{pur.totalTax.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{pur.totalAmount.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              backgroundColor: pur.status === 'PAID' ? '#f0fdf4' : '#fffbeb',
+                              color: pur.status === 'PAID' ? '#166534' : '#b45309',
+                              border: `1px solid ${pur.status === 'PAID' ? '#bbf7d0' : '#fde68a'}`
+                            }}>
                               {pur.status}
                             </span>
                           </td>
@@ -608,61 +733,83 @@ export default function GstReports() {
 
           {/* TAB 4: HSN SUMMARY */}
           {activeSubTab === 'hsn' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between bg-white border border-slate-200 rounded p-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-700">HSN Mode:</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>HSN Mode:</span>
                   <button
                     onClick={() => setHsnType('sales')}
-                    className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
-                      hsnType === 'sales' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      backgroundColor: hsnType === 'sales' ? '#0f766e' : '#f1f5f9',
+                      color: hsnType === 'sales' ? '#ffffff' : '#334155',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
                   >
                     Outward (HSN Sales)
                   </button>
                   <button
                     onClick={() => setHsnType('purchase')}
-                    className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
-                      hsnType === 'purchase' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      backgroundColor: hsnType === 'purchase' ? '#0f766e' : '#f1f5f9',
+                      color: hsnType === 'purchase' ? '#ffffff' : '#334155',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
                   >
                     Inward (HSN Purchases)
                   </button>
                 </div>
 
-                <span className="text-xs text-slate-500 font-mono">
+                <span style={{ fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
                   {hsnData.length} distinct HSN codes mapped
                 </span>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700">
+              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600 }}>
                       <tr>
-                        <th className="py-2.5 px-3">HSN Code</th>
-                        <th className="py-2.5 px-3">Description</th>
-                        <th className="py-2.5 px-3">UQC</th>
-                        <th className="py-2.5 px-3 text-right">Total Qty Sold</th>
-                        <th className="py-2.5 px-3 text-right">Taxable Value (₹)</th>
-                        <th className="py-2.5 px-3 text-right">CGST (₹)</th>
-                        <th className="py-2.5 px-3 text-right">SGST (₹)</th>
-                        <th className="py-2.5 px-3 text-right">Total GST (₹)</th>
-                        <th className="py-2.5 px-3 text-right">Total Value (₹)</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'left' }}>HSN Code</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'left' }}>Description</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'left' }}>UQC</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>Total Qty Sold</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>Taxable Value (₹)</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>CGST (₹)</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>SGST (₹)</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>Total GST (₹)</th>
+                        <th style={{ padding: '9px 12px', textAlign: 'right' }}>Total Value (₹)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 font-mono">
-                      {hsnData.map((hsn) => (
-                        <tr key={hsn.hsnCode} className="hover:bg-slate-50">
-                          <td className="py-2 px-3 font-bold text-teal-800">{hsn.hsnCode}</td>
-                          <td className="py-2 px-3 font-sans text-slate-800">{hsn.description}</td>
-                          <td className="py-2 px-3 text-slate-600">{hsn.uqc}</td>
-                          <td className="py-2 px-3 text-right">{hsn.quantity.toLocaleString('en-IN')}</td>
-                          <td className="py-2 px-3 text-right">{hsn.taxableAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right text-emerald-700">{hsn.cgstAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right text-emerald-700">{hsn.sgstAmount.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900">{hsn.totalTax.toFixed(2)}</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900">{hsn.totalAmount.toFixed(2)}</td>
+                    <tbody style={{ fontFamily: 'monospace' }}>
+                      {hsnData.map(hsn => (
+                        <tr key={hsn.hsnCode} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '9px 12px', fontWeight: 700, color: '#0f766e' }}>{hsn.hsnCode}</td>
+                          <td style={{ padding: '9px 12px', fontFamily: 'sans-serif', color: '#1e293b' }}>{hsn.description}</td>
+                          <td style={{ padding: '9px 12px', color: '#64748b' }}>{hsn.uqc}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right' }}>{hsn.quantity.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right' }}>{hsn.taxableAmount.toFixed(2)}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', color: '#059669' }}>{hsn.cgstAmount.toFixed(2)}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', color: '#059669' }}>{hsn.sgstAmount.toFixed(2)}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{hsn.totalTax.toFixed(2)}</td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{hsn.totalAmount.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -674,37 +821,37 @@ export default function GstReports() {
 
           {/* TAB 5: DATE-WISE SALES VS PURCHASES */}
           {activeSubTab === 'datewise' && (
-            <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
-                Day-by-Day Sales & Purchases Register
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
+                Day-by-Day Chronological Sales & Purchases Register
               </div>
-              <div className="overflow-x-auto max-h-[500px]">
-                <table className="w-full text-xs text-left border-collapse font-mono">
-                  <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 font-bold text-slate-700 font-sans">
+              <div style={{ overflowX: 'auto', maxHeight: '500px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: 'monospace' }}>
+                  <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600, fontFamily: 'sans-serif' }}>
                     <tr>
-                      <th className="py-2 px-3">Date</th>
-                      <th className="py-2 px-3 text-right">Sales Bills</th>
-                      <th className="py-2 px-3 text-right">Sales Taxable (₹)</th>
-                      <th className="py-2 px-3 text-right">Sales GST (₹)</th>
-                      <th className="py-2 px-3 text-right">Total Sales (₹)</th>
-                      <th className="py-2 px-3 text-right">Pur Bills</th>
-                      <th className="py-2 px-3 text-right">Pur Taxable (₹)</th>
-                      <th className="py-2 px-3 text-right">Pur ITC (₹)</th>
-                      <th className="py-2 px-3 text-right">Total Purchases (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left' }}>Date</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Sales Bills</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Sales Taxable (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Sales GST (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total Sales (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Pur Bills</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Pur Taxable (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Pur ITC (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total Purchases (₹)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {datewiseData.map((d) => (
-                      <tr key={d.date} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 font-semibold text-slate-900">{d.date}</td>
-                        <td className="py-2 px-3 text-right text-slate-600">{d.salesCount}</td>
-                        <td className="py-2 px-3 text-right">{d.salesTaxable.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right text-emerald-700">{d.salesGst.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-slate-900">{d.salesTotal.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right text-slate-600">{d.purchaseCount}</td>
-                        <td className="py-2 px-3 text-right">{d.purchaseTaxable.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right text-blue-700">{d.purchaseGst.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-blue-900">{d.purchaseTotal.toFixed(2)}</td>
+                  <tbody>
+                    {datewiseData.map(d => (
+                      <tr key={d.date} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>{d.date}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{d.salesCount}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>{d.salesTaxable.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#059669' }}>{d.salesGst.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{d.salesTotal.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{d.purchaseCount}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>{d.purchaseTaxable.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#2563eb' }}>{d.purchaseGst.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#1d4ed8' }}>{d.purchaseTotal.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -715,37 +862,37 @@ export default function GstReports() {
 
           {/* TAB 6: DATE/PARTY-WISE GST */}
           {activeSubTab === 'partywise' && (
-            <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
-                Party / Customer Wise GST Sales Distribution
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+              <div style={{ backgroundColor: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
+                Customer & Party Wise Outward GST Distribution
               </div>
-              <div className="overflow-x-auto max-h-[500px]">
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 font-bold text-slate-700">
+              <div style={{ overflowX: 'auto', maxHeight: '500px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 600 }}>
                     <tr>
-                      <th className="py-2 px-3">Customer / Party Name</th>
-                      <th className="py-2 px-3">GSTIN</th>
-                      <th className="py-2 px-3">State</th>
-                      <th className="py-2 px-3 text-right">Bills</th>
-                      <th className="py-2 px-3 text-right">Taxable Amount (₹)</th>
-                      <th className="py-2 px-3 text-right">CGST (₹)</th>
-                      <th className="py-2 px-3 text-right">SGST (₹)</th>
-                      <th className="py-2 px-3 text-right">Total GST (₹)</th>
-                      <th className="py-2 px-3 text-right">Grand Total (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left' }}>Customer / Party Name</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left' }}>GSTIN</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left' }}>State</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Bills</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Taxable Amount (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>CGST (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>SGST (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total GST (₹)</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Grand Total (₹)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 font-mono">
-                    {partywiseData.map((p) => (
-                      <tr key={p.partyName} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 font-sans font-semibold text-slate-900">{p.partyName}</td>
-                        <td className="py-2 px-3 text-teal-700 font-bold">{p.gstin || '-'}</td>
-                        <td className="py-2 px-3 font-sans text-slate-600">{p.state}</td>
-                        <td className="py-2 px-3 text-right">{p.invoiceCount}</td>
-                        <td className="py-2 px-3 text-right">{p.taxableAmount.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right text-emerald-700">{p.cgstAmount.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right text-emerald-700">{p.sgstAmount.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-slate-900">{p.totalTax.toFixed(2)}</td>
-                        <td className="py-2 px-3 text-right font-bold text-slate-900">{p.totalAmount.toFixed(2)}</td>
+                  <tbody style={{ fontFamily: 'monospace' }}>
+                    {partywiseData.map(p => (
+                      <tr key={p.partyName} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 12px', fontFamily: 'sans-serif', fontWeight: 600, color: '#0f172a' }}>{p.partyName}</td>
+                        <td style={{ padding: '8px 12px', color: '#0f766e', fontWeight: 700 }}>{p.gstin || '-'}</td>
+                        <td style={{ padding: '8px 12px', fontFamily: 'sans-serif', color: '#64748b' }}>{p.state}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>{p.invoiceCount}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>{p.taxableAmount.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#059669' }}>{p.cgstAmount.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#059669' }}>{p.sgstAmount.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{p.totalTax.toFixed(2)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{p.totalAmount.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -756,31 +903,55 @@ export default function GstReports() {
 
           {/* TAB 7: GSTR-4 (COMPOSITION SCHEME) */}
           {activeSubTab === 'gstr4' && gstr4Data && (
-            <div className="bg-white border border-slate-200 rounded p-6 shadow-xs max-w-xl mx-auto text-xs space-y-4">
-              <div className="border-b border-slate-200 pb-3">
-                <h3 className="font-bold text-sm text-slate-900">GSTR-4 Composition Scheme Summary</h3>
-                <p className="text-slate-500 mt-0.5">Applicable for taxpayers opting for 1% flat turnover tax.</p>
+            <div style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '540px',
+              margin: '20px auto',
+              fontSize: '12.5px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+            }}>
+              <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                  GSTR-4 Composition Scheme Summary
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '11.5px', color: '#64748b' }}>
+                  Statutory 1% flat turnover tax for enrolled small pharmacy retailers.
+                </p>
               </div>
 
-              <div className="space-y-3 font-mono">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="font-sans text-slate-600">Total Billed Turnover:</span>
-                  <span className="font-bold text-slate-900">₹{gstr4Data.grossTurnover.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontFamily: 'sans-serif', color: '#475569' }}>Total Gross Turnover:</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>₹{gstr4Data.grossTurnover.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="font-sans text-slate-600">Statutory Composition Rate:</span>
-                  <span className="font-bold text-teal-700">{gstr4Data.compositionRate}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontFamily: 'sans-serif', color: '#475569' }}>Composition Tax Rate:</span>
+                  <span style={{ fontWeight: 700, color: '#0f766e' }}>{gstr4Data.compositionRate}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="font-sans text-slate-600">CGST (0.5%):</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontFamily: 'sans-serif', color: '#475569' }}>CGST (0.5%):</span>
                   <span>₹{gstr4Data.taxPayable.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="font-sans text-slate-600">SGST (0.5%):</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontFamily: 'sans-serif', color: '#475569' }}>SGST (0.5%):</span>
                   <span>₹{gstr4Data.taxPayable.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between py-2 bg-teal-50 px-3 rounded text-sm text-teal-900 font-bold">
-                  <span className="font-sans">Total 1% Tax Payable:</span>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '6px',
+                  border: '1px solid #bbf7d0',
+                  marginTop: '6px',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  color: '#166534'
+                }}>
+                  <span style={{ fontFamily: 'sans-serif' }}>Total 1% Tax Payable:</span>
                   <span>₹{gstr4Data.taxPayable.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
