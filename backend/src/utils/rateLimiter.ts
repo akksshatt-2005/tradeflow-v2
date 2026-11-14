@@ -125,3 +125,55 @@ export async function resetLoginRateLimit(username: string, ipAddress: string): 
     // Record might not exist if first login succeeded
   }
 }
+
+/**
+ * Sliding window IP rate limiter for general API routes (Step 7: Network Shield / Anti-DDoS)
+ * Limits requests per IP to prevent scraping, brute-force, and resource exhaustion.
+ */
+interface IpBucket {
+  count: number;
+  resetAt: number;
+}
+
+const ipBuckets = new Map<string, IpBucket>();
+
+// Periodic cleanup every 5 minutes to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, bucket] of ipBuckets.entries()) {
+    if (now > bucket.resetAt) {
+      ipBuckets.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000).unref();
+
+export function createApiRateLimiter(windowMs: number = 60 * 1000, maxRequests: number = 300) {
+  return (req: any, res: any, next: any) => {
+    // Exclude healthcheck probes from rate limiting
+    if (req.path === '/' || req.path === '/health' || req.path === '/api/health') {
+      return next();
+    }
+
+    const ip = (req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').toString();
+    const now = Date.now();
+    const bucket = ipBuckets.get(ip);
+
+    if (!bucket || now > bucket.resetAt) {
+      ipBuckets.set(ip, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+
+    bucket.count += 1;
+    if (bucket.count > maxRequests) {
+      const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+      res.setHeader('Retry-After', retryAfterSec.toString());
+      return res.status(429).json({
+        error: 'Too many requests. Please slow down.',
+        retryAfter: retryAfterSec
+      });
+    }
+
+    next();
+  };
+}
+

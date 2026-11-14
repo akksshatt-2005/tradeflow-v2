@@ -16,6 +16,7 @@ import invoiceRoutes from './routes/invoices.js';
 import gstRoutes from './routes/gst.js';
 import settlementRoutes from './routes/settlements.js';
 import prisma from './prisma.js';
+import { createApiRateLimiter } from './utils/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +54,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'Idempotency-Key', 'x-idempotency-key', 'x-heartbeat-key'],
   exposedHeaders: ['X-Idempotency-Key', 'X-Idempotent-Replay']
 }));
+
+// Step 7: Bank-grade Edge Firewall & Network Shield
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  next();
+});
+
+// Step 7: Rate limiter (prevents API scraping, brute-force bots, and DDoS)
+app.use(createApiRateLimiter(60 * 1000, 300));
 
 app.use(express.json());
 
