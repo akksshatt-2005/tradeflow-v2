@@ -94,28 +94,58 @@ router.post('/', requireAuth, idempotencyMiddleware, async (req: AuthenticatedRe
         }
       });
 
-      // Automatically issue an initial active 1-year license for new company
-      const expiry = new Date();
-      expiry.setFullYear(expiry.getFullYear() + 1);
-      const year = new Date().getFullYear();
-      const chunk = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-      const initialKey = `TF-${year}-${chunk()}-${chunk()}-${chunk()}`;
+      // Check if an unlinked license was pre-issued by SuperAdmin for this vendor's username or email
+      const userIdentifier = (req.user?.username || '').toLowerCase();
+      const emailIdentifier = (email ? String(email).trim() : '').toLowerCase();
 
-      await tx.license.create({
-        data: {
-          licenseKey: initialKey,
-          registeredEmail: (email ? String(email).trim() : req.user?.username || 'admin@tradeflow.local').toLowerCase(),
-          companyId: newCompany.id,
-          planType: 'WHOLESALE',
-          status: 'ACTIVE',
-          maxUsers: 5,
-          gracePeriodDays: 7,
-          issuedAt: new Date(),
-          activatedAt: new Date(),
-          expiresAt: expiry,
-          notes: 'Automatic 1-Year license granted upon company registration.'
-        }
+      const existingPreIssuedLicense = await tx.license.findFirst({
+        where: {
+          OR: [
+            { registeredEmail: userIdentifier },
+            ...(emailIdentifier ? [{ registeredEmail: emailIdentifier }] : [])
+          ],
+          companyId: null
+        },
+        orderBy: { createdAt: 'desc' }
       });
+
+      if (existingPreIssuedLicense) {
+        // Bind the pre-issued license to this newly created firm!
+        await tx.license.update({
+          where: { id: existingPreIssuedLicense.id },
+          data: {
+            companyId: newCompany.id,
+            status: 'ACTIVE',
+            activatedAt: new Date(),
+            notes: existingPreIssuedLicense.notes
+              ? `${existingPreIssuedLicense.notes} | Bound to ${newCompany.name}`
+              : `Bound to ${newCompany.name}`
+          }
+        });
+      } else {
+        // Fallback: If no pre-issued license, create standard active 1-year license
+        const expiry = new Date();
+        expiry.setFullYear(expiry.getFullYear() + 1);
+        const year = new Date().getFullYear();
+        const chunk = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+        const initialKey = `TF-${year}-${chunk()}-${chunk()}-${chunk()}`;
+
+        await tx.license.create({
+          data: {
+            licenseKey: initialKey,
+            registeredEmail: (email ? String(email).trim() : req.user?.username || 'admin@tradeflow.local').toLowerCase(),
+            companyId: newCompany.id,
+            planType: 'WHOLESALE',
+            status: 'ACTIVE',
+            maxUsers: 5,
+            gracePeriodDays: 7,
+            issuedAt: new Date(),
+            activatedAt: new Date(),
+            expiresAt: expiry,
+            notes: 'Automatic 1-Year license granted upon company registration.'
+          }
+        });
+      }
 
       return newCompany;
     });

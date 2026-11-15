@@ -69,6 +69,8 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
   // Create Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createUsername, setCreateUsername] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
   const [createEmail, setCreateEmail] = useState('');
   const [createCompanyId, setCreateCompanyId] = useState('');
   const [createPlan, setCreatePlan] = useState('WHOLESALE');
@@ -78,6 +80,24 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
   const [createNotes, setCreateNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    username: string;
+    password: string;
+    licenseKey: string;
+    expiresAt: string;
+    planType: string;
+    email: string;
+  } | null>(null);
+  const [handoverCopied, setHandoverCopied] = useState(false);
+
+  const generateRandomPassword = () => {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let rand = '';
+    for (let i = 0; i < 4; i++) {
+      rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCreatePassword(`Pharma@${rand}`);
+  };
 
   // Edit Expiry Modal
   const [editingLicense, setEditingLicense] = useState<AdminLicenseItem | null>(null);
@@ -238,12 +258,17 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
   const handleCreateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createEmail.trim()) return;
+    if (!createUsername.trim() && !createEmail.trim()) {
+      alert('Please enter a Vendor Login ID or Client Email');
+      return;
+    }
 
     setCreating(true);
     try {
       let payload: any = {
-        registeredEmail: createEmail.trim(),
+        username: createUsername.trim() || undefined,
+        password: createPassword.trim() || undefined,
+        registeredEmail: createEmail.trim() || createUsername.trim(),
         companyId: createCompanyId || null,
         planType: createPlan,
         maxUsers: parseInt(createMaxUsers) || 5,
@@ -268,6 +293,16 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
       if (res.license?.licenseKey) {
         setCreatedKey(res.license.licenseKey);
+        if (res.credentials) {
+          setCreatedCredentials({
+            username: res.credentials.username,
+            password: res.credentials.password,
+            licenseKey: res.license.licenseKey,
+            expiresAt: res.license.expiresAt,
+            planType: res.license.planType,
+            email: createEmail.trim() || res.credentials.username
+          });
+        }
         fetchLicenses();
       }
     } catch (err: any) {
@@ -275,6 +310,19 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleCopyHandover = () => {
+    if (!createdCredentials) return;
+    const formattedExpiry = new Date(createdCredentials.expiresAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    const message = `🏥 *TradeFlow ERP — Vendor Access Credentials*\n----------------------------------------\n🌐 *Portal URL:* https://tradeflow-v2-frontend.vercel.app/\n👤 *Login ID / Username:* ${createdCredentials.username}\n🔑 *Password:* ${createdCredentials.password}\n🛡️ *License Key:* ${createdCredentials.licenseKey}\n📅 *Plan & Validity:* ${createdCredentials.planType} (Until ${formattedExpiry})\n\n*Quick Instructions:*\n1. Open https://tradeflow-v2-frontend.vercel.app/\n2. Sign in with your Login ID and Password above.\n3. Enter your Pharmacy / Firm name (e.g. XYZ Enterprises) and start billing!`;
+    navigator.clipboard.writeText(message);
+    setHandoverCopied(true);
+    setTimeout(() => setHandoverCopied(false), 2500);
   };
 
   // ----------------------------------------------------
@@ -920,13 +968,59 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
             </div>
 
             <form onSubmit={handleCreateLicense} style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              {/* Vendor Account Credentials Card */}
+              <div style={{ backgroundColor: '#f1f5f9', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f766e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  👤 VENDOR LOGIN ACCOUNT (ID & PASSWORD)
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>
+                      LOGIN ID / USERNAME * :
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. dr_priya or xyz_pharma"
+                      value={createUsername}
+                      onChange={e => setCreateUsername(e.target.value.toLowerCase())}
+                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>
+                        INITIAL PASSWORD * :
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generateRandomPassword}
+                        style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.68rem', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        🎲 Auto-Gen
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Pharma@2026"
+                      value={createPassword}
+                      onChange={e => setCreatePassword(e.target.value)}
+                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 700 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                  REGISTERED CLIENT EMAIL * :
+                  CLIENT EMAIL / MOBILE (FOR NOTIFICATIONS) :
                 </label>
                 <input
                   type="email"
-                  required
                   placeholder="e.g. clinic.owner@gmail.com"
                   value={createEmail}
                   onChange={e => setCreateEmail(e.target.value)}
@@ -1029,32 +1123,74 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                 />
               </div>
 
-              {createdKey ? (
-                <div style={{ marginTop: '10px', padding: '12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#166534', marginBottom: '4px' }}>
-                    🎉 License Key Generated Successfully!
+              {createdCredentials ? (
+                <div style={{ marginTop: '10px', padding: '14px', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#166534', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={16} /> Vendor Account & License Provisioned!
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '6px 10px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                    <code style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>{createdKey}</code>
+
+                  <div style={{ background: '#ffffff', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '12px', fontSize: '0.82rem', color: '#0f172a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Portal URL:</span>
+                      <strong style={{ color: '#0284c7' }}>https://tradeflow-v2-frontend.vercel.app/</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Login ID (Username):</span>
+                      <strong style={{ color: '#0f766e', fontSize: '0.9rem' }}>{createdCredentials.username}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                      <span style={{ color: '#64748b' }}>Initial Password:</span>
+                      <strong style={{ color: '#dc2626', fontSize: '0.9rem' }}>{createdCredentials.password}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                      <span style={{ color: '#64748b' }}>License Key:</span>
+                      <code style={{ fontWeight: 800 }}>{createdCredentials.licenseKey}</code>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Valid Until:</span>
+                      <span>{new Date(createdCredentials.expiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                     <button
                       type="button"
-                      onClick={() => handleCopy('new', createdKey)}
-                      style={{ background: 'none', border: 'none', color: '#0f766e', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+                      onClick={handleCopyHandover}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: '#16a34a',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '5px',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
                     >
-                      {copiedId === 'new' ? 'Copied!' : 'Copy Key'}
+                      <Copy size={14} />
+                      <span>{handoverCopied ? 'Copied to Clipboard!' : 'Copy WhatsApp / Client Handover'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateModal(false);
+                        setCreatedKey(null);
+                        setCreatedCredentials(null);
+                        setCreateUsername('');
+                        setCreatePassword('');
+                        setCreateEmail('');
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.8rem' }}
+                    >
+                      Done
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateModal(false);
-                      setCreatedKey(null);
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', marginTop: '8px', fontSize: '0.78rem' }}
-                  >
-                    Done & Close
-                  </button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
@@ -1071,7 +1207,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                     className="btn btn-primary btn-sm"
                     style={{ backgroundColor: '#0f766e', borderColor: '#0f766e', fontWeight: 700 }}
                   >
-                    {creating ? 'Generating...' : 'Generate & Issue Key'}
+                    {creating ? 'Provisioning Account...' : 'Issue License & Create Login'}
                   </button>
                 </div>
               )}

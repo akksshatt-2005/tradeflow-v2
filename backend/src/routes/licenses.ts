@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcrypt';
 import prisma from '../prisma.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
@@ -193,17 +194,62 @@ router.post('/activate', requireAuth, requireCompany, async (req: CompanyScopedR
 
 /**
  * POST /api/licenses/admin/generate
- * Super-Admin endpoint to generate a new license key with custom expiry date/time or duration
+ * Super-Admin endpoint to generate a new license key AND provision vendor login credentials (ID & Password)
  */
 router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
-  const { registeredEmail, planType = 'WHOLESALE', durationDays, expiresAt: customExpiry, companyId, maxUsers = 5, notes } = req.body;
+  const {
+    username,
+    password,
+    registeredEmail,
+    planType = 'WHOLESALE',
+    durationDays,
+    expiresAt: customExpiry,
+    companyId,
+    maxUsers = 5,
+    notes
+  } = req.body;
 
-  if (!registeredEmail || typeof registeredEmail !== 'string') {
-    res.status(400).json({ error: 'registeredEmail is required.' });
+  const targetEmail = (registeredEmail || username || '').trim().toLowerCase();
+  if (!targetEmail) {
+    res.status(400).json({ error: 'Client Email or Username is required.' });
     return;
   }
 
   try {
+    let createdUser: { id: string; username: string } | null = null;
+    let initialPassword = password;
+
+    // If username and password provided (or username only), provision vendor user account
+    if (username && typeof username === 'string') {
+      const normalizedUsername = username.trim().toLowerCase();
+      if (normalizedUsername.length < 3) {
+        res.status(400).json({ error: 'Vendor username must be at least 3 characters long.' });
+        return;
+      }
+
+      if (!initialPassword || initialPassword.length < 6) {
+        // Auto-generate strong initial password if not specified
+        initialPassword = `Pharma@${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { username: normalizedUsername }
+      });
+
+      if (existingUser) {
+        createdUser = { id: existingUser.id, username: existingUser.username };
+      } else {
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        const newUser = await prisma.user.create({
+          data: {
+            username: normalizedUsername,
+            passwordHash
+          }
+        });
+        createdUser = { id: newUser.id, username: newUser.username };
+      }
+    }
+
     let finalExpiry: Date;
     if (customExpiry) {
       finalExpiry = new Date(customExpiry);
@@ -221,7 +267,7 @@ router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedReque
     const license = await prisma.license.create({
       data: {
         licenseKey: key,
-        registeredEmail: registeredEmail.trim().toLowerCase(),
+        registeredEmail: targetEmail,
         companyId: companyId ? String(companyId).trim() : null,
         planType: String(planType).toUpperCase(),
         status: companyId ? 'ACTIVE' : 'PENDING',
@@ -229,16 +275,23 @@ router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedReque
         maxUsers: Number(maxUsers) || 5,
         gracePeriodDays: 7,
         expiresAt: finalExpiry,
-        notes: notes ? String(notes).trim() : null
+        notes: notes ? String(notes).trim() : (createdUser ? `Vendor Login: ${createdUser.username}` : null)
       }
     });
 
     res.status(201).json({
-      message: 'License key created successfully',
-      license
+      message: 'License & Vendor Login account created successfully!',
+      license,
+      credentials: createdUser ? {
+        username: createdUser.username,
+        password: initialPassword,
+        licenseKey: key,
+        expiresAt: finalExpiry,
+        planType: license.planType
+      } : null
     });
   } catch (err: any) {
-    console.error('Failed to generate license:', err);
+    console.error('Failed to generate license and vendor account:', err);
     res.status(500).json({ error: 'Could not generate license key.' });
   }
 });
