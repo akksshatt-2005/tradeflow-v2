@@ -640,15 +640,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         }
       }
 
+      const finalCustomerName = (selectedCustomer && !selectedCustomer.isCash)
+        ? selectedCustomer.name
+        : (patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : 'Cash Customer'));
+
       const payload = {
         partyId: finalPartyId,
-        customerName: customerName.trim() || (saleType === 'B2B' ? 'B2B Buyer' : 'Cash Customer'),
+        customerName: finalCustomerName,
         customerPhone: customerPhone.trim() || null,
         customerAddress: patientAddress.trim() || null,
         customerGstin: cleanGstin,
         doctorName: doctorName.trim() || null,
         doctorRegNo: doctorRegNo.trim() || null,
-        patientName: patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : null),
+        patientName: patientName.trim() || finalCustomerName,
         patientAddress: patientAddress.trim() || null,
         invoiceNumber: nextInvoiceNo,
         invoiceDate: invoiceDate === getLocalDateString() ? new Date().toISOString() : invoiceDate,
@@ -872,8 +876,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(280px, 1.8fr) minmax(200px, 1.2fr) minmax(180px, 1.1fr) minmax(130px, 0.8fr)',
-          gap: '0.85rem',
+          gridTemplateColumns: 'minmax(230px, 1.4fr) minmax(180px, 1.2fr) minmax(210px, 1.3fr) minmax(170px, 1.1fr) minmax(110px, 0.7fr)',
+          gap: '0.75rem',
           alignItems: 'start'
         }}>
           {/* 1. Account / Ledger [F2] (Handles all Cash Sales & Account/Credit Sales) */}
@@ -902,7 +906,6 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 onChange={e => {
                   const val = e.target.value;
                   setCustomerName(val);
-                  setPatientName(val);
                   if (selectedCustomer && selectedCustomer.name !== val && !selectedCustomer.isCash) {
                     setSelectedCustomer(null);
                   }
@@ -926,7 +929,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   onClick={() => {
                     setSelectedCustomer(null);
                     setCustomerName('Cash Customer');
-                    setPatientName('Cash Customer');
+                    setPatientName('');
                     setCustomerGstin('');
                     setBuyerDlNo('');
                     setCustomerPhone('');
@@ -1017,7 +1020,6 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   onClick={() => {
                     setSelectedCustomer(null);
                     setCustomerName('Cash Customer');
-                    setPatientName('Cash Customer');
                     setCustomerGstin('');
                     setBuyerDlNo('');
                     setShowCustomerDropdown(false);
@@ -1063,7 +1065,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                       onClick={() => {
                         setSelectedCustomer(c);
                         setCustomerName(c.name);
-                        setPatientName(c.name);
+                        if (!patientName) setPatientName(c.name);
                         if (c.phone) setCustomerPhone(c.phone);
                         if (c.address) setPatientAddress(c.address);
                         if (c.gstin) {
@@ -1120,6 +1122,34 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   ))}
               </div>
             )}
+          </div>
+
+          {/* 2. Customer / Patient Name */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0f766e' }}>
+                CUSTOMER NAME :
+              </label>
+              <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                {isB2B ? 'Buyer / Contact' : 'Walk-in Patient'}
+              </span>
+            </div>
+            <input
+              type="text"
+              placeholder={isB2B ? "Buyer / Contact Person" : "Customer / Patient Name..."}
+              value={patientName}
+              onChange={e => setPatientName(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                background: 'var(--bg-secondary)',
+                border: patientName ? '1.5px solid #0f766e' : '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontWeight: '700',
+                fontSize: '0.88rem'
+              }}
+            />
           </div>
 
           {/* 2. Patient / Mobile / Address */}
