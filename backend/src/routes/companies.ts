@@ -100,17 +100,22 @@ router.post('/', requireAuth, idempotencyMiddleware, async (req: AuthenticatedRe
 
       const existingPreIssuedLicense = await tx.license.findFirst({
         where: {
-          OR: [
-            { registeredEmail: userIdentifier },
-            ...(emailIdentifier ? [{ registeredEmail: emailIdentifier }] : [])
-          ],
-          companyId: null
+          AND: [
+            { companyId: null },
+            {
+              OR: [
+                { registeredEmail: userIdentifier },
+                ...(emailIdentifier ? [{ registeredEmail: emailIdentifier }] : []),
+                ...(userIdentifier ? [{ notes: { contains: userIdentifier } }] : [])
+              ]
+            }
+          ]
         },
         orderBy: { createdAt: 'desc' }
       });
 
       if (existingPreIssuedLicense) {
-        // Bind the pre-issued license to this newly created firm!
+        // Bind the pre-issued license (preserves exact trial/annual duration chosen in SuperAdmin)
         await tx.license.update({
           where: { id: existingPreIssuedLicense.id },
           data: {
@@ -123,9 +128,9 @@ router.post('/', requireAuth, idempotencyMiddleware, async (req: AuthenticatedRe
           }
         });
       } else {
-        // Fallback: If no pre-issued license, create standard active 1-year license
+        // Fallback: Default to a 14-Day Free Trial if no pre-issued commercial license exists
         const expiry = new Date();
-        expiry.setFullYear(expiry.getFullYear() + 1);
+        expiry.setDate(expiry.getDate() + 14);
         const year = new Date().getFullYear();
         const chunk = () => Math.random().toString(36).substring(2, 6).toUpperCase();
         const initialKey = `TF-${year}-${chunk()}-${chunk()}-${chunk()}`;
@@ -135,14 +140,14 @@ router.post('/', requireAuth, idempotencyMiddleware, async (req: AuthenticatedRe
             licenseKey: initialKey,
             registeredEmail: (email ? String(email).trim() : req.user?.username || 'admin@tradeflow.local').toLowerCase(),
             companyId: newCompany.id,
-            planType: 'WHOLESALE',
+            planType: 'TRIAL',
             status: 'ACTIVE',
             maxUsers: 5,
             gracePeriodDays: 7,
             issuedAt: new Date(),
             activatedAt: new Date(),
             expiresAt: expiry,
-            notes: 'Automatic 1-Year license granted upon company registration.'
+            notes: 'Automatic 14-Day Free Trial granted upon registration.'
           }
         });
       }
