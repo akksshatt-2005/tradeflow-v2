@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
+import { numberToIndianWords } from '../utils/numberToWords';
+import { getCompanySettings } from '../utils/companySettings';
 
 import {
   FileText,
@@ -139,10 +141,23 @@ export default function CreditNotes() {
   const [catalogMedicines, setCatalogMedicines] = useState<MedicineItem[]>([]);
   const [formSupplierId, setFormSupplierId] = useState('');
   const [formReturnDate, setFormReturnDate] = useState(getLocalDateString());
-  const [formReason, setFormReason] = useState('Expiry / Slow-moving medicine return');
+  const [formReason, setFormReason] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formItems, setFormItems] = useState<CNLineItem[]>([]);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Settings for branding & stamp
+  const compSettings = useMemo(() => getCompanySettings(activeCompany?.id || '', activeCompany), [activeCompany]);
+
+  // Apply print engine class when viewing a credit note slip
+  useEffect(() => {
+    if (viewingCN) {
+      document.body.classList.add('credit-note-open');
+      return () => {
+        document.body.classList.remove('credit-note-open');
+      };
+    }
+  }, [viewingCN]);
 
   // Medicine Picker Search within Modal
   const [itemSearchQuery, setItemSearchQuery] = useState('');
@@ -203,7 +218,7 @@ export default function CreditNotes() {
     setEditingCNId(null);
     setFormSupplierId(suppliers.length > 0 ? suppliers[0].id : '');
     setFormReturnDate(getLocalDateString());
-    setFormReason('Expiry / Slow-moving medicine return');
+    setFormReason('');
     setFormNotes('');
     setFormItems([]);
     resetMedicinePicker();
@@ -216,7 +231,7 @@ export default function CreditNotes() {
       setEditingCNId(cn.id);
       setFormSupplierId(cn.supplierId);
       setFormReturnDate(cn.returnDate ? getLocalDateString(new Date(cn.returnDate)) : getLocalDateString());
-      setFormReason(cn.reason || 'Expiry / Slow-moving medicine return');
+      setFormReason(cn.reason || '');
       setFormNotes(cn.notes || '');
 
       // Map existing lines
@@ -833,7 +848,18 @@ export default function CreditNotes() {
                     value={formSupplierId}
                     onChange={e => setFormSupplierId(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '0.65rem', border: '1.5px solid #6366f1', borderRadius: '6px', fontWeight: 700, fontSize: '0.88rem', background: '#f8fafc' }}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      boxSizing: 'border-box',
+                      padding: '8px 12px',
+                      border: '1.5px solid #0f766e',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      background: '#ffffff',
+                      color: '#0f172a'
+                    }}
                   >
                     <option value="">-- Select Supplier --</option>
                     {suppliers.map(s => (
@@ -853,21 +879,39 @@ export default function CreditNotes() {
                     required
                     value={formReturnDate}
                     onChange={e => setFormReturnDate(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      boxSizing: 'border-box',
+                      padding: '8px 12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.88rem',
+                      background: '#ffffff'
+                    }}
                   />
                 </div>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
-                  Return Reason / Remarks
+                  Return Reason / Remarks <span style={{ fontWeight: 500, color: '#64748b' }}>(Optional)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Expired lot return / Breakage / Short expiry"
+                  placeholder="e.g. Expired lot return, damaged stock, excess return (Optional)"
                   value={formReason}
                   onChange={e => setFormReason(e.target.value)}
-                  style={{ width: '100%', padding: '0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem' }}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    boxSizing: 'border-box',
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    background: '#ffffff'
+                  }}
                 />
               </div>
 
@@ -928,7 +972,7 @@ export default function CreditNotes() {
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr auto', gap: '8px', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 2.2fr) minmax(75px, 0.8fr) minmax(75px, 0.8fr) minmax(110px, 1fr) minmax(75px, 0.8fr) auto', gap: '8px', alignItems: 'flex-end' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#475569', marginBottom: '2px' }}>
                           Batch *
@@ -943,14 +987,29 @@ export default function CreditNotes() {
                               setTempRate(Number(foundB.ptr) || Number(foundB.mrp) || 0);
                             }
                           }}
-                          style={{ width: '100%', padding: '0.5rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600 }}
+                          style={{
+                            width: '100%',
+                            height: '40px',
+                            boxSizing: 'border-box',
+                            padding: '4px 8px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            fontSize: '0.82rem',
+                            fontWeight: 600,
+                            background: '#ffffff'
+                          }}
                         >
                           {selectedMedToAdd.batches && selectedMedToAdd.batches.length > 0 ? (
-                            selectedMedToAdd.batches.map(b => (
-                              <option key={b.id} value={b.id}>
-                                {b.batchNumber} (Exp: {b.expiryDate?.split('T')[0]}) — Stock: {b.currentStock} units
-                              </option>
-                            ))
+                            selectedMedToAdd.batches.map(b => {
+                              const expDateFormatted = b.expiryDate
+                                ? new Date(b.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+                                : 'N/A';
+                              return (
+                                <option key={b.id} value={b.id}>
+                                  Batch: {b.batchNumber} • Exp: {expDateFormatted} • Stk: {b.currentStock}
+                                </option>
+                              );
+                            })
                           ) : (
                             <option value="">No stock batches</option>
                           )}
@@ -1120,105 +1179,346 @@ export default function CreditNotes() {
         </div>
       )}
 
-      {/* PRINTABLE SLIP MODAL */}
+      {/* ── PROFESSIONAL A4 PURCHASE RETURN / DEBIT VOUCHER MODAL (ERP ENGINE) ── */}
       {viewingCN && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 350, padding: '1rem' }}>
-          <div style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', width: '100%', maxWidth: '750px', maxHeight: '92vh', overflowY: 'auto', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', position: 'relative' }}>
-            <div style={{ textAlign: 'center', borderBottom: '2px dashed #94a3b8', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#1e1b4b' }}>
-                {activeCompany?.name || 'PHARMACY STORE'}
-              </h2>
-              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
-                {activeCompany?.address || 'Medical Wholesale & Retail Distributor'}
-              </div>
-              {activeCompany?.gstin && (
-                <div style={{ fontSize: '0.78rem', color: '#6366f1', fontWeight: 700 }}>
-                  GSTIN: {activeCompany.gstin} {activeCompany?.drugLicenseNo ? `• D.L.: ${activeCompany.drugLicenseNo}` : ''}
-                </div>
-              )}
-              <div style={{ marginTop: '0.8rem', display: 'inline-block', background: '#4f46e5', color: '#fff', padding: '3px 14px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 800 }}>
-                PURCHASE RETURN / SUPPLIER CREDIT NOTE (CN)
-              </div>
+        <div className="invoice-modal-backdrop" style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          overflowY: 'auto',
+          padding: '1rem'
+        }}>
+          {/* ── ON-SCREEN TOOLBAR (NO-PRINT) ── */}
+          <div className="no-print" style={{
+            width: '100%',
+            maxWidth: '210mm',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '0.65rem 1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.8rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                background: '#0f766e',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                letterSpacing: '0.5px'
+              }}>
+                DEBIT NOTE / PURCHASE RETURN
+              </span>
+              <strong style={{ fontSize: '13px', color: '#0f172a' }}>#{viewingCN.returnNumber}</strong>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1.2rem', fontSize: '0.82rem', border: '1px solid #e2e8f0' }}>
-              <div>
-                <div><strong>Credit Note #:</strong> <span style={{ fontFamily: 'monospace', color: '#4f46e5', fontWeight: 700 }}>{viewingCN.returnNumber}</span></div>
-                <div><strong>Return Date:</strong> {new Date(viewingCN.returnDate).toLocaleDateString('en-IN')}</div>
-                <div><strong>Reason:</strong> {viewingCN.reason || 'Expired / Stock Return'}</div>
-              </div>
-              <div>
-                <div><strong>Wholesaler / Supplier:</strong> <strong>{viewingCN.supplierName}</strong></div>
-                {viewingCN.supplierGstin && <div><strong>GSTIN:</strong> {viewingCN.supplierGstin}</div>}
-                {viewingCN.supplierPhone && <div><strong>Phone:</strong> {viewingCN.supplierPhone}</div>}
-              </div>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginBottom: '1.2rem' }}>
-              <thead>
-                <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
-                  <th style={{ padding: '6px 8px' }}>#</th>
-                  <th style={{ padding: '6px 8px' }}>Description of Goods</th>
-                  <th style={{ padding: '6px 8px' }}>Batch</th>
-                  <th style={{ padding: '6px 8px' }}>Exp</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'center' }}>Returned Qty</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Rate / Strip</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viewingCN.items.map((itm, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '6px 8px' }}>{i + 1}</td>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>{itm.medicineName}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{itm.batchNumber}</td>
-                    <td style={{ padding: '6px 8px' }}>{itm.expiryDate ? new Date(itm.expiryDate).toLocaleDateString('en-IN') : 'N/A'}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700 }}>
-                      {itm.strips > 0 && itm.looseQty > 0
-                        ? `${itm.strips} Str + ${itm.looseQty} Tab`
-                        : itm.strips > 0
-                        ? `${itm.strips} Str`
-                        : `${itm.looseQty} Tab`}
-                    </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>₹{itm.returnRate.toFixed(2)}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>₹{itm.totalAmount.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ borderTop: '2px solid #cbd5e1', fontWeight: 800, background: '#f8fafc' }}>
-                  <td colSpan={5} style={{ padding: '8px', textAlign: 'right' }}>Total Debited Credit Value:</td>
-                  <td colSpan={2} style={{ padding: '8px', textAlign: 'right', color: '#4f46e5', fontSize: '1.05rem' }}>
-                    ₹{viewingCN.totalAmount.toFixed(2)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '2.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
-              <div>
-                <div>Generated By: <strong>{viewingCN.createdBy}</strong></div>
-                <div style={{ color: '#64748b' }}>Stock has been debited and inwarded back to supplier.</div>
-              </div>
-              <div style={{ textAlign: 'center', minWidth: '180px' }}>
-                <div style={{ borderBottom: '1px solid #94a3b8', marginBottom: '4px', height: '40px' }}></div>
-                <strong>Authorized Signatory / Seal</strong>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <button
+                type="button"
                 onClick={() => setViewingCN(null)}
-                style={{ padding: '6px 14px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                style={{
+                  padding: '6px 14px',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
               >
                 Close
               </button>
               <button
+                type="button"
                 onClick={() => window.print()}
-                style={{ padding: '6px 16px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{
+                  padding: '6px 16px',
+                  background: '#0f766e',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(15,118,110,0.3)'
+                }}
               >
-                <Printer size={15} /> Print Slip
+                <Printer size={15} /> Print Debit Voucher
               </button>
+            </div>
+          </div>
+
+          {/* ── PRINTABLE SHEET CONTAINER (MATCHES TAX INVOICE PRINT ENGINE) ── */}
+          <div id="printable-credit-note" className="credit-note-print-container" style={{
+            width: '100%',
+            maxWidth: '210mm',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+            borderRadius: '2px',
+            background: '#ffffff'
+          }}>
+            <div className="credit-note-sheet" style={{
+              boxSizing: 'border-box',
+              width: '100%',
+              maxWidth: '210mm',
+              margin: '0 auto',
+              background: '#ffffff',
+              color: '#000000',
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+              fontSize: '9.5px',
+              lineHeight: 1.3,
+              border: '1.5px solid #000000',
+              pageBreakInside: 'avoid',
+              breakInside: 'avoid'
+            }}>
+              {/* ── TOP 3-BOX ERP HEADER ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '37% 33% 30%', borderBottom: '1.5px solid #000000' }}>
+                {/* Box 1: Left - Our Firm Details */}
+                <div style={{ padding: '6px 8px', borderRight: '1.5px solid #000000', fontSize: '9.5px', lineHeight: 1.35 }}>
+                  {compSettings.companyLogo && (
+                    <div style={{ marginBottom: '3px' }}>
+                      <img src={compSettings.companyLogo} alt="Logo" style={{ maxHeight: '32px', maxWidth: '120px', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>
+                    {activeCompany?.name || 'PHARMACY STORE'}
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#111827', textTransform: 'uppercase', fontSize: '9px' }}>
+                    {activeCompany?.address || 'MAIN ROAD, PHARMA MARKET'}
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#111827', textTransform: 'uppercase', fontSize: '9px' }}>
+                    {activeCompany?.city || 'LOCAL CITY'}{activeCompany?.pincode ? ` - ${activeCompany.pincode}` : ''}{activeCompany?.state ? `, ${activeCompany.state}` : ''}
+                  </div>
+                  <div style={{ marginTop: '2px' }}>
+                    Phone : <strong style={{ fontFamily: 'monospace' }}>{activeCompany?.phone || '—'}</strong>
+                  </div>
+                  <div>
+                    D.L.No. : <strong style={{ fontFamily: 'monospace' }}>
+                      {compSettings.dl20b ? `${compSettings.dl20b}${compSettings.dl21b ? `, ${compSettings.dl21b}` : ''}` : (activeCompany?.drugLicenseNo || '20B-194000, 21B-194001')}
+                    </strong>
+                  </div>
+                  <div style={{ marginTop: '1px' }}>
+                    GSTIN : <strong style={{ fontFamily: 'monospace', fontSize: '10px' }}>{activeCompany?.gstin || 'URP / UNREGISTERED'}</strong>
+                  </div>
+                </div>
+
+                {/* Box 2: Middle - Banner & Voucher Meta */}
+                <div style={{ borderRight: '1.5px solid #000000', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{
+                    background: '#dbeafe',
+                    borderBottom: '1.5px solid #000000',
+                    textAlign: 'center',
+                    padding: '3px 0',
+                    fontWeight: 900,
+                    fontSize: '11px',
+                    letterSpacing: '0.5px',
+                    color: '#1e3a8a',
+                    textTransform: 'uppercase'
+                  }}>
+                    PURCHASE RETURN / DEBIT NOTE
+                  </div>
+                  <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '9px' }}>
+                    <div>Debit Note No : <strong style={{ fontFamily: 'monospace', color: '#1e3a8a', fontSize: '10.5px' }}>{viewingCN.returnNumber}</strong></div>
+                    <div>Return Date : <strong>{new Date(viewingCN.returnDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
+                    <div>Voucher Type : <strong>PURCHASE RETURN (DEBIT)</strong></div>
+                    <div>Reason : <strong>{viewingCN.reason || 'Expired / Stock Reversal'}</strong></div>
+                  </div>
+                </div>
+
+                {/* Box 3: Right - Supplier / Wholesaler Details */}
+                <div style={{ padding: '6px 8px', fontSize: '9.5px', lineHeight: 1.35 }}>
+                  <div style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', marginBottom: '2px' }}>
+                    TO WHOLESALER / SUPPLIER:
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', color: '#000000' }}>
+                    {viewingCN.supplierName}
+                  </div>
+                  {viewingCN.supplierPhone && <div>Phone : <strong style={{ fontFamily: 'monospace' }}>{viewingCN.supplierPhone}</strong></div>}
+                  <div>
+                    GSTIN : <strong style={{ fontFamily: 'monospace', fontSize: '9.5px' }}>{viewingCN.supplierGstin || 'URP / UNREGISTERED'}</strong>
+                  </div>
+                  <div style={{ marginTop: '2px', fontSize: '8.5px', color: '#475569' }}>
+                    Mode: <strong>CREDIT NOTE / LEDGER ADJUSTMENT</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── ITEMS TABLE WITH CONTINUOUS VERTICAL LINES ── */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1.5px solid #000000', background: '#f8fafc', fontWeight: 800 }}>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '28px', textAlign: 'center' }}>S.N.</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'left' }}>Description of Returned Goods</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '50px', textAlign: 'center' }}>HSN</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '70px', textAlign: 'center' }}>Batch</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '52px', textAlign: 'center' }}>Exp</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 4px', width: '65px', textAlign: 'center' }}>Ret Qty</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 6px', width: '65px', textAlign: 'right' }}>Rate/Strip</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 3px', width: '45px', textAlign: 'center' }}>GST%</th>
+                    <th style={{ borderRight: '1px solid #000000', padding: '4px 6px', width: '70px', textAlign: 'right' }}>Taxable</th>
+                    <th style={{ padding: '4px 6px', width: '75px', textAlign: 'right' }}>Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingCN.items.map((itm, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #000000' }}>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 3px', textAlign: 'center' }}>{i + 1}</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 6px', fontWeight: 700 }}>{itm.medicineName}</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 3px', textAlign: 'center', fontFamily: 'monospace' }}>3004</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'center', fontFamily: 'monospace' }}>{itm.batchNumber}</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 3px', textAlign: 'center' }}>
+                        {itm.expiryDate ? new Date(itm.expiryDate).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : '—'}
+                      </td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 4px', textAlign: 'center', fontWeight: 800 }}>
+                        {itm.strips > 0 && itm.looseQty > 0
+                          ? `${itm.strips} Str + ${itm.looseQty} Tab`
+                          : itm.strips > 0
+                          ? `${itm.strips} Strip`
+                          : `${itm.looseQty} Tab`}
+                      </td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{itm.returnRate.toFixed(2)}</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 3px', textAlign: 'center' }}>{itm.gstRate || 5}%</td>
+                      <td style={{ borderRight: '1px solid #000000', padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>
+                        {(itm.taxableValue || (itm.totalAmount / 1.05)).toFixed(2)}
+                      </td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 800, fontFamily: 'monospace' }}>
+                        {itm.totalAmount.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Proportional filler rows */}
+                  {Array.from({ length: Math.max(1, 6 - viewingCN.items.length) }).map((_, fIdx) => (
+                    <tr key={`fill-${fIdx}`} style={{ borderBottom: '1px solid #e2e8f0', height: '18px' }}>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td style={{ borderRight: '1px solid #000000' }}>&nbsp;</td>
+                      <td>&nbsp;</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* ── TOTAL IN WORDS BAR ── */}
+              <div style={{
+                borderTop: '1.5px solid #000000',
+                borderBottom: '1px solid #000000',
+                padding: '4px 8px',
+                background: '#f8fafc',
+                fontSize: '9.5px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <strong>Amount in Words:</strong> Rs. {numberToIndianWords(viewingCN.totalAmount)}
+                </div>
+                <div>
+                  <strong>Total Return Value:</strong> ₹{viewingCN.totalAmount.toFixed(2)}
+                </div>
+              </div>
+
+              {/* ── FOOTER: REMARKS, TAX BREAKDOWN & SIGNATURE ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '55% 45%', fontSize: '8.5px' }}>
+                {/* Left: Remarks & Audit trail */}
+                <div style={{ borderRight: '1.5px solid #000000', padding: '5px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 800, textDecoration: 'underline', marginBottom: '2px' }}>Remarks & Ledger Reversal Note</div>
+                    <div style={{ color: '#1f2937' }}>• Medicine stock outwarded from batch inventory and returned to wholesaler.</div>
+                    <div style={{ color: '#1f2937' }}>• Wholesaler payable ledger debited by ₹{viewingCN.totalAmount.toFixed(2)}.</div>
+                    {viewingCN.reason && (
+                      <div style={{ color: '#0f766e', fontWeight: 700, marginTop: '2px' }}>
+                        Reason: {viewingCN.reason}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: '14px', paddingTop: '4px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                      <div>Generated By: <strong>{viewingCN.createdBy || 'admin'}</strong></div>
+                      <div style={{ fontSize: '7.5px', color: '#64748b' }}>TradeFlow ERP • Document verified</div>
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: '120px' }}>
+                      <div style={{ height: '24px' }}></div>
+                      <div style={{ borderTop: '1px solid #000000', paddingTop: '2px', fontWeight: 700 }}>
+                        Supplier's Signature / Seal
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Signature Box */}
+                <div style={{
+                  padding: '6px 10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    fontWeight: 900,
+                    fontSize: '10.5px',
+                    textTransform: 'uppercase',
+                    textAlign: 'center',
+                    width: '100%',
+                    color: '#000000',
+                    letterSpacing: '0.4px'
+                  }}>
+                    FOR {activeCompany?.name || 'PHARMACY STORE'}
+                  </div>
+                  <div style={{
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    margin: '2px 0'
+                  }}>
+                    {compSettings.signatureImage ? (
+                      <img
+                        src={compSettings.signatureImage}
+                        alt="Stamp / Mohar"
+                        style={{ maxHeight: '44px', maxWidth: '140px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                      />
+                    ) : (
+                      <div style={{ height: '40px' }} />
+                    )}
+                  </div>
+                  <div style={{
+                    borderTop: '1px solid #000000',
+                    paddingTop: '3px',
+                    fontWeight: 800,
+                    fontSize: '9px',
+                    textAlign: 'center',
+                    width: '100%',
+                    color: '#000000'
+                  }}>
+                    Authorized Signatory
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

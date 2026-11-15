@@ -772,16 +772,48 @@ form[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
     print-color-adjust: exact !important;
   }
 
-  /* When printing the tax invoice modal: isolate and display ONLY the invoice */
-  body.tax-invoice-open * {
+  /* When printing the tax invoice or credit note modal: isolate and display ONLY the printable sheet */
+  body.tax-invoice-open *,
+  body.credit-note-open * {
     visibility: hidden;
   }
 
   body.tax-invoice-open .tax-invoice-print-container,
   body.tax-invoice-open .tax-invoice-print-container *,
   body.tax-invoice-open .tax-invoice-sheet,
-  body.tax-invoice-open .tax-invoice-sheet * {
+  body.tax-invoice-open .tax-invoice-sheet *,
+  body.credit-note-open .credit-note-print-container,
+  body.credit-note-open .credit-note-print-container *,
+  body.credit-note-open .credit-note-sheet,
+  body.credit-note-open .credit-note-sheet * {
     visibility: visible !important;
+  }
+
+  body.credit-note-open .credit-note-print-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  body.credit-note-open .credit-note-sheet {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    border: 1.5px solid #000000 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
   }
 
   /* Reset layout wrappers so parents don't hide, clip, or offset the modal */
