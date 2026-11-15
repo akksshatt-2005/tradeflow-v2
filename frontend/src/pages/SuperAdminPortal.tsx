@@ -841,29 +841,32 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '10px 14px' }}>Status</th>
-                  <th style={{ padding: '10px 14px' }}>Company / Client</th>
-                  <th style={{ padding: '10px 14px' }}>Registered Email</th>
-                  <th style={{ padding: '10px 14px' }}>Login ID & Password</th>
-                  <th style={{ padding: '10px 14px' }}>License Key</th>
-                  <th style={{ padding: '10px 14px' }}>Plan</th>
-                  <th style={{ padding: '10px 14px' }}>Expiry Date & Time</th>
-                  <th style={{ padding: '10px 14px' }}>Remaining</th>
-                  <th style={{ padding: '10px 14px', textAlign: 'right' }}>Actions</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Status</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Company / Client</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Contact / Email</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Vendor Credentials</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>License Key</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Plan</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Expiration</th>
+                  <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>Validity</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                      Loading licenses from database...
+                    <td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <RefreshCw size={16} className="spin" color="#0f766e" />
+                        <span style={{ fontWeight: 600 }}>Loading system licenses...</span>
+                      </div>
                     </td>
                   </tr>
                 ) : filteredLicenses.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                      No licenses match the selected criteria.
+                    <td colSpan={9} style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b' }}>
+                      No licenses found matching the selected filters.
                     </td>
                   </tr>
                 ) : (
@@ -873,8 +876,10 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                     const isGrace = lic.effectiveStatus === 'GRACE';
                     const isExpiringSoon = lic.effectiveStatus === 'ACTIVE' && lic.daysRemaining <= 15;
 
-                    const badgeColor = isSuspended ? '#b91c1c' : isExpired ? '#dc2626' : isGrace ? '#ea580c' : isExpiringSoon ? '#d97706' : '#16a34a';
-                    const badgeBg = isSuspended ? '#fef2f2' : isExpired ? '#fef2f2' : isGrace ? '#fff7ed' : isExpiringSoon ? '#fffbeb' : '#f0fdf4';
+                    const badgeColor = isSuspended ? '#475569' : isExpired ? '#b91c1c' : isGrace ? '#c2410c' : isExpiringSoon ? '#b45309' : '#15803d';
+                    const badgeBg = isSuspended ? '#f1f5f9' : isExpired ? '#fef2f2' : isGrace ? '#fff7ed' : isExpiringSoon ? '#fffbeb' : '#f0fdf4';
+                    const badgeBorder = isSuspended ? '#cbd5e1' : isExpired ? '#fecaca' : isGrace ? '#fed7aa' : isExpiringSoon ? '#fde68a' : '#bbf7d0';
+                    const badgeDot = isSuspended ? '#64748b' : isExpired ? '#ef4444' : isGrace ? '#f97316' : isExpiringSoon ? '#f59e0b' : '#22c55e';
 
                     const expiryDateObj = new Date(lic.expiresAt);
                     const formattedExpiry = expiryDateObj.toLocaleDateString('en-IN', {
@@ -887,168 +892,284 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                       minute: '2-digit'
                     });
 
+                    const isPasswordShown = !!showPasswordMap[lic.id];
+
                     return (
                       <tr
                         key={lic.id}
                         style={{
                           borderBottom: '1px solid #f1f5f9',
-                          opacity: isSuspended ? 0.65 : 1
+                          backgroundColor: '#ffffff',
+                          transition: 'background-color 0.15s ease'
                         }}
                       >
-                        <td style={{ padding: '10px 14px' }}>
+                        {/* 1. STATUS BADGE */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
+                            gap: '5px',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
                             backgroundColor: badgeBg,
                             color: badgeColor,
-                            border: `1px solid ${badgeColor}40`
+                            border: `1px solid ${badgeBorder}`
                           }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: badgeDot }} />
                             {isSuspended ? 'SUSPENDED' : lic.effectiveStatus}
                           </span>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                            {lic.company?.name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Unassigned (Pending)</span>}
-                          </div>
-                          {lic.company?.gstin && (
-                            <div style={{ fontSize: '0.7rem', color: '#0f766e', fontFamily: 'monospace' }}>
-                              GSTIN: {lic.company.gstin}
+                        {/* 2. COMPANY / CLIENT */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '160px' }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>
+                              {lic.company?.name || <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 500 }}>Unassigned (Pending Registration)</span>}
                             </div>
-                          )}
+                            {lic.company?.gstin ? (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#64748b' }}>GSTIN:</span>
+                                <code style={{ fontSize: '0.72rem', color: '#0f766e', fontWeight: 700, fontFamily: 'monospace' }}>
+                                  {lic.company.gstin}
+                                </code>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>GSTIN: Not linked</span>
+                            )}
+                          </div>
                         </td>
 
-                        <td style={{ padding: '10px 14px', color: '#334155' }}>
-                          {lic.registeredEmail}
+                        {/* 3. CONTACT / REGISTERED EMAIL */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontSize: '0.78rem' }}>
+                            <Mail size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }} title={lic.registeredEmail}>
+                              {lic.registeredEmail}
+                            </span>
+                          </div>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {/* Login ID / Username */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>ID:</span>
-                              <code style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', background: '#f0fdf4', padding: '1px 5px', borderRadius: '4px' }}>
-                                {lic.vendorUsername || lic.registeredEmail}
-                              </code>
+                        {/* 4. VENDOR CREDENTIALS WIDGET */}
+                        <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+                          <div style={{
+                            backgroundColor: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            padding: '6px 8px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            minWidth: '220px',
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                          }}>
+                            {/* Username row */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.04em' }}>ID</span>
+                                <code style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f766e', fontFamily: 'monospace' }}>
+                                  {lic.vendorUsername || lic.registeredEmail}
+                                </code>
+                              </div>
                               <button
                                 onClick={() => handleCopy(`user_${lic.id}`, lic.vendorUsername || lic.registeredEmail)}
-                                title="Copy Login ID"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '1px' }}
+                                title="Copy Username"
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '3px',
+                                  padding: '2px 4px',
+                                  cursor: 'pointer',
+                                  color: '#475569',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
                               >
-                                {copiedId === `user_${lic.id}` ? <CheckCircle2 size={12} color="#16a34a" /> : <Copy size={12} />}
+                                {copiedId === `user_${lic.id}` ? <CheckCircle2 size={11} color="#16a34a" /> : <Copy size={11} />}
                               </button>
                             </div>
 
-                            {/* Password */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>PW:</span>
-                              {lic.vendorPassword ? (
-                                <>
-                                  <code style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', background: '#fef2f2', padding: '1px 5px', borderRadius: '4px', letterSpacing: showPasswordMap[lic.id] ? 'normal' : '0.15em' }}>
-                                    {showPasswordMap[lic.id] ? lic.vendorPassword : '••••••••'}
-                                  </code>
-                                  <button
-                                    onClick={() => toggleShowPassword(lic.id)}
-                                    title={showPasswordMap[lic.id] ? 'Hide Password' : 'Show Password'}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '1px' }}
-                                  >
-                                    {showPasswordMap[lic.id] ? <EyeOff size={12} /> : <Eye size={12} />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCopy(`pwd_${lic.id}`, lic.vendorPassword || '')}
-                                    title="Copy Password"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '1px' }}
-                                  >
-                                    {copiedId === `pwd_${lic.id}` ? <CheckCircle2 size={12} color="#16a34a" /> : <Copy size={12} />}
-                                  </button>
-                                </>
-                              ) : (
-                                <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                  Not saved
-                                </span>
-                              )}
+                            <div style={{ height: '1px', backgroundColor: '#e2e8f0' }} />
 
-                              {/* Reset Password Button */}
-                              <button
-                                onClick={() => {
-                                  setResetModalLicense(lic);
-                                  setResetSuccessMessage(null);
-                                  generateRandomResetPassword();
-                                }}
-                                title="Reset / Change Vendor Password"
-                                style={{
-                                  background: '#f1f5f9',
-                                  border: '1px solid #cbd5e1',
-                                  borderRadius: '3px',
-                                  cursor: 'pointer',
-                                  color: '#334155',
-                                  fontSize: '0.66rem',
-                                  fontWeight: 700,
-                                  padding: '1px 5px',
-                                  marginLeft: '4px'
-                                }}
-                              >
-                                🔑 Reset
-                              </button>
+                            {/* Password row */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.04em' }}>PW</span>
+                                {lic.vendorPassword ? (
+                                  <code style={{
+                                    fontSize: '0.76rem',
+                                    fontWeight: 700,
+                                    color: isPasswordShown ? '#0f172a' : '#64748b',
+                                    fontFamily: 'monospace',
+                                    letterSpacing: isPasswordShown ? 'normal' : '0.12em'
+                                  }}>
+                                    {isPasswordShown ? lic.vendorPassword : '••••••••'}
+                                  </code>
+                                ) : (
+                                  <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>Not recorded</span>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                {lic.vendorPassword && (
+                                  <>
+                                    <button
+                                      onClick={() => toggleShowPassword(lic.id)}
+                                      title={isPasswordShown ? 'Hide Password' : 'Show Password'}
+                                      style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '3px',
+                                        padding: '2px 4px',
+                                        cursor: 'pointer',
+                                        color: '#475569',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                      }}
+                                    >
+                                      {isPasswordShown ? <EyeOff size={11} /> : <Eye size={11} />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleCopy(`pwd_${lic.id}`, lic.vendorPassword || '')}
+                                      title="Copy Password"
+                                      style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '3px',
+                                        padding: '2px 4px',
+                                        cursor: 'pointer',
+                                        color: '#475569',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                      }}
+                                    >
+                                      {copiedId === `pwd_${lic.id}` ? <CheckCircle2 size={11} color="#16a34a" /> : <Copy size={11} />}
+                                    </button>
+                                  </>
+                                )}
+
+                                <button
+                                  onClick={() => {
+                                    setResetModalLicense(lic);
+                                    setResetSuccessMessage(null);
+                                    generateRandomResetPassword();
+                                  }}
+                                  title="Reset Vendor Password"
+                                  style={{
+                                    background: '#ffffff',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '3px',
+                                    padding: '2px 6px',
+                                    cursor: 'pointer',
+                                    color: '#0f172a',
+                                    fontSize: '0.66rem',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  <Key size={10} color="#0f766e" />
+                                  <span>Reset</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <code style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                        {/* 5. LICENSE KEY (CRISP SINGLE-LINE MONOSPACE) */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: '#f1f5f9',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '5px',
+                            padding: '4px 8px',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            <code style={{
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                              color: '#0f172a',
+                              letterSpacing: '0.04em',
+                              whiteSpace: 'nowrap'
+                            }}>
                               {lic.licenseKey}
                             </code>
                             <button
                               onClick={() => handleCopy(lic.id, lic.licenseKey)}
                               title="Copy License Key"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '2px' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '0', display: 'flex', alignItems: 'center' }}
                             >
-                              {copiedId === lic.id ? <CheckCircle2 size={13} color="#16a34a" /> : <Copy size={13} />}
+                              {copiedId === lic.id ? <CheckCircle2 size={12} color="#16a34a" /> : <Copy size={12} />}
                             </button>
                           </div>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#e2e8f0', color: '#334155' }}>
+                        {/* 6. PLAN TIER */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.04em',
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap',
+                            backgroundColor: lic.planType === 'WHOLESALE' ? '#f0fdfa' : lic.planType === 'TRIAL' ? '#fffbeb' : '#f8fafc',
+                            color: lic.planType === 'WHOLESALE' ? '#0f766e' : lic.planType === 'TRIAL' ? '#b45309' : '#334155',
+                            border: `1px solid ${lic.planType === 'WHOLESALE' ? '#ccfbf1' : lic.planType === 'TRIAL' ? '#fef3c7' : '#e2e8f0'}`
+                          }}>
                             {lic.planType}
                           </span>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                            {formattedExpiry}
-                          </div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Clock size={11} /> {formattedTime}
+                        {/* 7. EXPIRATION DATE & TIME */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <div style={{ whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.78rem' }}>
+                              {formattedExpiry}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 500 }}>
+                              <Clock size={11} color="#94a3b8" />
+                              <span>{formattedTime}</span>
+                            </div>
                           </div>
                         </td>
 
-                        <td style={{ padding: '10px 14px' }}>
-                          <span style={{ fontWeight: 700, color: badgeColor }}>
-                            {isSuspended ? 'Disabled' : lic.daysRemaining > 0 ? `${lic.daysRemaining} days` : `Expired`}
+                        {/* 8. VALIDITY / DAYS REMAINING */}
+                        <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '0.76rem',
+                            color: isSuspended ? '#64748b' : isExpired ? '#dc2626' : isGrace ? '#ea580c' : isExpiringSoon ? '#d97706' : '#15803d'
+                          }}>
+                            {isSuspended ? 'Suspended' : lic.daysRemaining > 0 ? `${lic.daysRemaining} days` : 'Expired'}
                           </span>
                         </td>
 
-                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {/* 9. ACTIONS TOOLBAR */}
+                        <td style={{ padding: '12px 14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={() => handleQuickExtend(lic, 365)}
-                              title="Renew: Add +1 Year (+365 days)"
+                              title="Extend: +1 Year (+365 days)"
                               style={{
-                                padding: '3px 7px',
+                                height: '26px',
+                                padding: '0 8px',
                                 backgroundColor: '#f0fdf4',
-                                border: '1px solid #86efac',
+                                border: '1px solid #bbf7d0',
                                 color: '#15803d',
-                                borderRadius: '4px',
+                                borderRadius: '5px',
                                 fontSize: '0.72rem',
                                 fontWeight: 700,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
                               }}
                             >
                               +1 Yr
@@ -1056,16 +1177,19 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
                             <button
                               onClick={() => handleQuickExtend(lic, 30)}
-                              title="Add +30 Days"
+                              title="Extend: +30 Days"
                               style={{
-                                padding: '3px 7px',
-                                backgroundColor: '#f8fafc',
-                                border: '1px solid #cbd5e1',
+                                height: '26px',
+                                padding: '0 8px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e2e8f0',
                                 color: '#334155',
-                                borderRadius: '4px',
+                                borderRadius: '5px',
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center'
                               }}
                             >
                               +30d
@@ -1078,14 +1202,18 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                                 d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
                                 setNewExpiryDateTime(d.toISOString().slice(0, 16));
                               }}
-                              title="Set custom expiry date and time"
+                              title="Set exact expiry date & time"
                               style={{
-                                padding: '3px 6px',
-                                backgroundColor: '#f0f9ff',
-                                border: '1px solid #bae6fd',
+                                height: '26px',
+                                width: '26px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e2e8f0',
                                 color: '#0284c7',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                               }}
                             >
                               <Calendar size={13} />
@@ -1093,14 +1221,18 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
                             <button
                               onClick={() => handleToggleStatus(lic)}
-                              title={isSuspended ? 'Reactivate License' : 'Deactivate / Suspend License'}
+                              title={isSuspended ? 'Reactivate License' : 'Suspend License'}
                               style={{
-                                padding: '3px 6px',
-                                backgroundColor: isSuspended ? '#f0fdf4' : '#fef2f2',
-                                border: isSuspended ? '1px solid #86efac' : '1px solid #fecaca',
+                                height: '26px',
+                                width: '26px',
+                                backgroundColor: '#ffffff',
+                                border: isSuspended ? '1px solid #bbf7d0' : '1px solid #fecaca',
                                 color: isSuspended ? '#16a34a' : '#dc2626',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                               }}
                             >
                               {isSuspended ? <Power size={13} /> : <PowerOff size={13} />}
@@ -1108,14 +1240,18 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
                             <button
                               onClick={() => handleDeleteLicense(lic)}
-                              title="Delete License"
+                              title="Permanently Delete License"
                               style={{
-                                padding: '3px 6px',
+                                height: '26px',
+                                width: '26px',
                                 backgroundColor: '#ffffff',
                                 border: '1px solid #e2e8f0',
-                                color: '#64748b',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
+                                color: '#94a3b8',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                               }}
                             >
                               <Trash2 size={13} />
