@@ -534,22 +534,29 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   }, 0);
   const grossTaxable = Math.max(0, valueOfGoods - totalItemDiscount);
 
-  // Automatic 10% Scheme on bills exceeding ₹500 — EXCLUSIVELY for Dr. Priyadarshi Srivastava's vendor/clinic
-  const isPriyadarshiVendor = Boolean(
-    activeCompany?.name?.toUpperCase().includes('PRIYADARSHI') ||
-    activeCompany?.name?.toUpperCase().includes('NEURO HARMONY') ||
-    (doctorName && doctorName.toUpperCase().includes('PRIYADARSHI'))
+  // Automatic 10% Scheme on bills exceeding ₹500 — EXCLUSIVELY for Dr. Priyadarshi Srivastava's account/vendor
+  const isPriyadarshiParty = Boolean(
+    (customerName && customerName.trim().toUpperCase().includes('PRIYADARSHI')) ||
+    (selectedCustomer?.name && selectedCustomer.name.trim().toUpperCase().includes('PRIYADARSHI'))
   );
+
+  // When switching away from Priyadarshi to another vendor (like SS TRADERS or Cash), reset discount to 0
+  useEffect(() => {
+    if (!isPriyadarshiParty && !editingInvoiceId) {
+      setBillDiscountPct(0);
+      setManualDiscountOverride(false);
+    }
+  }, [customerName, selectedCustomer?.id, isPriyadarshiParty, editingInvoiceId]);
 
   useEffect(() => {
     if (!manualDiscountOverride && !editingInvoiceId) {
-      if (isPriyadarshiVendor && grossTaxable > 500) {
+      if (isPriyadarshiParty && grossTaxable > 500) {
         setBillDiscountPct(10);
       } else {
         setBillDiscountPct(0);
       }
     }
-  }, [grossTaxable, manualDiscountOverride, editingInvoiceId, isPriyadarshiVendor]);
+  }, [grossTaxable, manualDiscountOverride, editingInvoiceId, isPriyadarshiParty]);
 
   const billDiscountAmt = (grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100;
   const netTaxable = Math.max(0, grossTaxable - billDiscountAmt);
@@ -1255,13 +1262,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </label>
             )}
 
-            {/* Scheme Indicator Badge */}
-            {grossTaxable > 500 && billDiscountPct === 10 ? (
+            {/* Scheme Indicator Badge - Strictly for Dr. Priyadarshi vendor only */}
+            {isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', padding: '0.25rem 0.6rem', borderRadius: '6px', fontWeight: '700' }}>
                 <span>🎁 10% Scheme Applied (Bill &gt; ₹500)</span>
                 <span style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '800' }}>(-₹{billDiscountAmt.toFixed(2)})</span>
               </div>
-            ) : grossTaxable > 0 && grossTaxable <= 500 ? (
+            ) : isPriyadarshiParty && grossTaxable > 0 && grossTaxable <= 500 ? (
               <div style={{ fontSize: '0.74rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
                 💡 Add <strong style={{ color: '#0f766e' }}>₹{(500 - grossTaxable + 0.01).toFixed(2)}</strong> more for <strong>10% Scheme OFF</strong>
               </div>
@@ -1284,7 +1291,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   width: '52px',
                   padding: '0.3rem 0.4rem',
                   background: 'var(--card-bg)',
-                  border: isPriyadarshiVendor && grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
+                  border: isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
                   borderRadius: '5px',
                   color: 'var(--text-primary)',
                   textAlign: 'center',
@@ -1293,7 +1300,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 }}
               />
               <span style={{ color: 'var(--text-muted)' }}>%</span>
-              {isPriyadarshiVendor && grossTaxable > 500 && billDiscountPct === 10 && (
+              {isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 && (
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '1px 5px', borderRadius: '3px' }}>
                   10% Dr. Priyadarshi Scheme
                 </span>
@@ -1303,13 +1310,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   type="button"
                   onClick={() => {
                     setManualDiscountOverride(false);
-                    if (isPriyadarshiVendor && grossTaxable > 500) setBillDiscountPct(10);
+                    if (isPriyadarshiParty && grossTaxable > 500) setBillDiscountPct(10);
                     else setBillDiscountPct(0);
                   }}
-                  title={isPriyadarshiVendor ? "Reset to automatic 10% scheme for bills > ₹500" : "Reset discount"}
+                  title={isPriyadarshiParty ? "Reset to automatic 10% scheme for bills > ₹500" : "Reset discount to 0%"}
                   style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: '0 2px' }}
                 >
-                  ↺ Auto
+                  ↺ Reset
                 </button>
               )}
             </div>
@@ -1844,7 +1851,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
               <span>
-                DISCOUNT {billDiscountPct > 0 ? `(${billDiscountPct}%${grossTaxable > 500 && billDiscountPct === 10 ? ' Scheme' : ''})` : ''} :
+                DISCOUNT {billDiscountPct > 0 ? `(${billDiscountPct}%${isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? ' Scheme' : ''})` : ''} :
               </span>
               <span style={{ fontWeight: '700' }}>- ₹{(totalItemDiscount + billDiscountAmt).toFixed(2)}</span>
             </div>
