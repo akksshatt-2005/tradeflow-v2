@@ -1171,10 +1171,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                         <ShoppingCart size={24} />
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Sales & POS Billing</h3>
-                          <span style={{ background: '#dcfce7', color: '#166534', fontSize: '9.5px', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>10% SCHEME</span>
-                        </div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Sales & POS Billing</h3>
                         <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Non-GST & GST retail bills, barcode scan [F2]</div>
                       </div>
                     </div>

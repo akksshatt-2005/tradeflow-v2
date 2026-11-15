@@ -185,7 +185,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
     try {
       const saved = localStorage.getItem(bankStorageKey);
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return {
       bankName: 'Bank Of India',
       accountNo: '777140000006',
@@ -201,7 +201,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
     try {
       const saved = localStorage.getItem(dispatchStorageKey);
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return {
       transport: 'Self / Hand Delivery',
       lrNo: '—',
@@ -428,7 +428,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
     }}>
       {/* ── TOP 3-BOX HEADER ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '37% 37% 26%', borderBottom: '1.5px solid #000000' }}>
-        
+
         {/* Box 1: Left - Company Details */}
         <div style={{ padding: '6px 8px', borderRight: '1.5px solid #000000', fontSize: '9.5px', lineHeight: 1.35 }}>
           {companySettings.companyLogo && (
@@ -654,7 +654,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
       {/* ── FOOTER SEGMENT 1: GST BREAKDOWN (LEFT) & TOTALS (RIGHT) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '56% 14% 30%', borderTop: '1.5px solid #000000', borderBottom: '1.5px solid #000000' }}>
-        
+
         {/* Left: GST Slabs Breakdown (7 Columns) */}
         <div style={{ borderRight: '1.5px solid #000000' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', textAlign: 'center' }}>
