@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Printer } from 'lucide-react';
 import { MultiItemReturnSlip } from './MultiPatientReturnModal';
@@ -14,6 +14,17 @@ export const MultiItemReturnSlipModal: React.FC<MultiItemReturnSlipModalProps> =
 }) => {
   const { activeCompany } = useAuth();
 
+  useEffect(() => {
+    if (!slip) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [slip, onClose]);
+
   if (!slip) return null;
 
   const handlePrint = () => {
@@ -22,6 +33,11 @@ export const MultiItemReturnSlipModal: React.FC<MultiItemReturnSlipModalProps> =
 
   return (
     <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       style={{
         position: 'fixed',
         top: 0,

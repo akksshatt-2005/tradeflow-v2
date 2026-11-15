@@ -110,6 +110,21 @@ export default function Purchases() {
     fetchPurchases();
   }, [activeCompany?.id, statusFilter]);
 
+  // Keyboard Shortcut: Escape to close viewingPurchase or payment modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showPaymentModal) {
+          setShowPaymentModal(false);
+        } else if (viewingPurchase) {
+          setViewingPurchase(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPaymentModal, viewingPurchase]);
+
   const fetchPurchases = async () => {
     if (!activeCompany) return;
     try {
@@ -593,19 +608,26 @@ export default function Purchases() {
 
       {/* Modal: View Purchase Bill Details */}
       {viewingPurchase && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setViewingPurchase(null);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
@@ -916,7 +938,15 @@ export default function Purchases() {
 
       {/* Modal: Record Payment Towards Purchase */}
       {showPaymentModal && viewingPurchase && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPaymentModal(false);
+            }
+          }}
+          style={{ zIndex: 10000 }}
+        >
           <div className="modal-card" style={{ maxWidth: '400px', width: '100%' }}>
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Record Payment to Supplier</h3>

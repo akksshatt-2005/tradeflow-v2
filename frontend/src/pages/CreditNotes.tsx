@@ -159,6 +159,23 @@ export default function CreditNotes() {
     }
   }, [viewingCN]);
 
+  // Keyboard Shortcut: Escape to close active modal (delete modal -> view modal -> editor modal)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (deleteConfirmCN) {
+          setDeleteConfirmCN(null);
+        } else if (viewingCN) {
+          setViewingCN(null);
+        } else if (showEditorModal) {
+          setShowEditorModal(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteConfirmCN, viewingCN, showEditorModal]);
+
   // Medicine Picker Search within Modal
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [selectedMedToAdd, setSelectedMedToAdd] = useState<MedicineItem | null>(null);
@@ -815,7 +832,15 @@ export default function CreditNotes() {
 
       {/* CREATE / EDIT CREDIT NOTE MODAL */}
       {showEditorModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '1rem' }}>
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditorModal(false);
+            }
+          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '1rem' }}
+        >
           <div className="modal-card" style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', width: '100%', maxWidth: '900px', maxHeight: 'min(92vh, 92dvh)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', padding: '1.2rem 1.5rem', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1181,19 +1206,27 @@ export default function CreditNotes() {
 
       {/* ── PROFESSIONAL A4 PURCHASE RETURN / DEBIT VOUCHER MODAL (ERP ENGINE) ── */}
       {viewingCN && (
-        <div className="invoice-modal-backdrop" style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(3px)',
-          zIndex: 1000,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          overflowY: 'auto',
-          padding: '1rem'
-        }}>
+        <div
+          className="invoice-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setViewingCN(null);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            overflowY: 'auto',
+            padding: '1rem'
+          }}
+        >
           {/* ── ON-SCREEN TOOLBAR (NO-PRINT) ── */}
           <div className="no-print" style={{
             width: '100%',
@@ -1229,6 +1262,7 @@ export default function CreditNotes() {
               <button
                 type="button"
                 onClick={() => setViewingCN(null)}
+                title="Close [Esc]"
                 style={{
                   padding: '6px 14px',
                   background: '#f1f5f9',
@@ -1240,7 +1274,7 @@ export default function CreditNotes() {
                   cursor: 'pointer'
                 }}
               >
-                Close
+                Close (Esc)
               </button>
               <button
                 type="button"
@@ -1526,7 +1560,14 @@ export default function CreditNotes() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {deleteConfirmCN && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, padding: '1rem' }}>
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDeleteConfirmCN(null);
+            }
+          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, padding: '1rem' }}
+        >
           <div style={{ background: '#ffffff', color: '#0f172a', borderRadius: '12px', width: '100%', maxWidth: '480px', padding: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
               <div style={{ background: '#fee2e2', color: '#ef4444', padding: '8px', borderRadius: '8px' }}>

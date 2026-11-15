@@ -218,6 +218,25 @@ export default function Sales() {
   const [referenceNo, setReferenceNo] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
 
+  // Keyboard Shortcut: Escape to close open overlapping modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showPaymentModal) {
+          setShowPaymentModal(false);
+        } else if (viewingInvoice) {
+          setViewingInvoice(null);
+        } else if (viewingMultiReturnSlip) {
+          setViewingMultiReturnSlip(null);
+        } else if (showReturnModal) {
+          setShowReturnModal(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPaymentModal, viewingInvoice, viewingMultiReturnSlip, showReturnModal]);
+
   const getDateRangeForPeriod = (p: PeriodOption, customStart?: string, customEnd?: string) => {
     const now = new Date();
     const todayStr = getLocalDateString(now);
@@ -1895,19 +1914,26 @@ export default function Sales() {
 
       {/* SETTLE BALANCE PAYMENT MODAL */}
       {showPaymentModal && viewingInvoice && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 110,
-          padding: '1rem'
-        }}>
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPaymentModal(false);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 110,
+            padding: '1rem'
+          }}
+        >
           <div style={{
             background: 'var(--card-bg)',
             border: '1px solid var(--border-color)',

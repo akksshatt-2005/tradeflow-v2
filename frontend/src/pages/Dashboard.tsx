@@ -157,6 +157,27 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const [suppReturnSearch, setSuppReturnSearch] = useState('');
   const [selectedSuppMed, setSelectedSuppMed] = useState<MedicineItem | null>(null);
   const [selectedSuppBatchId, setSelectedSuppBatchId] = useState('');
+
+  // Keyboard shortcut Escape to dismiss overlapping modals & drawers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (settingsModalOpen) {
+          setSettingsModalOpen(false);
+        } else if (licenseModalOpen) {
+          setLicenseModalOpen(false);
+        } else if (showSupplierReturnModal) {
+          setShowSupplierReturnModal(false);
+        } else if (showReturnModal) {
+          setShowReturnModal(false);
+        } else if (switcherOpen) {
+          setSwitcherOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [settingsModalOpen, licenseModalOpen, showSupplierReturnModal, showReturnModal, switcherOpen]);
   const [tempSuppStrips, setTempSuppStrips] = useState<number>(1);
   const [tempSuppLoose, setTempSuppLoose] = useState<number>(0);
   const [tempSuppRate, setTempSuppRate] = useState<number>(0);
@@ -1292,19 +1313,27 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
 
       {/* Multi-Item Supplier Return (Debit Note / CN) Modal */}
       {showSupplierReturnModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 200,
-          padding: '1rem'
-        }}>
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSupplierReturnModal(false);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 200,
+            padding: '1rem'
+          }}
+        >
           <div className="modal-card" style={{
             background: 'var(--card-bg, #ffffff)',
             color: 'var(--text-primary, #0f172a)',

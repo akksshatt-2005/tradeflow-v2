@@ -394,6 +394,22 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
     window.print();
   };
 
+  // Keyboard Shortcut: Escape to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (viewingSlip) {
+          setViewingSlip(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, viewingSlip, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -401,6 +417,11 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
       {/* VOUCHER / SLIP VIEW (after successful submission) */}
       {viewingSlip ? (
         <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setViewingSlip(null);
+            }
+          }}
           style={{
             position: 'fixed',
             top: 0,
@@ -638,6 +659,11 @@ export const MultiPatientReturnModal: React.FC<MultiPatientReturnModalProps> = (
         /* MAIN MULTI-ITEM RETURN MODAL */
         <div
           className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
           style={{
             position: 'fixed',
             top: 0,

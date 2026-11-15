@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, AlertTriangle, AlertOctagon, Key, Calendar, Mail, CheckCircle2, Copy, Sparkles, ExternalLink, X } from 'lucide-react';
 import api from '../api/client';
 
@@ -39,6 +39,18 @@ export default function LicenseModal({
   const [adminPlan, setAdminPlan] = useState('WHOLESALE');
   const [generating, setGenerating] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+
+  // Keyboard Shortcut: Escape to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -82,20 +94,27 @@ export default function LicenseModal({
     (license?.daysRemaining || 0) <= 15 ? '#fffbeb' : '#f0fdf4';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(15, 23, 42, 0.65)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1rem',
-      backdropFilter: 'blur(3px)'
-    }}>
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1rem',
+        backdropFilter: 'blur(3px)'
+      }}
+    >
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '12px',

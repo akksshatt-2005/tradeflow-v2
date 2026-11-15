@@ -265,6 +265,25 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
     };
   }, []);
 
+  // Keyboard Shortcut: Escape to close modal (or dismiss nested sub-modals/popups first)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showSettingsModal) {
+          setShowSettingsModal(false);
+          return;
+        }
+        if (showVouchers) {
+          setShowVouchers(false);
+          return;
+        }
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, showSettingsModal, showVouchers]);
+
   const currentItems = invoice.items || [];
   // Proportional filler rows calculation
   const fillerRowCount = Math.max(1, 10 - currentItems.length);
@@ -954,22 +973,30 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   );
 
   return (
-    <div className="invoice-modal-backdrop" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.75)',
-      backdropFilter: 'blur(3px)',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      overflowY: 'auto',
-      padding: '1rem'
-    }}>
+    <div
+      className="invoice-modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(3px)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        overflowY: 'auto',
+        padding: '1rem'
+      }}
+    >
       {/* ── PROFESSIONAL ERP COMMAND RIBBON (NO-PRINT) ── */}
       <div className="no-print" style={{
         width: '100%',
@@ -1298,6 +1325,39 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             >
               <Printer size={13} />
               <span>Print Invoice</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '5px 10px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                color: '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Close Invoice [Esc]"
+              onMouseEnter={e => {
+                e.currentTarget.style.color = '#dc2626';
+                e.currentTarget.style.borderColor = '#fca5a5';
+                e.currentTarget.style.background = '#fef2f2';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = '#475569';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.background = '#ffffff';
+              }}
+            >
+              <X size={13} />
+              <span>Close <span style={{ fontSize: '10px', opacity: 0.7 }}>(Esc)</span></span>
             </button>
           </div>
         </div>
