@@ -604,14 +604,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setSubmitting(true);
       setError(null);
 
-      const cleanGstin = customerGstin ? customerGstin.trim().toUpperCase() : null;
-
-      if (saleType === 'B2B' && (!cleanGstin || cleanGstin.length < 15)) {
-        if (!window.confirm('Notice: B2B Tax Invoices standardly require a valid 15-character GSTIN so your buyer can claim Input Tax Credit (ITC). Do you want to proceed and save?')) {
-          setSubmitting(false);
-          return;
-        }
-      }
+      const cleanGstin = customerGstin ? customerGstin.trim().toUpperCase() : (selectedCustomer?.gstin ? selectedCustomer.gstin.trim().toUpperCase() : null);
 
       const combinedNotes = [
         notes.trim() || null,
@@ -924,14 +917,19 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
         {/* Dynamic Fields Grid */}
         {saleType === 'B2B' ? (
-          /* B2B WHOLESALE FIELDS */
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.9rem', alignItems: 'end' }}>
-            
-            {/* Buyer Firm Name [F2] */}
+          /* B2B WHOLESALE - ONLY BUYER / FIRM NAME [F2] */
+          <div style={{ maxWidth: '520px' }}>
             <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8', marginBottom: '0.3rem' }}>
-                BUYER / FIRM NAME [F2] * :
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>
+                  BUYER / FIRM NAME [F2] * :
+                </label>
+                {selectedCustomer?.gstin && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f766e', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '3px' }}>
+                    GSTIN: {selectedCustomer.gstin}
+                  </span>
+                )}
+              </div>
               <input
                 ref={patientInputRef}
                 type="text"
@@ -947,7 +945,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   setShowCustomerDropdown(true);
                 }}
                 onFocus={() => setShowCustomerDropdown(true)}
-                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1.5px solid #93c5fd', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
+                style={{ width: '100%', padding: '0.55rem 0.75rem', background: 'var(--bg-secondary)', border: '1.5px solid #93c5fd', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
               />
               {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
                 <div
@@ -1013,76 +1011,6 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 </div>
               )}
             </div>
-
-            {/* Buyer GSTIN */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>
-                  BUYER GSTIN * :
-                </label>
-                {buyerState && (
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isInterState ? '#b45309' : '#059669', background: isInterState ? '#fffbeb' : '#f0fdf4', border: `1px solid ${isInterState ? '#fde68a' : '#bbf7d0'}`, padding: '1px 6px', borderRadius: '3px' }}>
-                    {buyerState} ({isInterState ? 'IGST' : 'CGST+SGST'})
-                  </span>
-                )}
-              </div>
-              <input
-                type="text"
-                placeholder="15-digit GSTIN (e.g. 09AOAPV7912G1ZO)"
-                value={customerGstin}
-                onChange={e => handleGstinChange(e.target.value)}
-                maxLength={15}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  background: 'var(--bg-secondary)',
-                  border: '1.5px solid #93c5fd',
-                  borderRadius: '6px',
-                  color: '#0f766e',
-                  fontWeight: '800',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.04em'
-                }}
-              />
-            </div>
-
-            {/* Buyer Drug License No. */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                BUYER D.L. NO. (Drug License) :
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 20B/21B UP/LKO/2024"
-                value={buyerDlNo}
-                onChange={e => setBuyerDlNo(e.target.value.toUpperCase())}
-                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
-              />
-            </div>
-
-            {/* Buyer Address & Station */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                BUYER ADDRESS / MOBILE :
-              </label>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <input
-                  type="text"
-                  placeholder="Mobile"
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                  style={{ width: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                />
-                <input
-                  type="text"
-                  placeholder="Firm Billing Address"
-                  value={patientAddress}
-                  onChange={e => setPatientAddress(e.target.value)}
-                  style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                />
-              </div>
-            </div>
-
           </div>
         ) : (
           /* B2C RETAIL PATIENT FIELDS */
