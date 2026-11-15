@@ -87,7 +87,7 @@ interface PurchasesProps {
   initialShowNewPurchase?: boolean;
 }
 
-export default function Purchases({ initialShowNewPurchase = true }: PurchasesProps = {}) {
+export default function Purchases({ initialShowNewPurchase = false }: PurchasesProps = {}) {
   const { activeCompany } = useAuth();
   const [purchases, setPurchases] = useState<PurchaseBill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,8 +95,15 @@ export default function Purchases({ initialShowNewPurchase = true }: PurchasesPr
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // View / Creation State (Defaults directly to Inward Entry page for rapid stock inwarding)
+  // View / Creation State (Synced with sidebar vs dashboard routing)
   const [showNewPurchase, setShowNewPurchase] = useState(initialShowNewPurchase);
+
+  useEffect(() => {
+    if (initialShowNewPurchase !== undefined) {
+      setShowNewPurchase(initialShowNewPurchase);
+    }
+  }, [initialShowNewPurchase]);
+
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);

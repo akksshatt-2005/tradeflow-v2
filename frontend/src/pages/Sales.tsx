@@ -159,7 +159,7 @@ interface SalesProps {
   initialShowPOS?: boolean;
 }
 
-export default function Sales({ initialShowPOS = true }: SalesProps = {}) {
+export default function Sales({ initialShowPOS = false }: SalesProps = {}) {
   const { activeCompany } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [patientReturns, setPatientReturns] = useState<PatientReturnItem[]>([]);
@@ -173,8 +173,14 @@ export default function Sales({ initialShowPOS = true }: SalesProps = {}) {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // View / Creation State (Defaults directly to POS Entry Terminal for rapid keyboard billing)
+  // View / Creation State (Synced with sidebar vs dashboard routing)
   const [showPOS, setShowPOS] = useState(initialShowPOS);
+
+  useEffect(() => {
+    if (initialShowPOS !== undefined) {
+      setShowPOS(initialShowPOS);
+    }
+  }, [initialShowPOS]);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);

@@ -100,6 +100,8 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements' | 'gst-reports'>('dashboard');
+  const [salesInitialPOS, setSalesInitialPOS] = useState(false);
+  const [purchaseInitialNew, setPurchaseInitialNew] = useState(false);
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [license, setLicense] = useState<LicenseInfo | null>(null);
@@ -189,7 +191,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard, hotkey: 'Alt+D' },
-    { id: 'sales', label: 'Sales & POS Terminal', icon: ShoppingCart, hotkey: 'Alt+S' },
+    { id: 'sales', label: 'Sales & Patient Returns', icon: ShoppingCart, hotkey: 'Alt+S' },
     { id: 'purchases', label: 'Purchases & Inward', icon: Truck, hotkey: 'Alt+B' },
     { id: 'medicines', label: 'Medicine Catalog', icon: Pill, hotkey: 'Alt+M' },
     { id: 'batches', label: 'Batches & Expiry', icon: Layers },
@@ -206,21 +208,31 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         const k = e.key.toLowerCase();
         if (k === 's') {
           e.preventDefault();
+          setSalesInitialPOS(false);
           setActiveTab('sales');
-          window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+          window.dispatchEvent(new CustomEvent('tradeflow_close_pos'));
         } else if (k === 'p') {
           e.preventDefault();
+          setSalesInitialPOS(true);
           setActiveTab('sales');
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
-          }, 40);
+          }, 30);
         } else if (k === 'm') {
           e.preventDefault();
           setActiveTab('medicines');
-        } else if (k === 'b' || k === 'u') {
+        } else if (k === 'b') {
           e.preventDefault();
+          setPurchaseInitialNew(false);
           setActiveTab('purchases');
-          window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+          window.dispatchEvent(new CustomEvent('tradeflow_close_new_purchase'));
+        } else if (k === 'u') {
+          e.preventDefault();
+          setPurchaseInitialNew(true);
+          setActiveTab('purchases');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+          }, 30);
         } else if (k === 'd') {
           e.preventDefault();
           setActiveTab('dashboard');
@@ -553,10 +565,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   setActiveTab(item.id as any);
                   if (item.id === 'dashboard') fetchSummary();
                   if (item.id === 'sales') {
-                    window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+                    setSalesInitialPOS(false);
+                    window.dispatchEvent(new CustomEvent('tradeflow_close_pos'));
                   }
                   if (item.id === 'purchases') {
-                    window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+                    setPurchaseInitialNew(false);
+                    window.dispatchEvent(new CustomEvent('tradeflow_close_new_purchase'));
                   }
                 }}
                 style={{
@@ -1147,11 +1161,14 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     </div>
                   </div>
 
-                  {/* 2. Sales / POS Billing (Direct Entry Mapping) */}
+                  {/* 2. Sales / POS Billing (Direct Entry Shortcut) */}
                   <div
                     onClick={() => {
+                      setSalesInitialPOS(true);
                       setActiveTab('sales');
-                      window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+                      }, 20);
                     }}
                     className="card"
                     style={{
@@ -1177,11 +1194,14 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     </div>
                   </div>
 
-                  {/* 3. Purchases & Inward (Direct Entry Mapping) */}
+                  {/* 3. Purchases & Inward (Direct Entry Shortcut) */}
                   <div
                     onClick={() => {
+                      setPurchaseInitialNew(true);
                       setActiveTab('purchases');
-                      window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+                      }, 20);
                     }}
                     className="card"
                     style={{
@@ -1293,8 +1313,8 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             </div>
           )}
 
-          {activeTab === 'sales' && <Sales />}
-          {activeTab === 'purchases' && <Purchases />}
+          {activeTab === 'sales' && <Sales initialShowPOS={salesInitialPOS} />}
+          {activeTab === 'purchases' && <Purchases initialShowNewPurchase={purchaseInitialNew} />}
           {activeTab === 'medicines' && <Medicines />}
           {activeTab === 'batches' && <Batches />}
           {activeTab === 'parties' && <Parties />}
