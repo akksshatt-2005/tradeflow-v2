@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Printer, Edit2, Trash2, X, ChevronDown, ChevronUp, FileText, Settings2, Check } from 'lucide-react';
+import { Printer, Edit2, Trash2, X, ChevronDown, ChevronUp, FileText, Settings2, Check, Upload } from 'lucide-react';
 import { Company } from '../context/AuthContext';
 import { numberToIndianWords, normalizeIndianState } from '../utils/numberToWords';
 
@@ -82,6 +82,7 @@ interface VendorBankDetails {
   ifscCode: string;
   branch: string;
   accountName: string;
+  signatureImage?: string;
 }
 
 interface VendorDispatchDetails {
@@ -202,12 +203,47 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const [editBankForm, setEditBankForm] = useState(bankDetails);
   const [editDispatchForm, setEditDispatchForm] = useState(dispatchDetails);
 
+  // Sync bank details if changed from Dashboard settings
+  useEffect(() => {
+    const handleBankUpdate = () => {
+      try {
+        const saved = localStorage.getItem(bankStorageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setBankDetails(parsed);
+          setEditBankForm(parsed);
+        }
+      } catch {}
+    };
+    window.addEventListener('tradeflow_bank_updated', handleBankUpdate);
+    return () => {
+      window.removeEventListener('tradeflow_bank_updated', handleBankUpdate);
+    };
+  }, [bankStorageKey]);
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size exceeds 2MB limit. Please upload a smaller image.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setEditBankForm(prev => ({ ...prev, signatureImage: event.target!.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setBankDetails(editBankForm);
     setDispatchDetails(editDispatchForm);
     localStorage.setItem(bankStorageKey, JSON.stringify(editBankForm));
     localStorage.setItem(dispatchStorageKey, JSON.stringify(editDispatchForm));
+    window.dispatchEvent(new Event('tradeflow_bank_updated'));
     setShowSettingsModal(false);
   };
 
@@ -672,14 +708,58 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         </div>
 
         {/* Right: Signature Box */}
-        <div style={{ padding: '6px 8px', textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 800, fontSize: '10px', textTransform: 'uppercase' }}>
+        <div style={{
+          padding: '6px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            fontWeight: 900,
+            fontSize: '10.5px',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            width: '100%',
+            color: '#000000',
+            letterSpacing: '0.4px'
+          }}>
             FOR {companyName}
           </div>
-          <div style={{ height: '38px' }}>
-            {/* Signature & Stamp space */}
+          <div style={{
+            minHeight: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            margin: '2px 0'
+          }}>
+            {bankDetails.signatureImage ? (
+              <img
+                src={bankDetails.signatureImage}
+                alt={`Official Stamp / Signature for ${companyName}`}
+                style={{
+                  maxHeight: '44px',
+                  maxWidth: '140px',
+                  objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+            ) : (
+              <div style={{ height: '40px' }} />
+            )}
           </div>
-          <div style={{ borderTop: '1px solid #000000', paddingTop: '3px', fontWeight: 800, fontSize: '9px', textAlign: 'center' }}>
+          <div style={{
+            borderTop: '1px solid #000000',
+            paddingTop: '3px',
+            fontWeight: 800,
+            fontSize: '9px',
+            textAlign: 'center',
+            width: '100%',
+            color: '#000000'
+          }}>
             Authorized Signatory
           </div>
         </div>
@@ -1205,6 +1285,82 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                     onChange={e => setEditBankForm({ ...editBankForm, branch: e.target.value })}
                     style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
                   />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Account Beneficiary / Company Name</label>
+                <input
+                  type="text"
+                  placeholder={companyName}
+                  value={editBankForm.accountName || ''}
+                  onChange={e => setEditBankForm({ ...editBankForm, accountName: e.target.value })}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+                />
+              </div>
+
+              {/* Upload Signature or Mohar / Stamp */}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  ✍️ Authorized Signature / Mohar (Stamp) Upload
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {editBankForm.signatureImage ? (
+                    <div style={{ position: 'relative', display: 'inline-block', padding: '4px', border: '1.5px solid #86efac', borderRadius: '6px', background: '#f0fdf4' }}>
+                      <img
+                        src={editBankForm.signatureImage}
+                        alt="Stamp / Mohar"
+                        style={{ maxHeight: '48px', maxWidth: '120px', objectFit: 'contain' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditBankForm({ ...editBankForm, signatureImage: undefined })}
+                        title="Remove Stamp"
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-6px',
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label style={{
+                      flex: 1,
+                      border: '1.5px dashed #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '10px',
+                      textAlign: 'center',
+                      backgroundColor: '#f8fafc',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Upload size={16} color="#0f766e" />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f766e' }}>Click to Upload Stamp / Mohar / Signature</span>
+                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>PNG or JPEG format (transparent background recommended)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSignatureUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 
