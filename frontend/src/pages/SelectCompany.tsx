@@ -7,7 +7,6 @@ import {
   ArrowRight, 
   LogOut, 
   AlertCircle, 
-  Sparkles, 
   MapPin, 
   Edit2, 
   Trash2, 
@@ -398,20 +397,18 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
             }}>
               {/* GSTIN Autofill for Edit */}
               <div style={{
-                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                padding: '12px 14px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderLeft: '3px solid #0f766e',
+                borderRadius: '4px',
+                padding: '10px 12px',
                 marginBottom: '16px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={15} color="#0284c7" />
-                    <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0369a1' }}>
-                      ⚡ Instant GSTIN Autofill (Optional)
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 500 }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                    GSTIN Autofill
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                     Auto-updates address & details from GST portal
                   </span>
                 </div>
@@ -434,8 +431,8 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
                       fontSize: '12.5px',
                       fontFamily: 'monospace',
                       fontWeight: 600,
-                      borderRadius: '6px',
-                      border: '1px solid #93c5fd',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
                       background: '#ffffff'
                     }}
                   />
@@ -445,8 +442,6 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
                     disabled={gstLookupLoading}
                     className="btn btn-primary btn-sm"
                     style={{
-                      backgroundColor: '#0284c7',
-                      borderColor: '#0284c7',
                       padding: '7px 12px',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -619,20 +614,18 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
             }}>
               {/* GSTIN Instant Autofill Helper Bar */}
               <div style={{
-                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                padding: '12px 14px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderLeft: '3px solid #0f766e',
+                borderRadius: '4px',
+                padding: '10px 12px',
                 marginBottom: '16px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={15} color="#0284c7" />
-                    <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0369a1' }}>
-                      ⚡ Instant GSTIN Autofill (Optional)
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: 500 }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                    GSTIN Autofill
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                     Auto-fetches name, address & PIN code
                   </span>
                 </div>
@@ -655,8 +648,8 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
                       fontSize: '12.5px',
                       fontFamily: 'monospace',
                       fontWeight: 600,
-                      borderRadius: '6px',
-                      border: '1px solid #93c5fd',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
                       background: '#ffffff'
                     }}
                   />
@@ -666,8 +659,6 @@ export default function SelectCompany({ onCompanySelected }: SelectCompanyProps)
                     disabled={gstLookupLoading}
                     className="btn btn-primary btn-sm"
                     style={{
-                      backgroundColor: '#0284c7',
-                      borderColor: '#0284c7',
                       padding: '7px 12px',
                       fontSize: '12px',
                       fontWeight: 600,

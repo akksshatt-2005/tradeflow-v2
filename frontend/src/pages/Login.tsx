@@ -46,14 +46,14 @@ export default function Login({ onSwitchToSignup }: { onSwitchToSignup: () => vo
           <div style={{
             width: '44px',
             height: '44px',
-            backgroundColor: '#e0f2fe',
-            borderRadius: '8px',
+            backgroundColor: '#ecfdf5',
+            borderRadius: '6px',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '12px'
           }}>
-            <Building2 size={24} color="#0284c7" />
+            <Building2 size={24} color="#0f766e" />
           </div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>Trade Flow v2</h1>
           <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Sign in to your billing system</p>
@@ -135,7 +135,7 @@ export default function Login({ onSwitchToSignup }: { onSwitchToSignup: () => vo
           Don't have an account?{' '}
           <button
             onClick={onSwitchToSignup}
-            style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: '#0f766e', fontWeight: 600, cursor: 'pointer', padding: 0 }}
           >
             Create account
           </button>

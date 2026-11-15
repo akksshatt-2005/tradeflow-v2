@@ -38,7 +38,6 @@ import {
   Search,
   X,
   IndianRupee,
-  Sparkles,
   FileText,
   Printer,
   Trash2,
@@ -507,8 +506,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             <div style={{
               width: '32px',
               height: '32px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
+              background: '#0f766e',
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -738,7 +736,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   alignItems: 'center',
                   gap: '5px',
                   padding: '3px 8px',
-                  borderRadius: '12px',
+                  borderRadius: '4px',
                   fontSize: '0.73rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -761,13 +759,13 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                 }}
               >
                 {license.isHardExpired ? (
-                  <><span>⛔</span> Expired (Read-Only)</>
+                  <><AlertTriangle size={12} /> Expired (Read-Only)</>
                 ) : license.inGracePeriod ? (
-                  <><span>⚠️</span> Grace Active</>
+                  <><AlertTriangle size={12} /> Grace Active</>
                 ) : license.daysRemaining <= 15 ? (
-                  <><span>🟡</span> Renews in {license.daysRemaining}d</>
+                  <><AlertTriangle size={12} /> Renews in {license.daysRemaining}d</>
                 ) : (
-                  <><span>🛡️</span> License Active</>
+                  <><ShieldCheck size={12} /> License Active</>
                 )}
               </button>
             )}
@@ -886,208 +884,156 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         {/* Page Body */}
         <main className="page-content">
           {activeTab === 'dashboard' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-              
-              {/* Premium Welcome Hero Banner */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* Compact Status Header */}
               <div style={{
-                background: 'linear-gradient(135deg, #ffffff 60%, #f0fdf4 100%)',
-                color: '#0f172a',
-                borderRadius: '14px',
-                padding: '20px 24px',
+                background: '#ffffff',
                 border: '1px solid #e2e8f0',
-                boxShadow: '0 4px 16px -2px rgba(0, 0, 0, 0.04)',
+                borderLeft: '3px solid #0f766e',
+                borderRadius: '4px',
+                padding: '10px 16px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '16px',
-                position: 'relative'
+                gap: '8px'
               }}>
-                <div style={{ zIndex: 2 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <span style={{
-                      background: '#ecfdf5',
-                      color: '#047857',
-                      border: '1px solid #a7f3d0',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      🏥 Pharmacy Command Center
-                    </span>
-                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>•</span>
-                    <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
-                      {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
                     {activeCompany?.name}
-                  </h1>
+                  </span>
+                  <span style={{
+                    background: '#f0fdf4', color: '#15803d',
+                    border: '1px solid #bbf7d0', padding: '1px 7px',
+                    borderRadius: '3px', fontSize: '10.5px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.4px'
+                  }}>Pharma ERP</span>
                 </div>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
               </div>
 
               {/* Top Row Metric Cards */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '16px'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '10px'
               }}>
                 {/* Total Medicines */}
                 <div className="card" style={{
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #e0f2fe',
-                  background: 'linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%)',
-                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.05)',
+                  padding: '14px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  borderTop: '2px solid #0f766e',
+                  background: '#ffffff',
                   position: 'relative'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Medicines Catalog
-                      </div>
-                      <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                        {loadingSummary ? '...' : summary?.totalMedicines || 0}
-                      </div>
-                    </div>
-                    <div style={{ background: '#0284c7', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
-                      <Pill size={22} />
-                    </div>
+                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    Medicines Catalog
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>Active formulations & SKUs</span>
+                  <div style={{ fontSize: '26px', fontWeight: 700, color: '#0f172a', lineHeight: 1 }}>
+                    {loadingSummary ? '—' : summary?.totalMedicines || 0}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Active SKUs</span>
                     <button
                       onClick={() => setActiveTab('medicines')}
-                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 'none', color: '#0f766e', fontSize: '11px', fontWeight: 700, padding: 0, cursor: 'pointer' }}
                     >
-                      View All <ArrowRight size={12} />
+                      View →
                     </button>
                   </div>
                 </div>
 
                 {/* Stock Value (Cost) */}
                 <div className="card" style={{
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #dcfce7',
-                  background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)'
+                  padding: '14px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  borderTop: '2px solid #0f766e',
+                  background: '#ffffff',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Stock Valuation (Cost)
-                      </div>
-                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                        ₹{loadingSummary ? '...' : (summary?.stockValueAtCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                    <div style={{ background: '#10b981', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)' }}>
-                      <Boxes size={22} />
-                    </div>
+                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    Stock Value (Cost)
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '11.5px', color: '#166534', fontWeight: 700 }}>
-                      ✓ {summary?.activeBatches || 0} active batch lots
-                    </span>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', lineHeight: 1 }}>
+                    ₹{loadingSummary ? '—' : (summary?.stockValueAtCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{summary?.activeBatches || 0} active batches</span>
                     <button
                       onClick={() => setActiveTab('batches')}
-                      style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 'none', color: '#0f766e', fontSize: '11px', fontWeight: 700, padding: 0, cursor: 'pointer' }}
                     >
-                      Batches <ArrowRight size={12} />
+                      Batches →
                     </button>
                   </div>
                 </div>
 
                 {/* Stock Value (MRP) */}
                 <div className="card" style={{
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: '1px solid #fef3c7',
-                  background: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
-                  boxShadow: '0 4px 12px rgba(217, 119, 6, 0.05)'
+                  padding: '14px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  borderTop: '2px solid #64748b',
+                  background: '#ffffff',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Retail Stock Value (MRP)
-                      </div>
-                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                        ₹{loadingSummary ? '...' : (summary?.stockValueAtRetail || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                    <div style={{ background: '#d97706', padding: '10px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)' }}>
-                      <TrendingUp size={22} />
-                    </div>
+                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    Retail Value (MRP)
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '11.5px', color: '#b45309', fontWeight: 600 }}>Gross Realizable Retail</span>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>Tax Inclusive</span>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', lineHeight: 1 }}>
+                    ₹{loadingSummary ? '—' : (summary?.stockValueAtRetail || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Tax inclusive</span>
                   </div>
                 </div>
 
                 {/* Expiry Alerts */}
                 <div className="card" style={{
-                  padding: '20px',
-                  borderRadius: '12px',
-                  border: (summary?.nearExpiryCount || 0) > 0 ? '1px solid #fecaca' : '1px solid #dcfce7',
-                  background: (summary?.nearExpiryCount || 0) > 0 ? 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)' : 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.05)'
+                  padding: '14px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  borderTop: `2px solid ${(summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#0f766e'}`,
+                  background: '#ffffff',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Near-Expiry & Expiry Alerts
-                      </div>
-                      <div style={{
-                        fontSize: '28px',
-                        fontWeight: 800,
-                        color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a',
-                        marginTop: '4px'
-                      }}>
-                        {loadingSummary ? '...' : summary?.nearExpiryCount || 0}
-                      </div>
-                    </div>
-                    <div style={{
-                      background: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a',
-                      padding: '10px',
-                      borderRadius: '10px',
-                      color: '#ffffff',
-                      boxShadow: (summary?.nearExpiryCount || 0) > 0 ? '0 4px 10px rgba(220, 38, 38, 0.3)' : '0 4px 10px rgba(22, 163, 74, 0.3)'
-                    }}>
-                      <Calendar size={22} />
-                    </div>
+                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    Near-Expiry Alerts
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '11.5px', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                      {(summary?.nearExpiryCount || 0) > 0 ? '⚠️ Action needed in 90 days' : '✓ All batches in safe period'}
+                  <div style={{
+                    fontSize: '26px', fontWeight: 700, lineHeight: 1,
+                    color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#0f172a'
+                  }}>
+                    {loadingSummary ? '—' : summary?.nearExpiryCount || 0}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '11px', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#94a3b8', fontWeight: (summary?.nearExpiryCount || 0) > 0 ? 600 : 400 }}>
+                      {(summary?.nearExpiryCount || 0) > 0 ? 'Action needed ≤90 days' : 'All batches safe'}
                     </span>
                     <button
                       onClick={() => setActiveTab('batches')}
-                      style={{ background: 'none', border: 'none', color: (summary?.nearExpiryCount || 0) > 0 ? '#dc2626' : '#16a34a', fontSize: '11.5px', fontWeight: 700, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 'none', color: '#0f766e', fontSize: '11px', fontWeight: 700, padding: 0, cursor: 'pointer' }}
                     >
-                      Inspect <ArrowRight size={12} />
+                      Inspect →
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Operations Command Hub Grid */}
+              {/* Operations Command Panel */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    ⚡ Operations & Workflows
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h2 style={{ fontSize: '12px', fontWeight: 700, color: '#475569', margin: 0, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                    Quick Actions
                   </h2>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>Click any module for instant access</span>
                 </div>
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                  gap: '16px'
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '8px'
                 }}>
                   {/* 1. Patient Quick Return */}
                   <div
@@ -1095,32 +1041,24 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '2px solid #0d9488',
-                      background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(13, 148, 136, 0.2) 100%)',
-                      boxShadow: '0 4px 14px rgba(13, 148, 136, 0.15)',
-                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #0f766e',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(13, 148, 136, 0.25)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(13, 148, 136, 0.15)';
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#0f766e', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(15, 118, 110, 0.3)' }}>
-                        <RotateCcw size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <RotateCcw size={18} color="#0f766e" strokeWidth={2} />
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f766e' }}>Patient Return</h3>
-                          <span style={{ background: '#0f766e', color: '#fff', fontSize: '9.5px', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>1-CLICK</span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Patient Return</span>
+                          <span style={{ background: '#f0fdf4', color: '#0f766e', border: '1px solid #bbf7d0', fontSize: '9.5px', padding: '0px 5px', borderRadius: '3px', fontWeight: 700 }}>QUICK</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>Instant stock credit & refund (No bill needed)</div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Instant stock credit & refund — no bill needed</div>
                       </div>
                     </div>
                   </div>
@@ -1131,32 +1069,24 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '2px solid #6366f1',
-                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.2) 100%)',
-                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.15)',
-                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #64748b',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(99, 102, 241, 0.25)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.15)';
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#4f46e5', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)' }}>
-                        <Truck size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Truck size={18} color="#475569" strokeWidth={2} />
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#4f46e5' }}>Supplier Return (CN)</h3>
-                          <span style={{ background: '#4f46e5', color: '#fff', fontSize: '9.5px', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>DEBIT NOTE</span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Supplier Return (CN)</span>
+                          <span style={{ background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', fontSize: '9.5px', padding: '0px 5px', borderRadius: '3px', fontWeight: 700 }}>DEBIT NOTE</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#475569', marginTop: '3px' }}>Return expired/slow items, deduct balance & print CN</div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Return expired/slow items, deduct balance & print CN</div>
                       </div>
                     </div>
                   </div>
@@ -1173,23 +1103,21 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #ccfbf1',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)',
-                      boxShadow: '0 4px 12px rgba(20, 184, 166, 0.08)',
-                      transition: 'transform 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #0f766e',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#0d9488', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(13, 148, 136, 0.3)' }}>
-                        <ShoppingCart size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <ShoppingCart size={18} color="#0f766e" strokeWidth={2} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Sales & POS Billing</h3>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Non-GST & GST retail bills, barcode scan [F2]</div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Sales & POS Billing</span>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Non-GST & GST retail bills, barcode scan [F2]</div>
                       </div>
                     </div>
                   </div>
@@ -1206,23 +1134,21 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #e0e7ff',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #eef2ff 100%)',
-                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.05)',
-                      transition: 'transform 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #0f766e',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#4f46e5', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)' }}>
-                        <Truck size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Truck size={18} color="#0f766e" strokeWidth={2} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Purchases & Inward</h3>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Distributor bills, lot entries & PTR calculation</div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Purchases & Inward</span>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Distributor bills, lot entries & PTR calculation</div>
                       </div>
                     </div>
                   </div>
@@ -1233,23 +1159,21 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #e0f2fe',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
-                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.05)',
-                      transition: 'transform 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #64748b',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#0284c7', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
-                        <Pill size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Pill size={18} color="#475569" strokeWidth={2} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Medicine Catalog</h3>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Add formulations, strip conversions & HSN codes</div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Medicine Catalog</span>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Add formulations, strip conversions & HSN codes</div>
                       </div>
                     </div>
                   </div>
@@ -1260,23 +1184,21 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #fef3c7',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)',
-                      boxShadow: '0 4px 12px rgba(217, 119, 6, 0.05)',
-                      transition: 'transform 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #64748b',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#d97706', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)' }}>
-                        <Layers size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Layers size={18} color="#475569" strokeWidth={2} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Batches & Expiry</h3>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>FEFO lot tracking, MRP/PTR & near-expiry list</div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Batches & Expiry</span>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>FEFO lot tracking, MRP/PTR & near-expiry list</div>
                       </div>
                     </div>
                   </div>
@@ -1287,23 +1209,21 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     className="card"
                     style={{
                       cursor: 'pointer',
-                      padding: '20px',
-                      borderRadius: '12px',
-                      border: '1px solid #dcfce7',
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
-                      boxShadow: '0 4px 12px rgba(22, 163, 74, 0.05)',
-                      transition: 'transform 0.15s ease'
+                      padding: '14px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      borderLeft: '3px solid #64748b',
+                      background: '#ffffff',
+                      transition: 'background 0.12s ease'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#ffffff'; }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ background: '#16a34a', padding: '12px', borderRadius: '10px', color: '#ffffff', boxShadow: '0 4px 10px rgba(22, 163, 74, 0.3)' }}>
-                        <Users size={24} />
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Users size={18} color="#475569" strokeWidth={2} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>Suppliers & Customers</h3>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Distributors, Drug Licenses (20B/21B) & balances</div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>Suppliers & Customers</span>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>Distributors, Drug Licenses (20B/21B) & balances</div>
                       </div>
                     </div>
                   </div>
