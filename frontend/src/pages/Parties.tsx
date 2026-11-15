@@ -124,6 +124,96 @@ export default function Parties() {
   const [statementEndDate, setStatementEndDate] = useState('');
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
+  // Payment / Receipt Voucher State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentParty, setPaymentParty] = useState<PartyLedger | null>(null);
+  const [paymentType, setPaymentType] = useState<'PAYMENT_IN' | 'PAYMENT_OUT'>('PAYMENT_IN');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(getLocalDateString());
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE'>('CASH');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [unpaidBills, setUnpaidBills] = useState<{ invoices: any[]; purchases: any[] }>({ invoices: [], purchases: [] });
+  const [selectedBillId, setSelectedBillId] = useState('');
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const handleOpenRecordPayment = async (party: PartyLedger) => {
+    setPaymentParty(party);
+    const defaultType = party.type === 'supplier' ? 'PAYMENT_OUT' : 'PAYMENT_IN';
+    setPaymentType(defaultType);
+    setPaymentAmount(party.outstandingBalance > 0 ? String(party.outstandingBalance) : '');
+    setPaymentDate(getLocalDateString());
+    setPaymentMode('CASH');
+    setPaymentRef('');
+    setPaymentNotes('');
+    setSelectedBillId('');
+    setPaymentError(null);
+    setShowPaymentModal(true);
+
+    try {
+      const res = await api.get<{ invoices: any[]; purchases: any[] }>(`/api/parties/${party.id}/unpaid-bills`, {
+        companyId: activeCompany?.id
+      });
+      setUnpaidBills(res || { invoices: [], purchases: [] });
+    } catch (err) {
+      console.warn('Failed to fetch unpaid bills:', err);
+    }
+  };
+
+  const handleSavePayment = async () => {
+    if (!paymentParty || !activeCompany) return;
+    const numAmount = parseFloat(paymentAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setPaymentError('Please enter a valid payment amount greater than 0.');
+      return;
+    }
+
+    setSubmittingPayment(true);
+    setPaymentError(null);
+
+    try {
+      let invoiceId = undefined;
+      let purchaseId = undefined;
+      if (selectedBillId) {
+        if (paymentType === 'PAYMENT_IN') {
+          invoiceId = selectedBillId;
+        } else {
+          purchaseId = selectedBillId;
+        }
+      }
+
+      await api.post(`/api/parties/${paymentParty.id}/payments`, {
+        paymentType,
+        amount: numAmount,
+        paymentDate,
+        paymentMode,
+        referenceNo: paymentRef.trim() || undefined,
+        notes: paymentNotes.trim() || undefined,
+        invoiceId,
+        purchaseId
+      }, {
+        companyId: activeCompany.id
+      });
+
+      setShowPaymentModal(false);
+      setSuccessMsg(`Payment voucher recorded successfully for ${paymentParty.name}.`);
+
+      // Refresh parties list
+      fetchParties();
+
+      // If statement modal is open for this party, refresh statement
+      if (showStatementModal && statementParty && statementParty.id === paymentParty.id) {
+        handleOpenStatement(paymentParty, statementStartDate, statementEndDate);
+      }
+    } catch (err: any) {
+      console.error('Failed to record payment voucher:', err);
+      setPaymentError(err.message || 'Failed to save payment voucher');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
   const handleOpenStatement = async (party: PartyLedger, start?: string, end?: string) => {
     setStatementParty(party);
     setShowStatementModal(true);
@@ -1058,6 +1148,30 @@ export default function Parties() {
                         >
                           <FileText size={13} />
                           <span>Statement</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenRecordPayment(p)}
+                          style={{
+                            padding: '6px 11px',
+                            background: p.type === 'supplier' ? 'rgba(217, 119, 6, 0.08)' : 'rgba(15, 118, 110, 0.08)',
+                            border: p.type === 'supplier' ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(15, 118, 110, 0.3)',
+                            borderRadius: '6px',
+                            color: p.type === 'supplier' ? '#b45309' : '#0f766e',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            transition: 'all 0.15s ease',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = p.type === 'supplier' ? 'rgba(217, 119, 6, 0.18)' : 'rgba(15, 118, 110, 0.18)'}
+                          onMouseLeave={e => e.currentTarget.style.background = p.type === 'supplier' ? 'rgba(217, 119, 6, 0.08)' : 'rgba(15, 118, 110, 0.08)'}
+                          title="Record Payment or Receipt Voucher for this ledger"
+                        >
+                          <CreditCard size={13} />
+                          <span>{p.type === 'supplier' ? 'Pay' : 'Receive'}</span>
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(p)}
@@ -2075,6 +2189,26 @@ export default function Parties() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
+                  onClick={() => handleOpenRecordPayment(statementParty)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: '#0f766e',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                  }}
+                  title="Record Payment or Receipt Voucher for this ledger"
+                >
+                  <CreditCard size={14} /> + Record Payment / Receipt
+                </button>
+                <button
                   onClick={() => handleOpenStatement(statementParty)}
                   className="btn btn-secondary"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700 }}
@@ -2422,6 +2556,361 @@ export default function Parties() {
                 style={{ padding: '0.6rem 1.4rem', fontWeight: 700 }}
               >
                 Close Statement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          RECORD PAYMENT / RECEIPT VOUCHER MODAL
+          ======================================================== */}
+      {showPaymentModal && paymentParty && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 200,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--card-bg, #ffffff)',
+            color: 'var(--text-primary, #0f172a)',
+            width: '100%',
+            maxWidth: '560px',
+            borderRadius: '12px',
+            padding: '1.6rem',
+            position: 'relative',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: '10px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>
+                  Record Payment / Receipt Voucher
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #64748b)', marginTop: '3px' }}>
+                  Party: <strong style={{ color: '#0f172a' }}>{paymentParty.name}</strong> ({paymentParty.type.toUpperCase()})
+                  {paymentParty.station && ` • Station: ${paymentParty.station}`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Error banner */}
+            {paymentError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '8px 12px', borderRadius: '6px', fontSize: '0.82rem' }}>
+                ⚠️ {paymentError}
+              </div>
+            )}
+
+            {/* Outstanding Balance Banner */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: paymentParty.outstandingBalance > 0 ? '#fffbeb' : '#f0fdf4',
+              border: `1px solid ${paymentParty.outstandingBalance > 0 ? '#fde68a' : '#bbf7d0'}`
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+                  Current Ledger Outstanding
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: paymentParty.outstandingBalance > 0 ? '#b45309' : '#166534' }}>
+                  ₹{paymentParty.outstandingBalance.toFixed(2)}
+                </div>
+              </div>
+              {paymentParty.outstandingBalance > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPaymentAmount(String(paymentParty.outstandingBalance))}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: '#0284c7',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Pay Full Balance
+                </button>
+              )}
+            </div>
+
+            {/* Voucher Type Tabs */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                VOUCHER TYPE :
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentType('PAYMENT_IN');
+                    setSelectedBillId('');
+                  }}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: '1.5px solid',
+                    borderColor: paymentType === 'PAYMENT_IN' ? '#0f766e' : '#cbd5e1',
+                    background: paymentType === 'PAYMENT_IN' ? '#f0fdf4' : '#ffffff',
+                    color: paymentType === 'PAYMENT_IN' ? '#0f766e' : '#64748b',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📥</span> RECEIPT (Money In / Client)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentType('PAYMENT_OUT');
+                    setSelectedBillId('');
+                  }}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: '1.5px solid',
+                    borderColor: paymentType === 'PAYMENT_OUT' ? '#b45309' : '#cbd5e1',
+                    background: paymentType === 'PAYMENT_OUT' ? '#fffbeb' : '#ffffff',
+                    color: paymentType === 'PAYMENT_OUT' ? '#b45309' : '#64748b',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📤</span> PAYMENT (Money Out / Supplier)
+                </button>
+              </div>
+            </div>
+
+            {/* Amount & Date */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  AMOUNT (₹) * :
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1.5px solid #0f766e',
+                    fontSize: '1.1rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  PAYMENT DATE * :
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={e => setPaymentDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.88rem',
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Payment Mode & Reference */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  PAYMENT MODE :
+                </label>
+                <select
+                  value={paymentMode}
+                  onChange={e => setPaymentMode(e.target.value as any)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    background: '#ffffff',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="CASH">💵 Cash</option>
+                  <option value="UPI">📱 UPI / QR Code</option>
+                  <option value="BANK_TRANSFER">🏦 Bank Transfer (NEFT / RTGS)</option>
+                  <option value="CHEQUE">📝 Cheque</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  REFERENCE / UTR / CHQ # :
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. UTR / Transaction / Cheque No."
+                  value={paymentRef}
+                  onChange={e => setPaymentRef(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Optional Unpaid Bill Link */}
+            {((paymentType === 'PAYMENT_IN' && (unpaidBills.invoices || []).length > 0) ||
+              (paymentType === 'PAYMENT_OUT' && (unpaidBills.purchases || []).length > 0)) && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  LINK TO UNPAID BILL (OPTIONAL) :
+                </label>
+                <select
+                  value={selectedBillId}
+                  onChange={e => {
+                    const billId = e.target.value;
+                    setSelectedBillId(billId);
+                    if (billId) {
+                      if (paymentType === 'PAYMENT_IN') {
+                        const inv = (unpaidBills.invoices || []).find(i => i.id === billId);
+                        if (inv && inv.balanceDue) setPaymentAmount(String(inv.balanceDue));
+                      } else {
+                        const pur = (unpaidBills.purchases || []).find(p => p.id === billId);
+                        if (pur && pur.balanceDue) setPaymentAmount(String(pur.balanceDue));
+                      }
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.82rem',
+                    color: '#0f172a',
+                    background: '#ffffff',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">— On Account / Lump Sum Payment —</option>
+                  {paymentType === 'PAYMENT_IN'
+                    ? (unpaidBills.invoices || []).map(inv => (
+                        <option key={inv.id} value={inv.id}>
+                          Invoice #{inv.invoiceNumber} ({new Date(inv.date).toLocaleDateString('en-IN')}) — Due: ₹{inv.balanceDue.toFixed(2)}
+                        </option>
+                      ))
+                    : (unpaidBills.purchases || []).map(pur => (
+                        <option key={pur.id} value={pur.id}>
+                          Bill #{pur.invoiceNumber} ({new Date(pur.date).toLocaleDateString('en-IN')}) — Due: ₹{pur.balanceDue.toFixed(2)}
+                        </option>
+                      ))}
+                </select>
+              </div>
+            )}
+
+            {/* Notes / Narration */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                NARRATION / NOTES :
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Received via PhonePe, or Cheque #123456 cleared"
+                value={paymentNotes}
+                onChange={e => setPaymentNotes(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.85rem',
+                  color: '#0f172a',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px', borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '0.55rem 1.2rem', fontWeight: 600, fontSize: '0.85rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePayment}
+                disabled={submittingPayment}
+                style={{
+                  backgroundColor: paymentType === 'PAYMENT_IN' ? '#0f766e' : '#b45309',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.55rem 1.4rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: submittingPayment ? 'not-allowed' : 'pointer',
+                  opacity: submittingPayment ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}
+              >
+                {submittingPayment ? 'Saving Voucher...' : `Save ${paymentType === 'PAYMENT_IN' ? 'Receipt' : 'Payment'} Voucher`}
               </button>
             </div>
           </div>

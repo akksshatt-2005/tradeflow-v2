@@ -1137,5 +1137,251 @@ router.delete('/payments/:paymentId', async (req: CompanyScopedRequest, res: Res
   }
 });
 
+/**
+ * Helper: Generate unique Payment/Receipt voucher number
+ * Format: REC-YYYY-XXXX (receipts) or PAY-YYYY-XXXX (payments)
+ */
+async function generatePaymentVoucherNo(companyId: string, paymentType: string): Promise<string> {
+  const currentYear = new Date().getFullYear();
+  const prefix = paymentType === 'PAYMENT_IN' ? `REC-${currentYear}-` : `PAY-${currentYear}-`;
+
+  try {
+    const lastPayment = await prisma.payment.findFirst({
+      where: {
+        companyId,
+        voucherNo: { startsWith: prefix }
+      },
+      orderBy: { voucherNo: 'desc' }
+    });
+
+    let nextSeq = 1;
+    if (lastPayment && lastPayment.voucherNo) {
+      const parts = lastPayment.voucherNo.split('-');
+      if (parts.length === 3) {
+        const parsed = parseInt(parts[2], 10);
+        if (!isNaN(parsed)) {
+          nextSeq = parsed + 1;
+        }
+      }
+    }
+
+    return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  } catch {
+    return `${prefix}${Date.now().toString().slice(-4)}`;
+  }
+}
+
+/**
+ * GET /parties/:id/unpaid-bills
+ * Returns unpaid / partially paid invoices and purchases for this party
+ */
+router.get('/:id/unpaid-bills', async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { id } = req.params;
+
+  try {
+    const party = await prisma.party.findFirst({
+      where: { id, companyId }
+    });
+
+    if (!party) {
+      res.status(404).json({ error: 'Party not found' });
+      return;
+    }
+
+    const partyName = party.name.trim();
+
+    // Invoices for this customer
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        companyId,
+        status: { in: ['UNPAID', 'PARTIAL'] },
+        OR: [
+          { partyId: id },
+          { customerName: { equals: partyName, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        invoiceDate: true,
+        grandTotal: true,
+        paidAmount: true,
+        status: true
+      },
+      orderBy: { invoiceDate: 'desc' }
+    });
+
+    // Purchases for this supplier
+    const purchases = await prisma.purchase.findMany({
+      where: {
+        companyId,
+        status: { in: ['UNPAID', 'PARTIAL'] },
+        OR: [
+          { supplierId: id },
+          { supplier: { name: { equals: partyName, mode: 'insensitive' } } }
+        ]
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        purchaseDate: true,
+        totalAmount: true,
+        paidAmount: true,
+        status: true
+      },
+      orderBy: { purchaseDate: 'desc' }
+    });
+
+    res.json({
+      invoices: invoices.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.invoiceDate,
+        total: Number(inv.grandTotal),
+        paid: Number(inv.paidAmount),
+        balanceDue: Math.max(0, Math.round((Number(inv.grandTotal) - Number(inv.paidAmount)) * 100) / 100)
+      })),
+      purchases: purchases.map(p => ({
+        id: p.id,
+        invoiceNumber: p.invoiceNumber,
+        date: p.purchaseDate,
+        total: Number(p.totalAmount),
+        paid: Number(p.paidAmount),
+        balanceDue: Math.max(0, Math.round((Number(p.totalAmount) - Number(p.paidAmount)) * 100) / 100)
+      }))
+    });
+  } catch (err: any) {
+    console.error('Error fetching unpaid bills:', err);
+    res.status(500).json({ error: err.message || 'Failed to load unpaid bills' });
+  }
+});
+
+/**
+ * POST /parties/:id/payments
+ * Record a payment (money paid to supplier) or receipt (money received from client)
+ */
+router.post('/:id/payments', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
+  const companyId = req.company!.id;
+  const { id } = req.params;
+  const {
+    amount,
+    paymentType: reqType,
+    paymentDate,
+    paymentMode = 'CASH',
+    referenceNo,
+    notes,
+    invoiceId,
+    purchaseId
+  } = req.body;
+
+  const numAmount = parseFloat(String(amount));
+  if (isNaN(numAmount) || numAmount <= 0) {
+    res.status(400).json({ error: 'Valid payment amount greater than 0 is required' });
+    return;
+  }
+
+  try {
+    await ensurePaymentsTableExists();
+
+    const party = await prisma.party.findFirst({
+      where: { id, companyId }
+    });
+
+    if (!party) {
+      res.status(404).json({ error: 'Party ledger not found' });
+      return;
+    }
+
+    // Default payment type if not provided:
+    // If party is supplier -> PAYMENT_OUT, if customer -> PAYMENT_IN
+    const paymentType = reqType || (party.type === 'supplier' ? 'PAYMENT_OUT' : 'PAYMENT_IN');
+    const voucherNo = await generatePaymentVoucherNo(companyId, paymentType);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create payment voucher
+      const payment = await tx.payment.create({
+        data: {
+          companyId,
+          partyId: id,
+          purchaseId: purchaseId || null,
+          invoiceId: invoiceId || null,
+          voucherNo,
+          paymentType,
+          amount: numAmount,
+          paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+          paymentMode,
+          referenceNo: referenceNo ? String(referenceNo).trim() : null,
+          notes: notes ? String(notes).trim() : null,
+          createdBy: req.user!.userId
+        }
+      });
+
+      // 2. If linked to an invoice (customer payment)
+      if (invoiceId) {
+        const inv = await tx.invoice.findFirst({
+          where: { id: invoiceId, companyId }
+        });
+        if (inv) {
+          const currentPaid = Number(inv.paidAmount || 0);
+          const grandTotal = Number(inv.grandTotal);
+          const newPaid = Math.min(grandTotal, Math.round((currentPaid + numAmount) * 100) / 100);
+          const newStatus = newPaid >= grandTotal ? 'PAID' : (newPaid > 0 ? 'PARTIAL' : 'UNPAID');
+
+          await tx.invoice.update({
+            where: { id: inv.id },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 3. If linked to a purchase (supplier payment)
+      if (purchaseId) {
+        const pur = await tx.purchase.findFirst({
+          where: { id: purchaseId, companyId }
+        });
+        if (pur) {
+          const currentPaid = Number(pur.paidAmount || 0);
+          const totalAmount = Number(pur.totalAmount);
+          const newPaid = Math.min(totalAmount, Math.round((currentPaid + numAmount) * 100) / 100);
+          const newStatus = newPaid >= totalAmount ? 'PAID' : (newPaid > 0 ? 'PARTIAL' : 'UNPAID');
+
+          await tx.purchase.update({
+            where: { id: pur.id },
+            data: {
+              paidAmount: newPaid,
+              status: newStatus
+            }
+          });
+        }
+      }
+
+      // 4. Update party outstanding balance
+      const updatedParty = await tx.party.update({
+        where: { id },
+        data: {
+          outstandingBalance: {
+            decrement: numAmount
+          }
+        }
+      });
+
+      return { payment, updatedParty };
+    });
+
+    res.status(201).json({
+      message: `${paymentType === 'PAYMENT_IN' ? 'Receipt' : 'Payment'} voucher #${result.payment.voucherNo} created successfully`,
+      payment: result.payment,
+      party: result.updatedParty
+    });
+  } catch (error: any) {
+    console.error('Failed to record party payment:', error);
+    res.status(500).json({ error: error.message || 'Failed to record payment' });
+  }
+});
+
 export default router;
 

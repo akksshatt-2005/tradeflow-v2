@@ -265,10 +265,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           console.warn('Failed to fetch items:', err);
           return { items: [] };
         }),
-        api.get<{ parties: CustomerParty[] }>('/api/parties?type=customer', {
+        api.get<{ parties: CustomerParty[] }>('/api/parties', {
           companyId: activeCompany.id
         }).catch(err => {
-          console.warn('Failed to fetch customers:', err);
+          console.warn('Failed to fetch ledger parties:', err);
           return { parties: [] };
         }),
         api.get<{ invoiceNumber: string }>('/api/invoices/next-number', {
@@ -612,8 +612,17 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         saleType === 'B2B' ? '[B2B TAX INVOICE]' : null
       ].filter(Boolean).join(' | ') || null;
 
+      // Auto-match party if user typed the name directly without clicking dropdown
+      let finalPartyId = selectedCustomer?.id || null;
+      if (!finalPartyId && customerName.trim()) {
+        const matched = (customers || []).find(c => c.name.trim().toLowerCase() === customerName.trim().toLowerCase());
+        if (matched) {
+          finalPartyId = matched.id;
+        }
+      }
+
       const payload = {
-        partyId: selectedCustomer?.id || null,
+        partyId: finalPartyId,
         customerName: customerName.trim() || (saleType === 'B2B' ? 'B2B Buyer' : 'Cash Customer'),
         customerPhone: customerPhone.trim() || null,
         customerAddress: patientAddress.trim() || null,
@@ -918,62 +927,143 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         {/* Dynamic Fields Grid */}
         {saleType === 'B2B' ? (
           /* B2B WHOLESALE - ONLY BUYER / FIRM NAME [F2] */
-          <div style={{ maxWidth: '520px' }}>
+          <div style={{ maxWidth: '560px' }}>
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>
                   BUYER / FIRM NAME [F2] * :
                 </label>
-                {selectedCustomer?.gstin && (
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f766e', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '3px' }}>
-                    GSTIN: {selectedCustomer.gstin}
-                  </span>
+                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                  Click to select from Suppliers & Clients
+                </span>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  ref={patientInputRef}
+                  type="text"
+                  placeholder="Click or type to search Doctor Clinic, Hospital, or Chemist Name..."
+                  value={customerName}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setCustomerName(val);
+                    setPatientName(val);
+                    if (selectedCustomer && selectedCustomer.name !== val) {
+                      setSelectedCustomer(null);
+                    }
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 2rem 0.55rem 0.75rem',
+                    background: 'var(--bg-secondary)',
+                    border: selectedCustomer ? '1.5px solid #0f766e' : '1.5px solid #93c5fd',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontWeight: '700'
+                  }}
+                />
+                {customerName && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      setCustomerName('');
+                      setPatientName('');
+                      setCustomerGstin('');
+                      setShowCustomerDropdown(true);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 700
+                    }}
+                    title="Clear party"
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
-              <input
-                ref={patientInputRef}
-                type="text"
-                placeholder="Doctor Clinic, Hospital, or Chemist Name"
-                value={customerName}
-                onChange={e => {
-                  const val = e.target.value;
-                  setCustomerName(val);
-                  setPatientName(val);
-                  if (selectedCustomer && selectedCustomer.name !== val) {
-                    setSelectedCustomer(null);
-                  }
-                  setShowCustomerDropdown(true);
-                }}
-                onFocus={() => setShowCustomerDropdown(true)}
-                style={{ width: '100%', padding: '0.55rem 0.75rem', background: 'var(--bg-secondary)', border: '1.5px solid #93c5fd', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
-              />
-              {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
+
+              {/* Linked Ledger Details Tag */}
+              {selectedCustomer && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginTop: '5px',
+                  padding: '4px 8px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '5px',
+                  fontSize: '0.73rem',
+                  color: '#166534'
+                }}>
+                  <span style={{ fontWeight: 800 }}>✓ Ledger Linked: {selectedCustomer.name}</span>
+                  {selectedCustomer.station && <span>📍 {selectedCustomer.station}</span>}
+                  {selectedCustomer.gstin && <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>GSTIN: {selectedCustomer.gstin}</span>}
+                  <span style={{
+                    marginLeft: 'auto',
+                    fontWeight: 800,
+                    color: selectedCustomer.outstandingBalance > 0 ? '#dc2626' : '#15803d'
+                  }}>
+                    Balance: ₹{selectedCustomer.outstandingBalance ? selectedCustomer.outstandingBalance.toFixed(2) : '0.00'}
+                  </span>
+                </div>
+              )}
+
+              {/* Suppliers & Clients Master Dropdown */}
+              {showCustomerDropdown && (customers || []).length > 0 && (
                 <div
                   style={{
                     position: 'absolute',
                     top: '100%',
                     left: 0,
                     right: 0,
-                    zIndex: 50,
-                    background: 'var(--card-bg)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-                    maxHeight: '220px',
-                    overflowY: 'auto'
+                    zIndex: 60,
+                    background: 'var(--card-bg, #ffffff)',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    marginTop: '4px'
                   }}
                 >
+                  <div style={{
+                    padding: '6px 10px',
+                    background: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    color: '#475569',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>📒 SUPPLIERS & CLIENTS LEDGER MASTER ({customers.length})</span>
+                    <span style={{ color: '#0f766e', cursor: 'pointer' }} onClick={() => setShowCustomerDropdown(false)}>Close ✕</span>
+                  </div>
+
                   {(customers || [])
                     .filter(c => {
                       if (!c) return false;
                       const q = (customerName || '').trim().toLowerCase();
-                      if (!q) return true;
-                      const nameMatch = (c.name || '').toLowerCase().includes(q);
+                      if (!q) return true; // show all when empty!
+                      const nameMatch = (c.name || '').toLowerCase().includes(q) || (c.mailTo || '').toLowerCase().includes(q);
                       const gstinMatch = Boolean(c.gstin && c.gstin.toLowerCase().includes(q));
                       const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
-                      return nameMatch || gstinMatch || phoneMatch;
+                      const stationMatch = Boolean(c.station && c.station.toLowerCase().includes(q));
+                      return nameMatch || gstinMatch || phoneMatch || stationMatch;
                     })
-                    .slice(0, 8)
+                    .slice(0, 15)
                     .map(c => (
                       <div
                         key={c.id}
@@ -991,20 +1081,40 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                         style={{
                           padding: '0.55rem 0.8rem',
                           cursor: 'pointer',
-                          borderBottom: '1px solid var(--border-color)',
-                          fontSize: '0.85rem'
+                          borderBottom: '1px solid var(--border-color, #f1f5f9)',
+                          fontSize: '0.82rem',
+                          transition: 'background 0.15s ease'
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary, #f1f5f9)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>{c.name}</span>
-                          {c.gstin && <span style={{ color: '#0f766e', fontSize: '0.75rem', fontFamily: 'monospace' }}>GSTIN: {c.gstin}</span>}
+                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{c.name}</span>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              backgroundColor: c.type === 'supplier' ? '#ffedd5' : '#e0e7ff',
+                              color: c.type === 'supplier' ? '#c2410c' : '#3730a3'
+                            }}>
+                              {c.type}
+                            </span>
+                          </div>
+                          <span style={{
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            color: c.outstandingBalance > 0 ? '#dc2626' : '#15803d'
+                          }}>
+                            {c.outstandingBalance > 0 ? `Due: ₹${c.outstandingBalance.toFixed(2)}` : 'Nil'}
+                          </span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #64748b)', display: 'flex', gap: '10px', marginTop: '2px', alignItems: 'center' }}>
                           {c.station && <span>📍 {c.station}</span>}
                           {c.phone && <span>📞 {c.phone}</span>}
-                          {c.outstandingBalance > 0 && <span style={{ color: '#dc2626', fontWeight: 600 }}>Due: ₹{c.outstandingBalance.toFixed(2)}</span>}
+                          {c.gstin && <span style={{ color: '#0f766e', fontFamily: 'monospace', fontWeight: 600 }}>GSTIN: {c.gstin}</span>}
                         </div>
                       </div>
                     ))}
