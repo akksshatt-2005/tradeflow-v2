@@ -22,12 +22,18 @@ import {
   Lock,
   LogOut,
   X,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  EyeOff,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 export interface AdminLicenseItem {
   id: string;
   licenseKey: string;
   registeredEmail: string;
+  vendorUsername?: string;
+  vendorPassword?: string;
   companyId: string | null;
   planType: string;
   status: 'ACTIVE' | 'GRACE' | 'EXPIRED' | 'PENDING' | 'SUSPENDED';
@@ -103,6 +109,27 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
   const [editingLicense, setEditingLicense] = useState<AdminLicenseItem | null>(null);
   const [newExpiryDateTime, setNewExpiryDateTime] = useState('');
   const [updatingExpiry, setUpdatingExpiry] = useState(false);
+
+  // Show / Hide password per license
+  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const toggleShowPassword = (id: string) => {
+    setShowPasswordMap(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Reset Password Modal
+  const [resetModalLicense, setResetModalLicense] = useState<AdminLicenseItem | null>(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+
+  const generateRandomResetPassword = () => {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let rand = '';
+    for (let i = 0; i < 4; i++) {
+      rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResetNewPassword(`Pharma@${rand}`);
+  };
 
   // Copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -323,6 +350,84 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
     navigator.clipboard.writeText(message);
     setHandoverCopied(true);
     setTimeout(() => setHandoverCopied(false), 2500);
+  };
+
+  const exportToExcel = () => {
+    if (licenses.length === 0) {
+      alert('No licenses to export.');
+      return;
+    }
+
+    const headers = [
+      'Company / Firm Name',
+      'GSTIN',
+      'Registered Email / Mobile',
+      'Vendor Login ID (Username)',
+      'Vendor Password',
+      'License Key',
+      'Plan Tier',
+      'Status',
+      'Expiry Date',
+      'Expiry Time',
+      'Days Remaining',
+      'Max Users',
+      'Admin Notes'
+    ];
+
+    const rows = licenses.map(lic => {
+      const expDate = new Date(lic.expiresAt);
+      const formattedDate = expDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      const formattedTime = expDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+      return [
+        lic.company?.name || 'Unassigned',
+        lic.company?.gstin || '',
+        lic.registeredEmail,
+        lic.vendorUsername || lic.registeredEmail,
+        lic.vendorPassword || 'Not Recorded',
+        lic.licenseKey,
+        lic.planType,
+        lic.status === 'SUSPENDED' ? 'SUSPENDED' : lic.effectiveStatus,
+        formattedDate,
+        formattedTime,
+        lic.daysRemaining,
+        lic.maxUsers,
+        lic.notes || ''
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`);
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const today = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `TradeFlow_Vendor_Credentials_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetModalLicense || !resetNewPassword.trim()) return;
+
+    setResettingPassword(true);
+    setResetSuccessMessage(null);
+    try {
+      const res = await adminFetch(`/api/licenses/admin/${resetModalLicense.id}/reset-password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ newPassword: resetNewPassword.trim() })
+      });
+
+      setResetSuccessMessage(res.message || 'Vendor password reset successfully!');
+      fetchLicenses();
+    } catch (err: any) {
+      alert(err.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   // ----------------------------------------------------
@@ -580,6 +685,27 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
+              onClick={exportToExcel}
+              title="Export all client license & vendor credentials to CSV/Excel"
+              style={{
+                backgroundColor: '#ffffff',
+                color: '#15803d',
+                border: '1px solid #86efac',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <FileSpreadsheet size={15} />
+              <span>Export to Excel (CSV)</span>
+            </button>
+
+            <button
               onClick={fetchLicenses}
               className="btn btn-secondary btn-sm"
               style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
@@ -592,6 +718,9 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
               onClick={() => {
                 setShowCreateModal(true);
                 setCreatedKey(null);
+                setCreatedCredentials(null);
+                setCreateUsername('');
+                generateRandomPassword();
               }}
               style={{
                 backgroundColor: '#0f766e',
@@ -709,6 +838,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                   <th style={{ padding: '10px 14px' }}>Status</th>
                   <th style={{ padding: '10px 14px' }}>Company / Client</th>
                   <th style={{ padding: '10px 14px' }}>Registered Email</th>
+                  <th style={{ padding: '10px 14px' }}>Login ID & Password</th>
                   <th style={{ padding: '10px 14px' }}>License Key</th>
                   <th style={{ padding: '10px 14px' }}>Plan</th>
                   <th style={{ padding: '10px 14px' }}>Expiry Date & Time</th>
@@ -719,13 +849,13 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                    <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                       Loading licenses from database...
                     </td>
                   </tr>
                 ) : filteredLicenses.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                    <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                       No licenses match the selected criteria.
                     </td>
                   </tr>
@@ -788,6 +918,78 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
                         <td style={{ padding: '10px 14px', color: '#334155' }}>
                           {lic.registeredEmail}
+                        </td>
+
+                        <td style={{ padding: '10px 14px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {/* Login ID / Username */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>ID:</span>
+                              <code style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', background: '#f0fdf4', padding: '1px 5px', borderRadius: '4px' }}>
+                                {lic.vendorUsername || lic.registeredEmail}
+                              </code>
+                              <button
+                                onClick={() => handleCopy(`user_${lic.id}`, lic.vendorUsername || lic.registeredEmail)}
+                                title="Copy Login ID"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '1px' }}
+                              >
+                                {copiedId === `user_${lic.id}` ? <CheckCircle2 size={12} color="#16a34a" /> : <Copy size={12} />}
+                              </button>
+                            </div>
+
+                            {/* Password */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>PW:</span>
+                              {lic.vendorPassword ? (
+                                <>
+                                  <code style={{ fontSize: '0.78rem', fontWeight: 700, color: '#dc2626', background: '#fef2f2', padding: '1px 5px', borderRadius: '4px', letterSpacing: showPasswordMap[lic.id] ? 'normal' : '0.15em' }}>
+                                    {showPasswordMap[lic.id] ? lic.vendorPassword : '••••••••'}
+                                  </code>
+                                  <button
+                                    onClick={() => toggleShowPassword(lic.id)}
+                                    title={showPasswordMap[lic.id] ? 'Hide Password' : 'Show Password'}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '1px' }}
+                                  >
+                                    {showPasswordMap[lic.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleCopy(`pwd_${lic.id}`, lic.vendorPassword || '')}
+                                    title="Copy Password"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '1px' }}
+                                  >
+                                    {copiedId === `pwd_${lic.id}` ? <CheckCircle2 size={12} color="#16a34a" /> : <Copy size={12} />}
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                  Not saved
+                                </span>
+                              )}
+
+                              {/* Reset Password Button */}
+                              <button
+                                onClick={() => {
+                                  setResetModalLicense(lic);
+                                  setResetSuccessMessage(null);
+                                  generateRandomResetPassword();
+                                }}
+                                title="Reset / Change Vendor Password"
+                                style={{
+                                  background: '#f1f5f9',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  color: '#334155',
+                                  fontSize: '0.66rem',
+                                  fontWeight: 700,
+                                  padding: '1px 5px',
+                                  marginLeft: '4px'
+                                }}
+                              >
+                                🔑 Reset
+                              </button>
+                            </div>
+                          </div>
                         </td>
 
                         <td style={{ padding: '10px 14px' }}>
@@ -1302,6 +1504,154 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
                   {updatingExpiry ? 'Saving...' : 'Update Expiry'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RESET VENDOR PASSWORD MODAL */}
+      {resetModalLicense && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem',
+          backdropFilter: 'blur(3px)'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '10px',
+            width: '100%',
+            maxWidth: '440px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid #e2e8f0',
+              backgroundColor: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Key size={15} color="#dc2626" /> Reset Vendor Password
+              </h3>
+              <button
+                onClick={() => setResetModalLicense(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPasswordSubmit} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#334155', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <div>Vendor Firm: <strong>{resetModalLicense.company?.name || resetModalLicense.registeredEmail}</strong></div>
+                <div style={{ marginTop: '3px' }}>Login ID: <strong style={{ color: '#0f766e' }}>{resetModalLicense.vendorUsername || resetModalLicense.registeredEmail}</strong></div>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569' }}>
+                    NEW PASSWORD * :
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateRandomResetPassword}
+                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.68rem', cursor: 'pointer', fontWeight: 700 }}
+                  >
+                    🎲 Auto-Gen
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={resetNewPassword}
+                  onChange={e => setResetNewPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '5px',
+                    border: '1.5px solid #dc2626',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                />
+              </div>
+
+              {resetSuccessMessage ? (
+                <div style={{ padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', color: '#166534', fontSize: '0.8rem', fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={16} /> {resetSuccessMessage}
+                  </div>
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const msg = `🏥 *TradeFlow ERP — Password Updated*\n👤 *Login ID:* ${resetModalLicense.vendorUsername || resetModalLicense.registeredEmail}\n🔑 *New Password:* ${resetNewPassword}\n🌐 *Portal:* https://tradeflow-v2-frontend.vercel.app/`;
+                        navigator.clipboard.writeText(msg);
+                        alert('Updated credentials copied to clipboard!');
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#16a34a',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Copy New Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetModalLicense(null)}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#f1f5f9',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setResetModalLicense(null)}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resettingPassword}
+                    className="btn btn-primary btn-sm"
+                    style={{ backgroundColor: '#dc2626', borderColor: '#dc2626', fontWeight: 700 }}
+                  >
+                    {resettingPassword ? 'Updating...' : 'Save New Password'}
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

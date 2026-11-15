@@ -268,6 +268,8 @@ router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedReque
       data: {
         licenseKey: key,
         registeredEmail: targetEmail,
+        vendorUsername: createdUser ? createdUser.username : (username ? String(username).trim().toLowerCase() : null),
+        vendorPassword: initialPassword || null,
         companyId: companyId ? String(companyId).trim() : null,
         planType: String(planType).toUpperCase(),
         status: companyId ? 'ACTIVE' : 'PENDING',
@@ -298,7 +300,7 @@ router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedReque
 
 /**
  * GET /api/licenses/admin/list
- * Super-Admin endpoint to view all system licenses
+ * Super-Admin endpoint to view all system licenses including saved credentials
  */
 router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, res: Response) => {
   try {
@@ -310,7 +312,14 @@ router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, 
             name: true,
             phone: true,
             email: true,
-            gstin: true
+            gstin: true,
+            userCompanies: {
+              select: {
+                user: {
+                  select: { username: true }
+                }
+              }
+            }
           }
         }
       },
@@ -333,8 +342,14 @@ router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, 
         else effectiveStatus = 'ACTIVE';
       }
 
+      const resolvedUsername = lic.vendorUsername ||
+        lic.company?.userCompanies?.[0]?.user?.username ||
+        lic.registeredEmail;
+
       return {
         ...lic,
+        vendorUsername: resolvedUsername,
+        vendorPassword: lic.vendorPassword || null,
         daysRemaining,
         effectiveStatus
       };
@@ -344,6 +359,79 @@ router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, 
   } catch (err: any) {
     console.error('Failed to list licenses:', err);
     res.status(500).json({ error: 'Could not load licenses list.' });
+  }
+});
+
+/**
+ * PATCH /api/licenses/admin/:id/reset-password
+ * Super-Admin endpoint to reset a vendor's password and update stored credentials
+ */
+router.patch('/admin/:id/reset-password', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+    res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    return;
+  }
+
+  try {
+    const license = await prisma.license.findUnique({
+      where: { id },
+      include: {
+        company: {
+          include: {
+            userCompanies: {
+              include: { user: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!license) {
+      res.status(404).json({ error: 'License not found.' });
+      return;
+    }
+
+    const targetUsername = license.vendorUsername ||
+      license.company?.userCompanies?.[0]?.user?.username ||
+      license.registeredEmail;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: targetUsername.toLowerCase() },
+          { username: license.registeredEmail.toLowerCase() }
+        ]
+      }
+    });
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    if (user) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash }
+      });
+    }
+
+    const updatedLicense = await prisma.license.update({
+      where: { id },
+      data: {
+        vendorPassword: newPassword,
+        vendorUsername: user?.username || targetUsername
+      }
+    });
+
+    res.json({
+      message: 'Vendor password reset successfully!',
+      vendorUsername: updatedLicense.vendorUsername,
+      vendorPassword: updatedLicense.vendorPassword
+    });
+  } catch (err: any) {
+    console.error('Failed to reset vendor password:', err);
+    res.status(500).json({ error: 'Could not reset password.' });
   }
 });
 

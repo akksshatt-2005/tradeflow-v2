@@ -563,6 +563,8 @@ model License {
   expiresAt       DateTime  @map("expires_at")
   
   notes           String?
+  vendorUsername  String?   @map("vendor_username")
+  vendorPassword  String?   @map("vendor_password")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
