@@ -831,7 +831,13 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
 
     const numRoundOff = parseFloat(roundOff) || 0;
     const computedTotal = Math.round((taxableAmount + cgstAmount + sgstAmount + igstAmount + numRoundOff) * 100) / 100;
-    const numPaid = Math.max(0, parseFloat(paidAmount) || (paymentMode === 'CASH' || paymentMode === 'BANK_TRANSFER' ? computedTotal : 0));
+    let numPaid: number;
+    if (paidAmount !== undefined && paidAmount !== null && paidAmount !== '') {
+      const parsed = parseFloat(String(paidAmount));
+      numPaid = !isNaN(parsed) ? Math.max(0, parsed) : (paymentMode === 'CREDIT' ? 0 : computedTotal);
+    } else {
+      numPaid = paymentMode === 'CREDIT' ? 0 : computedTotal;
+    }
     const finalPaid = Math.min(numPaid, computedTotal);
     const balanceAmount = Math.max(0, computedTotal - finalPaid);
 

@@ -668,7 +668,13 @@ router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: R
     const numRoundOff = parseFloat(roundOff) || 0;
     const computedGrandTotal = Math.round((finalTaxable + totalTax + numRoundOff) * 100) / 100;
 
-    const numPaid = Math.max(0, parseFloat(paidAmount) || (paymentMode === 'CASH' || paymentMode === 'UPI' || paymentMode === 'CARD' ? computedGrandTotal : 0));
+    let numPaid: number;
+    if (paidAmount !== undefined && paidAmount !== null && paidAmount !== '') {
+      const parsed = parseFloat(String(paidAmount));
+      numPaid = !isNaN(parsed) ? Math.max(0, parsed) : (paymentMode === 'CREDIT' ? 0 : computedGrandTotal);
+    } else {
+      numPaid = paymentMode === 'CREDIT' ? 0 : computedGrandTotal;
+    }
     const finalPaid = Math.min(numPaid, computedGrandTotal);
     const balanceAmount = Math.max(0, computedGrandTotal - finalPaid);
 
@@ -1049,7 +1055,13 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     const numRoundOff = parseFloat(roundOff) || 0;
     const computedGrandTotal = Math.round((finalTaxable + totalTax + numRoundOff) * 100) / 100;
 
-    const numPaid = Math.max(0, parseFloat(paidAmount) || (paymentMode === 'CASH' || paymentMode === 'UPI' || paymentMode === 'CARD' ? computedGrandTotal : 0));
+    let numPaid: number;
+    if (paidAmount !== undefined && paidAmount !== null && paidAmount !== '') {
+      const parsed = parseFloat(String(paidAmount));
+      numPaid = !isNaN(parsed) ? Math.max(0, parsed) : (paymentMode === 'CREDIT' ? 0 : computedGrandTotal);
+    } else {
+      numPaid = paymentMode === 'CREDIT' ? 0 : computedGrandTotal;
+    }
     const finalPaid = Math.min(numPaid, computedGrandTotal);
     const balanceAmount = Math.max(0, computedGrandTotal - finalPaid);
 
