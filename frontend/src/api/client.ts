@@ -335,6 +335,7 @@ export const api = {
   get: <T = any>(url: string, opts: RequestOptions = {}) => apiRequest<T>(url, { ...opts, method: 'GET' }),
   post: <T = any>(url: string, body: any, opts: RequestOptions = {}) => apiRequest<T>(url, { ...opts, method: 'POST', body: JSON.stringify(body) }),
   put: <T = any>(url: string, body: any, opts: RequestOptions = {}) => apiRequest<T>(url, { ...opts, method: 'PUT', body: JSON.stringify(body) }),
+  patch: <T = any>(url: string, body: any, opts: RequestOptions = {}) => apiRequest<T>(url, { ...opts, method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T = any>(url: string, opts: RequestOptions = {}) => apiRequest<T>(url, { ...opts, method: 'DELETE' })
 };
 

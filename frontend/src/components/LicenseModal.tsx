@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, AlertOctagon, Key, Calendar, Mail, CheckCircle2, Copy, Sparkles, X } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertOctagon, Key, Calendar, Mail, CheckCircle2, Copy, Sparkles, ExternalLink, X } from 'lucide-react';
 import api from '../api/client';
 
 export interface LicenseInfo {
@@ -24,6 +24,7 @@ interface LicenseModalProps {
   license: LicenseInfo | null;
   onLicenseUpdated: () => void;
   isOwner?: boolean;
+  onOpenManager?: () => void;
 }
 
 export default function LicenseModal({
@@ -31,7 +32,8 @@ export default function LicenseModal({
   onClose,
   license,
   onLicenseUpdated,
-  isOwner = false
+  isOwner = false,
+  onOpenManager
 }: LicenseModalProps) {
   const [activationKey, setActivationKey] = useState('');
   const [activating, setActivating] = useState(false);
@@ -371,8 +373,32 @@ export default function LicenseModal({
           borderTop: '1px solid #e2e8f0',
           backgroundColor: '#f8fafc',
           display: 'flex',
-          justifyContent: 'flex-end'
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
+          {onOpenManager ? (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenManager();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'none',
+                border: 'none',
+                color: '#0f766e',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              <ExternalLink size={13} />
+              <span>Open License Manager Panel</span>
+            </button>
+          ) : <div />}
+
           <button
             onClick={onClose}
             className="btn btn-secondary btn-sm"
