@@ -984,44 +984,50 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
   return (
     <div
-      ref={modalBackdropRef}
       className="invoice-modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(3px)',
+        background: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(4px)',
         zIndex: 1000,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: 'stretch',
         justifyContent: 'flex-start',
-        overflowY: 'auto',
-        padding: '1rem'
+        overflow: 'hidden',
+        padding: 0
       }}
     >
-      {/* ── PROFESSIONAL ERP COMMAND RIBBON (STICKY HEADER NO-PRINT) ── */}
-      <div className="no-print" style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        width: '100%',
-        maxWidth: '210mm',
-        background: '#ffffff',
-        border: '1px solid #cbd5e1',
-        borderRadius: '8px',
-        marginBottom: '1rem',
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)',
-        overflow: 'hidden'
-      }}>
+      {/* ── PROFESSIONAL ERP COMMAND RIBBON (PERMANENTLY PINNED AT TOP - NEVER SCROLLS) ── */}
+      <div
+        className="no-print"
+        style={{
+          width: '100%',
+          flexShrink: 0,
+          background: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          padding: '10px 16px',
+          display: 'flex',
+          justifyContent: 'center',
+          boxSizing: 'border-box',
+          zIndex: 110,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)'
+        }}
+      >
+        <div style={{
+          width: '100%',
+          maxWidth: '210mm',
+          background: '#ffffff',
+          border: '1px solid #cbd5e1',
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)',
+          overflow: 'hidden'
+        }}>
         {/* Tier 1: Document Meta & Status Header */}
         <div style={{
           padding: '8px 14px',
@@ -1376,7 +1382,27 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
           </div>
         </div>
       </div>
+    </div>
 
+    {/* ── INDEPENDENT SCROLLABLE INVOICE SHEET CONTAINER (ONLY THIS SCROLLS) ── */}
+    <div
+      ref={modalBackdropRef}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      style={{
+        flex: '1 1 auto',
+        width: '100%',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '16px 16px 48px 16px',
+        boxSizing: 'border-box'
+      }}
+    >
       {/* ── ALL 7 PROFESSIONAL COMPANY SETTINGS MODAL ── */}
       <CompanySettingsModal
         activeCompany={comp}
@@ -1486,5 +1512,6 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 };
