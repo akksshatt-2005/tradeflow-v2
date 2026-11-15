@@ -48,6 +48,7 @@ interface InvoiceListItem {
   dueDate?: string | null;
   customerName: string;
   customerPhone?: string | null;
+  customerGstin?: string | null;
   doctorName?: string | null;
   patientName?: string | null;
   paymentMode: string;
@@ -164,6 +165,7 @@ export default function Sales() {
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [saleFilter, setSaleFilter] = useState<'ALL' | 'B2B' | 'B2C'>('ALL');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -554,14 +556,31 @@ export default function Sales() {
       const createdB = new Date(b.createdAt || b.invoiceDate).getTime();
       return createdB - createdA;
     })
-    .filter(inv =>
-      inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
-      (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
-      (inv.customerPhone && inv.customerPhone.includes(search)) ||
-      (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase())) ||
-      (inv.paymentMode && inv.paymentMode.toLowerCase().includes(search.toLowerCase()))
-    );
+    .filter(inv => {
+      // B2B vs B2C filter
+      const hasGst = Boolean((inv.customerGstin && inv.customerGstin.trim().length >= 10) || (inv.party?.gstin && inv.party.gstin.trim().length >= 10));
+      if (saleFilter === 'B2B' && !hasGst) return false;
+      if (saleFilter === 'B2C' && hasGst) return false;
+
+      // Text search
+      return (
+        inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+        (inv.customerName && inv.customerName.toLowerCase().includes(search.toLowerCase())) ||
+        (inv.patientName && inv.patientName.toLowerCase().includes(search.toLowerCase())) ||
+        (inv.customerPhone && inv.customerPhone.includes(search)) ||
+        (inv.customerGstin && inv.customerGstin.toLowerCase().includes(search.toLowerCase())) ||
+        (inv.doctorName && inv.doctorName.toLowerCase().includes(search.toLowerCase())) ||
+        (inv.paymentMode && inv.paymentMode.toLowerCase().includes(search.toLowerCase()))
+      );
+    });
+
+  const b2bCount = useMemo(() => {
+    return invoices.filter(inv => Boolean((inv.customerGstin && inv.customerGstin.trim().length >= 10) || (inv.party?.gstin && inv.party.gstin.trim().length >= 10))).length;
+  }, [invoices]);
+
+  const b2cCount = useMemo(() => {
+    return Math.max(0, invoices.length - b2bCount);
+  }, [invoices.length, b2bCount]);
 
   // Group patient returns by voucherNumber so multi-item returns appear as 1 return entry
   const groupedReturns = useMemo<GroupedPatientReturn[]>(() => {
@@ -1081,7 +1100,7 @@ export default function Sales() {
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input
               type="text"
-              placeholder={activeTab === 'INVOICES' ? "Search invoice #, customer, patient..." : "Search return slip #, medicine, patient..."}
+              placeholder={activeTab === 'INVOICES' ? "Search invoice #, customer, GSTIN..." : "Search return slip #, medicine, patient..."}
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
@@ -1095,6 +1114,76 @@ export default function Sales() {
               }}
             />
           </div>
+
+          {/* B2B vs B2C Quick Filter (Only on Invoices Tab) */}
+          {activeTab === 'INVOICES' && (
+            <div style={{
+              display: 'inline-flex',
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              padding: '2px',
+              alignItems: 'center'
+            }}>
+              <button
+                type="button"
+                onClick={() => setSaleFilter('ALL')}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: saleFilter === 'ALL' ? '#0f766e' : 'transparent',
+                  color: saleFilter === 'ALL' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: saleFilter === 'ALL' ? 700 : 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All ({invoices.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaleFilter('B2B')}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: saleFilter === 'B2B' ? '#1d4ed8' : 'transparent',
+                  color: saleFilter === 'B2B' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: saleFilter === 'B2B' ? 700 : 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>🏢</span> B2B ({b2bCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaleFilter('B2C')}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: saleFilter === 'B2C' ? '#059669' : 'transparent',
+                  color: saleFilter === 'B2C' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: saleFilter === 'B2C' ? 700 : 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>🛒</span> B2C ({b2cCount})
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Customized Date Range Pickers */}
@@ -1293,16 +1382,34 @@ export default function Sales() {
                         {new Date(inv.invoiceDate).toLocaleDateString('en-IN')}
                       </td>
                       <td style={{ padding: '0.5rem 0.9rem', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                          {inv.customerName && inv.customerName !== 'Cash Customer' 
-                            ? inv.customerName 
-                            : (inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
-                        </span>
-                        {inv.doctorName && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                            • {inv.doctorName.startsWith('Dr') ? inv.doctorName : `Dr. ${inv.doctorName}`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                            {inv.customerName && inv.customerName !== 'Cash Customer' 
+                              ? inv.customerName 
+                              : (inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
                           </span>
-                        )}
+                          {(inv.customerGstin && inv.customerGstin.trim().length >= 10) || (inv.party?.gstin && inv.party.gstin.trim().length >= 10) ? (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 5px', borderRadius: '4px' }}>
+                              🏢 B2B
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#0f766e', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 5px', borderRadius: '4px' }}>
+                              🛒 B2C
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                          {((inv.customerGstin && inv.customerGstin.trim().length >= 10) || (inv.party?.gstin && inv.party.gstin.trim().length >= 10)) && (
+                            <span style={{ fontSize: '0.7rem', color: '#0f766e', fontFamily: 'monospace', fontWeight: 700 }}>
+                              GSTIN: {(inv.customerGstin || inv.party?.gstin || '').toUpperCase()}
+                            </span>
+                          )}
+                          {inv.doctorName && (
+                            <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+                              • {inv.doctorName.startsWith('Dr') ? inv.doctorName : `Dr. ${inv.doctorName}`}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '0.5rem 0.9rem', color: 'var(--text-secondary)', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {inv.itemsCount} meds

@@ -104,14 +104,71 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
   // Form Header State (Photo 3: Marg ERP Sale Entry)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerParty | null>(null);
+  const [saleType, setSaleType] = useState<'B2C' | 'B2B'>('B2C');
   const [customerName, setCustomerName] = useState('Cash Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [patientAddress, setPatientAddress] = useState('');
   const [customerGstin, setCustomerGstin] = useState('');
+  const [buyerDlNo, setBuyerDlNo] = useState('');
+  const [buyerState, setBuyerState] = useState('');
   const [doctorName, setDoctorName] = useState('Dr. Priyadarshi Srivastava');
   const [doctorRegNo, setDoctorRegNo] = useState('UPMC 59048');
   const [patientName, setPatientName] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  // Standard Indian State Codes for GSTIN
+  const GST_STATE_MAP: Record<string, string> = {
+    '01': 'JAMMU & KASHMIR',
+    '02': 'HIMACHAL PRADESH',
+    '03': 'PUNJAB',
+    '04': 'CHANDIGARH',
+    '05': 'UTTARAKHAND',
+    '06': 'HARYANA',
+    '07': 'DELHI',
+    '08': 'RAJASTHAN',
+    '09': 'UTTAR PRADESH',
+    '10': 'BIHAR',
+    '11': 'SIKKIM',
+    '12': 'ARUNACHAL PRADESH',
+    '13': 'NAGALAND',
+    '14': 'MANIPUR',
+    '15': 'MIZORAM',
+    '16': 'TRIPURA',
+    '17': 'MEGHALAYA',
+    '18': 'ASSAM',
+    '19': 'WEST BENGAL',
+    '20': 'JHARKHAND',
+    '21': 'ODISHA',
+    '22': 'CHHATTISGARH',
+    '23': 'MADHYA PRADESH',
+    '24': 'GUJARAT',
+    '27': 'MAHARASHTRA',
+    '29': 'KARNATAKA',
+    '30': 'GOA',
+    '32': 'KERALA',
+    '33': 'TAMIL NADU',
+    '36': 'TELANGANA',
+    '37': 'ANDHRA PRADESH',
+    '38': 'LADAKH'
+  };
+
+  const handleGstinChange = (rawVal: string) => {
+    const clean = rawVal.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15);
+    setCustomerGstin(clean);
+
+    if (clean.length >= 2) {
+      const code = clean.slice(0, 2);
+      const stName = GST_STATE_MAP[code];
+      if (stName) {
+        setBuyerState(stName);
+        const compState = (activeCompany?.state || 'UTTAR PRADESH').toUpperCase();
+        const isOutside = !compState.includes(stName) && !stName.includes(compState);
+        setIsInterState(isOutside);
+      }
+    } else {
+      setBuyerState('');
+    }
+  };
 
   // Invoice Date & Payment
   const [invoiceDate, setInvoiceDate] = useState(getLocalDateString());
@@ -239,6 +296,11 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           setCustomerPhone(inv.customerPhone || '');
           setPatientAddress(inv.patientAddress || inv.customerAddress || '');
           setCustomerGstin(inv.customerGstin || '');
+          if (inv.customerGstin && inv.customerGstin.trim().length >= 10) {
+            setSaleType('B2B');
+            handleGstinChange(inv.customerGstin);
+            setIsGstBill(true);
+          }
           setDoctorName(inv.doctorName || '');
           setDoctorRegNo(inv.doctorRegNo || '');
           setPatientName(inv.patientName || '');
@@ -246,7 +308,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           setBillDiscountPct(Number(inv.billDiscountPct) || 0);
           setPaidAmount(String(inv.paidAmount ?? ''));
           setNotes(inv.notes || '');
-          setIsGstBill(Number(inv.totalTax || 0) > 0);
+          setIsGstBill(Number(inv.totalTax || 0) > 0 || Boolean(inv.customerGstin));
 
           if (inv.partyId && partiesRes.parties) {
             const found = partiesRes.parties.find((p: CustomerParty) => p.id === inv.partyId);
@@ -542,12 +604,27 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setSubmitting(true);
       setError(null);
 
+      const cleanGstin = customerGstin ? customerGstin.trim().toUpperCase() : null;
+
+      if (saleType === 'B2B' && (!cleanGstin || cleanGstin.length < 15)) {
+        if (!window.confirm('Notice: B2B Tax Invoices standardly require a valid 15-character GSTIN so your buyer can claim Input Tax Credit (ITC). Do you want to proceed and save?')) {
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const combinedNotes = [
+        notes.trim() || null,
+        buyerDlNo.trim() ? `[BUYER DL: ${buyerDlNo.trim().toUpperCase()}]` : null,
+        saleType === 'B2B' ? '[B2B TAX INVOICE]' : null
+      ].filter(Boolean).join(' | ') || null;
+
       const payload = {
         partyId: selectedCustomer?.id || null,
-        customerName: customerName.trim() || 'Cash Customer',
+        customerName: customerName.trim() || (saleType === 'B2B' ? 'B2B Buyer' : 'Cash Customer'),
         customerPhone: customerPhone.trim() || null,
         customerAddress: patientAddress.trim() || null,
-        customerGstin: customerGstin.trim() || null,
+        customerGstin: cleanGstin,
         doctorName: doctorName.trim() || null,
         doctorRegNo: doctorRegNo.trim() || null,
         patientName: patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : null),
@@ -559,7 +636,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         billDiscountPct,
         isInterState,
         roundOff,
-        notes: notes.trim() || null,
+        notes: combinedNotes,
         items: invoiceItems.map(i => ({
           itemId: i.itemId,
           batchId: i.batchId,
@@ -763,139 +840,387 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
       )}
 
-      {/* Patient & Doctor Header Bar (Responsive Grid) */}
-      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-          
-          {/* Patient [F2] */}
-          <div style={{ position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--brand-teal)', marginBottom: '0.3rem' }}>
-              PATIENT [F2] / CUSTOMER :
-            </label>
-            <input
-              ref={patientInputRef}
-              type="text"
-              placeholder="Patient / Customer Name"
-              value={customerName}
-              onChange={e => {
-                const val = e.target.value;
-                setCustomerName(val);
-                setPatientName(val);
-                if (selectedCustomer && selectedCustomer.name !== val && !selectedCustomer.isCash) {
-                  setSelectedCustomer(null);
-                }
-                setShowCustomerDropdown(true);
-              }}
-              onFocus={() => setShowCustomerDropdown(true)}
-              style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
-            />
-            {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
-              <div
+      {/* B2C Retail vs B2B Wholesale Tax Invoice Switcher & Customer Header */}
+      <div style={{ background: 'var(--card-bg)', border: saleType === 'B2B' ? '1.5px solid #2563eb' : '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', boxShadow: saleType === 'B2B' ? '0 2px 8px rgba(37,99,235,0.08)' : 'none' }}>
+        
+        {/* Category Toggle Strip */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              SALE CATEGORY :
+            </span>
+            <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '2px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSaleType('B2C');
+                  if (!selectedCustomer) {
+                    setCustomerName('Cash Customer');
+                    setPatientName('Cash Customer');
+                    setCustomerGstin('');
+                  }
+                }}
                 style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  zIndex: 50,
-                  background: 'var(--card-bg)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-                  maxHeight: '180px',
-                  overflowY: 'auto'
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: saleType === 'B2C' ? '#0f766e' : 'transparent',
+                  color: saleType === 'B2C' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: saleType === 'B2C' ? 700 : 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                {(customers || [])
-                  .filter(c => {
-                    if (!c) return false;
-                    const q = (customerName || '').trim().toLowerCase();
-                    if (!q) return true;
-                    const nameMatch = (c.name || '').toLowerCase().includes(q);
-                    const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
-                    return nameMatch || phoneMatch;
-                  })
-                  .slice(0, 6)
-                  .map(c => (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        setSelectedCustomer(c);
-                        setCustomerName(c.name);
-                        setPatientName(c.name);
-                        if (c.phone) setCustomerPhone(c.phone);
-                        if (c.address) setPatientAddress(c.address);
-                        if (c.gstin) setCustomerGstin(c.gstin);
-                        setShowCustomerDropdown(false);
-                      }}
-                      style={{
-                        padding: '0.5rem 0.8rem',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid var(--border-color)',
-                        fontSize: '0.85rem'
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{c.name} {c.isCash ? '(Cash)' : ''}</div>
-                      {c.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📞 {c.phone}</div>}
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
+                <span>🛒</span> B2C Retail (Patient Walk-in)
+              </button>
 
-          {/* Patient Address & Phone */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-              ADDRESS / MOBILE :
-            </label>
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
-              <input
-                type="text"
-                placeholder="Mobile"
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-                style={{ width: '105px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-              />
-              <input
-                type="text"
-                placeholder="Patient Address"
-                value={patientAddress}
-                onChange={e => setPatientAddress(e.target.value)}
-                style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  setSaleType('B2B');
+                  handleToggleGstBill(true);
+                  if (customerName === 'Cash Customer') {
+                    setCustomerName('');
+                    setPatientName('');
+                    setSelectedCustomer(null);
+                  }
+                }}
+                style={{
+                  padding: '0.35rem 0.8rem',
+                  borderRadius: '5px',
+                  border: 'none',
+                  background: saleType === 'B2B' ? '#1d4ed8' : 'transparent',
+                  color: saleType === 'B2B' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: saleType === 'B2B' ? 700 : 500,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>🏢</span> B2B Wholesale / Tax Invoice (With GSTIN)
+              </button>
             </div>
           </div>
 
-          {/* Doctor [F1] */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0284c7', marginBottom: '0.3rem' }}>
-              DOCTOR [F1] :
-            </label>
-            <input
-              ref={doctorInputRef}
-              type="text"
-              placeholder="Dr. Name (Prescribing Doctor)"
-              value={doctorName}
-              onChange={e => setDoctorName(e.target.value)}
-              style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
-            />
-          </div>
-
-          {/* Reg. No. */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-              REG. NO. :
-            </label>
-            <input
-              type="text"
-              placeholder="Doctor MCI Reg No."
-              value={doctorRegNo}
-              onChange={e => setDoctorRegNo(e.target.value.toUpperCase())}
-              style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-            />
+            {saleType === 'B2B' ? (
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '3px 10px', borderRadius: '4px' }}>
+                ✓ B2B Tax Invoice (Reports to GSTR-1 Table 4 for Buyer ITC Claim)
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f766e', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '3px 10px', borderRadius: '4px' }}>
+                ✓ B2C Retail Sale (Reports to GSTR-1 Table 7 Retail Cash Register)
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Dynamic Fields Grid */}
+        {saleType === 'B2B' ? (
+          /* B2B WHOLESALE FIELDS */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.9rem', alignItems: 'end' }}>
+            
+            {/* Buyer Firm Name [F2] */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8', marginBottom: '0.3rem' }}>
+                BUYER / FIRM NAME [F2] * :
+              </label>
+              <input
+                ref={patientInputRef}
+                type="text"
+                placeholder="Doctor Clinic, Hospital, or Chemist Name"
+                value={customerName}
+                onChange={e => {
+                  const val = e.target.value;
+                  setCustomerName(val);
+                  setPatientName(val);
+                  if (selectedCustomer && selectedCustomer.name !== val) {
+                    setSelectedCustomer(null);
+                  }
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1.5px solid #93c5fd', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '700' }}
+              />
+              {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 50,
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                    maxHeight: '220px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  {(customers || [])
+                    .filter(c => {
+                      if (!c) return false;
+                      const q = (customerName || '').trim().toLowerCase();
+                      if (!q) return true;
+                      const nameMatch = (c.name || '').toLowerCase().includes(q);
+                      const gstinMatch = Boolean(c.gstin && c.gstin.toLowerCase().includes(q));
+                      const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
+                      return nameMatch || gstinMatch || phoneMatch;
+                    })
+                    .slice(0, 8)
+                    .map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomer(c);
+                          setCustomerName(c.name);
+                          setPatientName(c.name);
+                          if (c.phone) setCustomerPhone(c.phone);
+                          if (c.address) setPatientAddress(c.address);
+                          if (c.gstin) {
+                            handleGstinChange(c.gstin);
+                          }
+                          setShowCustomerDropdown(false);
+                        }}
+                        style={{
+                          padding: '0.55rem 0.8rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--border-color)',
+                          fontSize: '0.85rem'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{c.name}</span>
+                          {c.gstin && <span style={{ color: '#0f766e', fontSize: '0.75rem', fontFamily: 'monospace' }}>GSTIN: {c.gstin}</span>}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px', marginTop: '2px' }}>
+                          {c.station && <span>📍 {c.station}</span>}
+                          {c.phone && <span>📞 {c.phone}</span>}
+                          {c.outstandingBalance > 0 && <span style={{ color: '#dc2626', fontWeight: 600 }}>Due: ₹{c.outstandingBalance.toFixed(2)}</span>}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Buyer GSTIN */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>
+                  BUYER GSTIN * :
+                </label>
+                {buyerState && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isInterState ? '#b45309' : '#059669', background: isInterState ? '#fffbeb' : '#f0fdf4', border: `1px solid ${isInterState ? '#fde68a' : '#bbf7d0'}`, padding: '1px 6px', borderRadius: '3px' }}>
+                    {buyerState} ({isInterState ? 'IGST' : 'CGST+SGST'})
+                  </span>
+                )}
+              </div>
+              <input
+                type="text"
+                placeholder="15-digit GSTIN (e.g. 09AOAPV7912G1ZO)"
+                value={customerGstin}
+                onChange={e => handleGstinChange(e.target.value)}
+                maxLength={15}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem',
+                  background: 'var(--bg-secondary)',
+                  border: '1.5px solid #93c5fd',
+                  borderRadius: '6px',
+                  color: '#0f766e',
+                  fontWeight: '800',
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.04em'
+                }}
+              />
+            </div>
+
+            {/* Buyer Drug License No. */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                BUYER D.L. NO. (Drug License) :
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 20B/21B UP/LKO/2024"
+                value={buyerDlNo}
+                onChange={e => setBuyerDlNo(e.target.value.toUpperCase())}
+                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+              />
+            </div>
+
+            {/* Buyer Address & Station */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                BUYER ADDRESS / MOBILE :
+              </label>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <input
+                  type="text"
+                  placeholder="Mobile"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  style={{ width: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Firm Billing Address"
+                  value={patientAddress}
+                  onChange={e => setPatientAddress(e.target.value)}
+                  style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+
+          </div>
+        ) : (
+          /* B2C RETAIL PATIENT FIELDS */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+            
+            {/* Patient [F2] */}
+            <div style={{ position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--brand-teal)', marginBottom: '0.3rem' }}>
+                PATIENT [F2] / CUSTOMER :
+              </label>
+              <input
+                ref={patientInputRef}
+                type="text"
+                placeholder="Patient / Customer Name"
+                value={customerName}
+                onChange={e => {
+                  const val = e.target.value;
+                  setCustomerName(val);
+                  setPatientName(val);
+                  if (selectedCustomer && selectedCustomer.name !== val && !selectedCustomer.isCash) {
+                    setSelectedCustomer(null);
+                  }
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+              />
+              {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 50,
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                    maxHeight: '180px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  {(customers || [])
+                    .filter(c => {
+                      if (!c) return false;
+                      const q = (customerName || '').trim().toLowerCase();
+                      if (!q) return true;
+                      const nameMatch = (c.name || '').toLowerCase().includes(q);
+                      const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
+                      return nameMatch || phoneMatch;
+                    })
+                    .slice(0, 6)
+                    .map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomer(c);
+                          setCustomerName(c.name);
+                          setPatientName(c.name);
+                          if (c.phone) setCustomerPhone(c.phone);
+                          if (c.address) setPatientAddress(c.address);
+                          if (c.gstin) {
+                            handleGstinChange(c.gstin);
+                            setSaleType('B2B');
+                          }
+                          setShowCustomerDropdown(false);
+                        }}
+                        style={{
+                          padding: '0.5rem 0.8rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--border-color)',
+                          fontSize: '0.85rem'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{c.name} {c.isCash ? '(Cash)' : ''}</div>
+                        {c.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📞 {c.phone}</div>}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Patient Address & Phone */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                ADDRESS / MOBILE :
+              </label>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <input
+                  type="text"
+                  placeholder="Mobile"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  style={{ width: '105px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Patient Address"
+                  value={patientAddress}
+                  onChange={e => setPatientAddress(e.target.value)}
+                  style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+
+            {/* Doctor [F1] */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0284c7', marginBottom: '0.3rem' }}>
+                DOCTOR [F1] :
+              </label>
+              <input
+                ref={doctorInputRef}
+                type="text"
+                placeholder="Dr. Name (Prescribing Doctor)"
+                value={doctorName}
+                onChange={e => setDoctorName(e.target.value)}
+                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+              />
+            </div>
+
+            {/* Reg. No. */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                REG. NO. :
+              </label>
+              <input
+                type="text"
+                placeholder="Doctor MCI Reg No."
+                value={doctorRegNo}
+                onChange={e => setDoctorRegNo(e.target.value.toUpperCase())}
+                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Medicine Search & Bill Grid (Photo 3 Middle Table) */}

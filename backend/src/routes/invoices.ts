@@ -260,6 +260,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
         dueDate: inv.dueDate ? inv.dueDate.toISOString() : null,
         customerName: inv.customerName,
         customerPhone: inv.customerPhone,
+        customerGstin: inv.customerGstin || inv.party?.gstin || null,
         doctorName: inv.doctorName,
         patientName: inv.patientName,
         paymentMode: inv.paymentMode,
