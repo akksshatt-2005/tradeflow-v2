@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Printer, Edit2, Trash2, X, ChevronDown, ChevronUp, FileText, Settings2, Check, Upload } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { CompanySettings, getCompanySettings } from '../utils/companySettings';
@@ -108,6 +108,14 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const [layoutMode, setLayoutMode] = useState<InvoiceLayout>('B2B_WHOLESALE');
   const [showVouchers, setShowVouchers] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const modalBackdropRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to top when switching copy mode (e.g. Both Copies) or layout
+  useEffect(() => {
+    if (modalBackdropRef.current) {
+      modalBackdropRef.current.scrollTop = 0;
+    }
+  }, [copyMode, layoutMode]);
 
   // Active company resolution (Strict tenant isolation)
   const comp = invoice.company || activeCompany || {};
@@ -466,14 +474,16 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             background: '#dbeafe',
             borderBottom: '1.5px solid #000000',
             textAlign: 'center',
-            padding: '3px 0',
-            fontWeight: 900,
-            fontSize: '12px',
-            letterSpacing: '1px',
+            padding: '3px 4px',
             color: '#1e3a8a',
             textTransform: 'uppercase'
           }}>
-            GST INVOICE
+            <div style={{ fontWeight: 900, fontSize: '12px', letterSpacing: '1px', lineHeight: 1.15 }}>
+              GST INVOICE
+            </div>
+            <div style={{ fontSize: '8px', fontWeight: 800, color: '#1e40af', letterSpacing: '0.3px', marginTop: '1px' }}>
+              {copyTitle} {copySubtitle}
+            </div>
           </div>
 
           {/* 2 Sub-Columns */}
@@ -974,6 +984,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
   return (
     <div
+      ref={modalBackdropRef}
       className="invoice-modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -997,15 +1008,18 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         padding: '1rem'
       }}
     >
-      {/* ── PROFESSIONAL ERP COMMAND RIBBON (NO-PRINT) ── */}
+      {/* ── PROFESSIONAL ERP COMMAND RIBBON (STICKY HEADER NO-PRINT) ── */}
       <div className="no-print" style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
         width: '100%',
         maxWidth: '210mm',
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '8px',
         marginBottom: '1rem',
-        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)',
         overflow: 'hidden'
       }}>
         {/* Tier 1: Document Meta & Status Header */}
@@ -1392,20 +1406,79 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         {/* Customer Copy */}
         {(copyMode === 'CUSTOMER' || copyMode === 'BOTH') && (
           <div style={{ pageBreakAfter: copyMode === 'BOTH' ? 'always' : 'auto' }}>
+            {copyMode === 'BOTH' && (
+              <div className="no-print" style={{
+                background: '#0f766e',
+                color: '#ffffff',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: '4px 4px 0 0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                letterSpacing: '0.4px',
+                marginBottom: '0px'
+              }}>
+                📄 PAGE 1 : ORIGINAL FOR RECIPIENT (CUSTOMER COPY)
+              </div>
+            )}
             {layoutMode === 'B2B_WHOLESALE'
               ? renderWholesaleB2BInvoiceSheet('ORIGINAL FOR RECIPIENT', '(CUSTOMER COPY)')
               : renderRetailInvoiceSheet('ORIGINAL FOR RECIPIENT', '(CUSTOMER COPY)')}
           </div>
         )}
 
-        {/* Separator if printing both */}
+        {/* Separator if displaying both on screen */}
         {copyMode === 'BOTH' && (
-          <div className="no-print" style={{ height: '24px', background: 'transparent' }} />
+          <div className="no-print" style={{
+            margin: '24px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            width: '100%'
+          }}>
+            <div style={{ flex: 1, height: '1.5px', background: '#94a3b8', opacity: 0.5 }} />
+            <span style={{
+              background: '#1e3a8a',
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: 800,
+              padding: '4px 14px',
+              borderRadius: '20px',
+              letterSpacing: '0.5px',
+              boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              ✂️ PAGE 2 : DUPLICATE FOR SUPPLIER (SHOP / AUDIT COPY)
+            </span>
+            <div style={{ flex: 1, height: '1.5px', background: '#94a3b8', opacity: 0.5 }} />
+          </div>
         )}
 
         {/* Shop / Supplier Copy */}
         {(copyMode === 'SHOP' || copyMode === 'BOTH') && (
           <div>
+            {copyMode === 'BOTH' && (
+              <div className="no-print" style={{
+                background: '#1e3a8a',
+                color: '#ffffff',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: '4px 4px 0 0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                letterSpacing: '0.4px',
+                marginBottom: '0px'
+              }}>
+                📄 PAGE 2 : DUPLICATE FOR SUPPLIER (SHOP / AUDIT COPY)
+              </div>
+            )}
             {layoutMode === 'B2B_WHOLESALE'
               ? renderWholesaleB2BInvoiceSheet('DUPLICATE FOR SUPPLIER', '(SHOP / AUDIT COPY)')
               : renderRetailInvoiceSheet('DUPLICATE FOR SUPPLIER', '(SHOP / AUDIT COPY)')}
