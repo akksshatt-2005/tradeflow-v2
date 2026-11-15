@@ -1313,6 +1313,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 step="0.5"
                 placeholder="0"
                 value={billDiscountPct === 0 ? '' : billDiscountPct}
+                onFocus={e => e.target.select()}
+                onClick={e => (e.target as HTMLInputElement).select()}
                 onChange={e => {
                   setManualDiscountOverride(true);
                   setBillDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)));
@@ -1666,6 +1668,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           placeholder="0"
                           value={item.strips === 0 ? '' : item.strips}
                           onFocus={e => e.target.select()}
+                          onClick={e => (e.target as HTMLInputElement).select()}
                           onChange={e => {
                             const val = e.target.value;
                             updateLineItem(idx, { strips: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
@@ -1689,6 +1692,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           title="Loose Tablets (e.g. 2 tabs)"
                           value={item.looseQty === 0 ? '' : item.looseQty}
                           onFocus={e => e.target.select()}
+                          onClick={e => (e.target as HTMLInputElement).select()}
                           onChange={e => {
                             const val = e.target.value;
                             updateLineItem(idx, { looseQty: val === '' ? 0 : Math.max(0, parseInt(val) || 0) });
@@ -1711,6 +1715,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           placeholder="0.00"
                           value={item.unitPrice === 0 ? '' : item.unitPrice}
                           onFocus={e => e.target.select()}
+                          onClick={e => (e.target as HTMLInputElement).select()}
                           onChange={e => {
                             const val = e.target.value;
                             updateLineItem(idx, { unitPrice: val === '' ? 0 : Math.max(0, parseFloat(val) || 0) });
@@ -1728,6 +1733,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           placeholder="0"
                           value={item.discountPercent === 0 ? '' : item.discountPercent}
                           onFocus={e => e.target.select()}
+                          onClick={e => (e.target as HTMLInputElement).select()}
                           onChange={e => {
                             const val = e.target.value;
                             updateLineItem(idx, { discountPercent: val === '' ? 0 : Math.min(100, Math.max(0, parseFloat(val) || 0)) });
@@ -1745,8 +1751,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                             max="100"
                             step="0.5"
                             placeholder="0"
-                            value={item.gstRate === 0 ? '0' : item.gstRate}
+                            value={item.gstRate === 0 ? '' : item.gstRate}
                             onFocus={e => e.target.select()}
+                            onClick={e => (e.target as HTMLInputElement).select()}
                             onChange={e => {
                               const val = e.target.value;
                               const newGst = val === '' ? 0 : Math.max(0, parseFloat(val) || 0);
