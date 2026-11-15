@@ -56,6 +56,7 @@ model Company {
   invoices        Invoice[]
   settlements     SupplierSettlement[]
   payments        Payment[]
+  licenses        License[]
 
   @@map("companies")
 }
@@ -544,4 +545,32 @@ model Payment {
   @@index([companyId, invoiceId])
   @@map("payments")
 }
+
+// 20. Licenses (Cloud-Verified SaaS Licensing Engine)
+model License {
+  id              String    @id @default(uuid())
+  licenseKey      String    @unique @map("license_key")
+  registeredEmail String    @map("registered_email")
+  companyId       String?   @map("company_id")
+  planType        String    @default("RETAIL_STD") @map("plan_type") // TRIAL, RETAIL_STD, WHOLESALE, ENTERPRISE
+  status          String    @default("PENDING")    @map("status")    // PENDING, ACTIVE, GRACE, EXPIRED, SUSPENDED
+  
+  maxUsers        Int       @default(2) @map("max_users")
+  gracePeriodDays Int       @default(7) @map("grace_period_days")
+  
+  issuedAt        DateTime  @default(now()) @map("issued_at")
+  activatedAt     DateTime? @map("activated_at")
+  expiresAt       DateTime  @map("expires_at")
+  
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  company         Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([registeredEmail, status])
+  @@index([companyId, expiresAt])
+  @@map("licenses")
+}
+
 

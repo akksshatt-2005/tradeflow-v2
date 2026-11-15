@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
 import { idempotencyMiddleware } from '../middleware/idempotency.js';
+import { requireActiveLicense } from '../middleware/licenseCheck.js';
 import prisma from '../prisma.js';
 import { generateUniqueItemSku } from '../utils/skuGenerator.js';
 import { parseRecordDate } from '../utils/dateUtils.js';
@@ -268,7 +269,7 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
  * POST /purchases
  * Create atomic Inward Purchase Bill (Rule E & Strict ACID ledger)
  */
-router.post('/', idempotencyMiddleware, async (req: CompanyScopedRequest, res: Response) => {
+router.post('/', idempotencyMiddleware, requireActiveLicense, async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const userId = req.user!.userId;
   const {

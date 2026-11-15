@@ -10,6 +10,7 @@ import CreditNotes from './CreditNotes';
 import Settlements from './Settlements';
 import GstReports from './GstReports';
 import MultiPatientReturnModal from '../components/MultiPatientReturnModal';
+import LicenseModal, { LicenseInfo } from '../components/LicenseModal';
 import {
   Building2,
   LayoutDashboard,
@@ -96,6 +97,8 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements' | 'gst-reports'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [license, setLicense] = useState<LicenseInfo | null>(null);
+  const [licenseModalOpen, setLicenseModalOpen] = useState(false);
 
   // Collapsible Sidebar State (persisted in localStorage)
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
@@ -210,8 +213,25 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   useEffect(() => {
     if (activeCompany) {
       fetchSummary();
+      fetchLicense();
     }
   }, [activeCompany?.id]);
+
+  const fetchLicense = async () => {
+    if (!activeCompany) return;
+    try {
+      const res = await api.get<any>('/api/licenses/current', {
+        companyId: activeCompany.id
+      });
+      if (res && res.hasLicense && res.license) {
+        setLicense(res.license);
+      } else {
+        setLicense(null);
+      }
+    } catch (err) {
+      console.error('Failed to load license details:', err);
+    }
+  };
 
   const fetchSummary = async () => {
     if (!activeCompany) return;
@@ -657,6 +677,50 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             <span className={`badge badge-${activeCompany?.role}`}>
               {activeCompany?.role.toUpperCase()}
             </span>
+
+            {/* License HUD Badge */}
+            {license && (
+              <button
+                onClick={() => setLicenseModalOpen(true)}
+                title={`License valid until ${new Date(license.expiresAt).toLocaleDateString('en-IN')}. Click to view or enter renewal key.`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.73rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: license.isHardExpired
+                    ? '1px solid #f87171'
+                    : license.inGracePeriod
+                    ? '1px solid #fdba74'
+                    : (license.daysRemaining <= 15 ? '1px solid #fde047' : '1px solid #86efac'),
+                  backgroundColor: license.isHardExpired
+                    ? '#fef2f2'
+                    : license.inGracePeriod
+                    ? '#fff7ed'
+                    : (license.daysRemaining <= 15 ? '#fefce8' : '#f0fdf4'),
+                  color: license.isHardExpired
+                    ? '#b91c1c'
+                    : license.inGracePeriod
+                    ? '#c2410c'
+                    : (license.daysRemaining <= 15 ? '#a16207' : '#15803d'),
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {license.isHardExpired ? (
+                  <><span>⛔</span> Expired (Read-Only)</>
+                ) : license.inGracePeriod ? (
+                  <><span>⚠️</span> Grace Active</>
+                ) : license.daysRemaining <= 15 ? (
+                  <><span>🟡</span> Renews in {license.daysRemaining}d</>
+                ) : (
+                  <><span>🛡️</span> License Active</>
+                )}
+              </button>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -703,6 +767,46 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
             </button>
           </div>
         </header>
+
+        {/* License Notice Banner (Grace Period or Expired) */}
+        {license && (license.isHardExpired || license.inGracePeriod) && (
+          <div style={{
+            backgroundColor: license.isHardExpired ? '#fee2e2' : '#fff7ed',
+            borderBottom: license.isHardExpired ? '1px solid #f87171' : '1px solid #fdba74',
+            padding: '8px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.82rem',
+            color: license.isHardExpired ? '#991b1b' : '#9a3412',
+            fontWeight: 600,
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <span>
+              {license.isHardExpired ? (
+                <>⛔ <strong>License Expired:</strong> System is in Read-Only Mode. Inward purchase entry and sale billing are temporarily paused until renewal.</>
+              ) : (
+                <>⚠️ <strong>License Overdue:</strong> Your commercial license is in the 7-day grace period. Please renew to prevent operational interruptions.</>
+              )}
+            </span>
+            <button
+              onClick={() => setLicenseModalOpen(true)}
+              style={{
+                backgroundColor: license.isHardExpired ? '#dc2626' : '#ea580c',
+                color: '#ffffff',
+                border: 'none',
+                padding: '4px 12px',
+                borderRadius: '5px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Enter Renewal Key
+            </button>
+          </div>
+        )}
 
         {/* Page Body */}
         <main className="page-content">
@@ -1143,6 +1247,15 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         onSuccess={() => {
           fetchSummary();
         }}
+      />
+
+      {/* Cloud-Verified License Details & Renewal Modal */}
+      <LicenseModal
+        isOpen={licenseModalOpen}
+        onClose={() => setLicenseModalOpen(false)}
+        license={license}
+        onLicenseUpdated={fetchLicense}
+        isOwner={activeCompany?.role === 'owner'}
       />
 
       {/* Multi-Item Supplier Return (Debit Note / CN) Modal */}

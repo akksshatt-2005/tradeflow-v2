@@ -15,6 +15,7 @@ import purchaseReturnRoutes from './routes/purchaseReturns.js';
 import invoiceRoutes from './routes/invoices.js';
 import gstRoutes from './routes/gst.js';
 import settlementRoutes from './routes/settlements.js';
+import licenseRoutes from './routes/licenses.js';
 import prisma from './prisma.js';
 import { createApiRateLimiter } from './utils/rateLimiter.js';
 
@@ -93,6 +94,7 @@ app.use('/purchase-returns', purchaseReturnRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/gst', gstRoutes);
 app.use('/settlements', settlementRoutes);
+app.use('/licenses', licenseRoutes);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
@@ -105,6 +107,7 @@ app.use('/api/purchase-returns', purchaseReturnRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/gst', gstRoutes);
 app.use('/api/settlements', settlementRoutes);
+app.use('/api/licenses', licenseRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

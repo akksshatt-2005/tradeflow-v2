@@ -94,6 +94,29 @@ router.post('/', requireAuth, idempotencyMiddleware, async (req: AuthenticatedRe
         }
       });
 
+      // Automatically issue an initial active 1-year license for new company
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      const year = new Date().getFullYear();
+      const chunk = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+      const initialKey = `TF-${year}-${chunk()}-${chunk()}-${chunk()}`;
+
+      await tx.license.create({
+        data: {
+          licenseKey: initialKey,
+          registeredEmail: (email ? String(email).trim() : req.user?.username || 'admin@tradeflow.local').toLowerCase(),
+          companyId: newCompany.id,
+          planType: 'WHOLESALE',
+          status: 'ACTIVE',
+          maxUsers: 5,
+          gracePeriodDays: 7,
+          issuedAt: new Date(),
+          activatedAt: new Date(),
+          expiresAt: expiry,
+          notes: 'Automatic 1-Year license granted upon company registration.'
+        }
+      });
+
       return newCompany;
     });
 
