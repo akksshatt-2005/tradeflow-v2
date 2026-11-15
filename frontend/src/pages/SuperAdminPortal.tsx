@@ -136,25 +136,32 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
   // Helper for authenticated SuperAdmin requests
   const adminFetch = async (endpoint: string, options: RequestInit = {}) => {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {})
+    try {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {})
+        }
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        handleLogout();
+        throw new Error('SuperAdmin session expired. Please log in again.');
       }
-    });
 
-    if (res.status === 401 || res.status === 403) {
-      handleLogout();
-      throw new Error('SuperAdmin session expired. Please log in again.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Request failed (${res.status})`);
+      }
+      return data;
+    } catch (err: any) {
+      if (err.name === 'TypeError' && (err.message === 'Failed to fetch' || err.message?.includes('fetch'))) {
+        throw new Error('Backend server is temporarily waking up or updating. Please wait 15 seconds and try again.');
+      }
+      throw err;
     }
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || data.message || 'Request failed');
-    }
-    return data;
   };
 
   useEffect(() => {
@@ -226,7 +233,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
     try {
       await adminFetch(`/api/licenses/admin/${item.id}/status`, {
-        method: 'PATCH',
+        method: 'POST',
         body: JSON.stringify({ status: newStatus })
       });
       fetchLicenses();
@@ -242,7 +249,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
 
     try {
       await adminFetch(`/api/licenses/admin/${item.id}/extend`, {
-        method: 'PATCH',
+        method: 'POST',
         body: JSON.stringify({ additionalDays: days })
       });
       fetchLicenses();
@@ -258,7 +265,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
     setUpdatingExpiry(true);
     try {
       await adminFetch(`/api/licenses/admin/${editingLicense.id}/expiry`, {
-        method: 'PATCH',
+        method: 'POST',
         body: JSON.stringify({ expiresAt: new Date(newExpiryDateTime).toISOString() })
       });
       setEditingLicense(null);
@@ -417,7 +424,7 @@ export default function SuperAdminPortal({ onBackToApp }: { onBackToApp?: () => 
     setResetSuccessMessage(null);
     try {
       const res = await adminFetch(`/api/licenses/admin/${resetModalLicense.id}/reset-password`, {
-        method: 'PATCH',
+        method: 'POST',
         body: JSON.stringify({ newPassword: resetNewPassword.trim() })
       });
 

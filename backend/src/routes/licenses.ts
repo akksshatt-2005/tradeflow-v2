@@ -363,10 +363,9 @@ router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, 
 });
 
 /**
- * PATCH /api/licenses/admin/:id/reset-password
- * Super-Admin endpoint to reset a vendor's password and update stored credentials
+ * Reset vendor password handler (supports both POST and PATCH)
  */
-router.patch('/admin/:id/reset-password', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+const handleResetVendorPassword = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { newPassword } = req.body;
 
@@ -433,13 +432,12 @@ router.patch('/admin/:id/reset-password', requireSuperAdmin, async (req: Authent
     console.error('Failed to reset vendor password:', err);
     res.status(500).json({ error: 'Could not reset password.' });
   }
-});
+};
 
-/**
- * PATCH /api/licenses/admin/:id/extend
- * Super-Admin endpoint to extend license validity by N days
- */
-router.patch('/admin/:id/extend', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/admin/:id/reset-password', requireSuperAdmin, handleResetVendorPassword);
+router.post('/admin/:id/reset-password', requireSuperAdmin, handleResetVendorPassword);
+
+const handleExtendLicense = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { additionalDays = 365 } = req.body;
 
@@ -473,13 +471,11 @@ router.patch('/admin/:id/extend', requireSuperAdmin, async (req: AuthenticatedRe
     console.error('Failed to extend license:', err);
     res.status(500).json({ error: 'Could not extend license.' });
   }
-});
+};
+router.patch('/admin/:id/extend', requireSuperAdmin, handleExtendLicense);
+router.post('/admin/:id/extend', requireSuperAdmin, handleExtendLicense);
 
-/**
- * PATCH /api/licenses/admin/:id/expiry
- * Super-Admin endpoint to set an exact expiry date and time
- */
-router.patch('/admin/:id/expiry', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+const handleExpiryLicense = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { expiresAt } = req.body;
 
@@ -511,13 +507,11 @@ router.patch('/admin/:id/expiry', requireSuperAdmin, async (req: AuthenticatedRe
     console.error('Failed to update expiry:', err);
     res.status(500).json({ error: 'Could not update expiry date.' });
   }
-});
+};
+router.patch('/admin/:id/expiry', requireSuperAdmin, handleExpiryLicense);
+router.post('/admin/:id/expiry', requireSuperAdmin, handleExpiryLicense);
 
-/**
- * PATCH /api/licenses/admin/:id/status
- * Super-Admin endpoint to Activate or Deactivate (Suspend) a license
- */
-router.patch('/admin/:id/status', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+const handleStatusLicense = async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { status } = req.body; // 'ACTIVE' or 'SUSPENDED'
 
@@ -538,20 +532,20 @@ router.patch('/admin/:id/status', requireSuperAdmin, async (req: AuthenticatedRe
 
     const updated = await prisma.license.update({
       where: { id },
-      data: {
-        status
-      }
+      data: { status }
     });
 
     res.json({
-      message: status === 'ACTIVE' ? 'License activated successfully.' : 'License deactivated / suspended.',
+      message: `License status changed to ${status} successfully.`,
       license: updated
     });
   } catch (err: any) {
-    console.error('Failed to update status:', err);
-    res.status(500).json({ error: 'Could not update license status.' });
+    console.error('Failed to toggle status:', err);
+    res.status(500).json({ error: 'Could not change license status.' });
   }
-});
+};
+router.patch('/admin/:id/status', requireSuperAdmin, handleStatusLicense);
+router.post('/admin/:id/status', requireSuperAdmin, handleStatusLicense);
 
 /**
  * DELETE /api/licenses/admin/:id
