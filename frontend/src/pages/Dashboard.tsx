@@ -207,7 +207,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         if (k === 's') {
           e.preventDefault();
           setActiveTab('sales');
-          window.dispatchEvent(new CustomEvent('tradeflow_close_pos'));
+          window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
         } else if (k === 'p') {
           e.preventDefault();
           setActiveTab('sales');
@@ -220,6 +220,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         } else if (k === 'b' || k === 'u') {
           e.preventDefault();
           setActiveTab('purchases');
+          window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
         } else if (k === 'd') {
           e.preventDefault();
           setActiveTab('dashboard');
@@ -551,6 +552,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                 onClick={() => {
                   setActiveTab(item.id as any);
                   if (item.id === 'dashboard') fetchSummary();
+                  if (item.id === 'sales') {
+                    window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+                  }
+                  if (item.id === 'purchases') {
+                    window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+                  }
                 }}
                 style={{
                   display: 'flex',
@@ -1140,9 +1147,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     </div>
                   </div>
 
-                  {/* 2. Sales / POS Billing */}
+                  {/* 2. Sales / POS Billing (Direct Entry Mapping) */}
                   <div
-                    onClick={() => setActiveTab('sales')}
+                    onClick={() => {
+                      setActiveTab('sales');
+                      window.dispatchEvent(new CustomEvent('tradeflow_open_pos'));
+                    }}
                     className="card"
                     style={{
                       cursor: 'pointer',
@@ -1170,9 +1180,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                     </div>
                   </div>
 
-                  {/* 3. Purchases & Inward */}
+                  {/* 3. Purchases & Inward (Direct Entry Mapping) */}
                   <div
-                    onClick={() => setActiveTab('purchases')}
+                    onClick={() => {
+                      setActiveTab('purchases');
+                      window.dispatchEvent(new CustomEvent('tradeflow_open_new_purchase'));
+                    }}
                     className="card"
                     style={{
                       cursor: 'pointer',

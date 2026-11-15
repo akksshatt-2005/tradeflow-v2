@@ -155,7 +155,11 @@ export interface GroupedPatientReturn {
 type PeriodOption = 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM';
 type SalesTab = 'INVOICES' | 'RETURNS';
 
-export default function Sales() {
+interface SalesProps {
+  initialShowPOS?: boolean;
+}
+
+export default function Sales({ initialShowPOS = true }: SalesProps = {}) {
   const { activeCompany } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [patientReturns, setPatientReturns] = useState<PatientReturnItem[]>([]);
@@ -169,8 +173,8 @@ export default function Sales() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // View / Creation State
-  const [showPOS, setShowPOS] = useState(false);
+  // View / Creation State (Defaults directly to POS Entry Terminal for rapid keyboard billing)
+  const [showPOS, setShowPOS] = useState(initialShowPOS);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);

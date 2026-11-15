@@ -83,7 +83,11 @@ interface PurchaseBill {
   createdAt: string;
 }
 
-export default function Purchases() {
+interface PurchasesProps {
+  initialShowNewPurchase?: boolean;
+}
+
+export default function Purchases({ initialShowNewPurchase = true }: PurchasesProps = {}) {
   const { activeCompany } = useAuth();
   const [purchases, setPurchases] = useState<PurchaseBill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,8 +95,8 @@ export default function Purchases() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // View / Creation State
-  const [showNewPurchase, setShowNewPurchase] = useState(false);
+  // View / Creation State (Defaults directly to Inward Entry page for rapid stock inwarding)
+  const [showNewPurchase, setShowNewPurchase] = useState(initialShowNewPurchase);
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -105,6 +109,18 @@ export default function Purchases() {
   const [referenceNo, setReferenceNo] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
+
+  // Global event triggers for New Purchase Entry
+  useEffect(() => {
+    const onOpen = () => setShowNewPurchase(true);
+    const onClose = () => setShowNewPurchase(false);
+    window.addEventListener('tradeflow_open_new_purchase', onOpen);
+    window.addEventListener('tradeflow_close_new_purchase', onClose);
+    return () => {
+      window.removeEventListener('tradeflow_open_new_purchase', onOpen);
+      window.removeEventListener('tradeflow_close_new_purchase', onClose);
+    };
+  }, []);
 
   useEffect(() => {
     fetchPurchases();
