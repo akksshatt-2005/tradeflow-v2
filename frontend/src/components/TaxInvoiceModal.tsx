@@ -970,177 +970,233 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       overflowY: 'auto',
       padding: '1rem'
     }}>
-      {/* ── ON-SCREEN TOOLBAR (NO-PRINT) ── */}
+      {/* ── PROFESSIONAL ERP COMMAND RIBBON (NO-PRINT) ── */}
       <div className="no-print" style={{
         width: '100%',
         maxWidth: '210mm',
         background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '10px',
-        padding: '0.65rem 1rem',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
         marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.8rem',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+        overflow: 'hidden'
       }}>
-        {/* Left: Invoice Badge & Layout Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        {/* Tier 1: Document Meta & Status Header */}
+        <div style={{
+          padding: '8px 14px',
+          background: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px'
+        }}>
+          {/* Left: Invoice Badge, Number, Firm and Buyer */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{
               background: '#0f766e',
               color: '#ffffff',
               fontSize: '11px',
               fontWeight: 800,
-              padding: '2px 8px',
+              padding: '2.5px 8px',
               borderRadius: '4px',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.4px',
+              textTransform: 'uppercase'
             }}>
               TAX INVOICE
             </span>
-            <strong style={{ fontSize: '13px', color: '#0f172a' }}>#{invoice.invoiceNumber}</strong>
+            <strong style={{ fontSize: '13px', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+              #{invoice.invoiceNumber}
+            </strong>
+
+            <span style={{ color: '#cbd5e1' }}>•</span>
+
+            <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: 600 }}>
+              🏢 <strong style={{ color: '#0f172a' }}>{companyName}</strong>
+            </span>
+
+            <span style={{ color: '#cbd5e1' }}>•</span>
+
+            <span style={{ fontSize: '11.5px', color: '#475569' }}>
+              Buyer: <strong style={{ color: '#0f172a' }}>{buyerName}</strong>
+            </span>
           </div>
 
-          {/* Invoice Layout Selector (B2B Wholesale vs Retail) */}
-          <div style={{
-            display: 'inline-flex',
-            background: '#f1f5f9',
-            borderRadius: '6px',
-            padding: '2px',
-            border: '1px solid #cbd5e1'
-          }}>
-            <button
-              type="button"
-              onClick={() => setLayoutMode('B2B_WHOLESALE')}
-              style={{
-                border: 'none',
-                background: layoutMode === 'B2B_WHOLESALE' ? '#0f766e' : 'transparent',
-                color: layoutMode === 'B2B_WHOLESALE' ? '#ffffff' : '#334155',
-                padding: '4px 10px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-              title="Standard Indian Pharma Wholesale GST Invoice"
-            >
-              🏢 B2B Wholesale Format
-            </button>
-            <button
-              type="button"
-              onClick={() => setLayoutMode('RETAIL_STANDARD')}
-              style={{
-                border: 'none',
-                background: layoutMode === 'RETAIL_STANDARD' ? '#0f766e' : 'transparent',
-                color: layoutMode === 'RETAIL_STANDARD' ? '#ffffff' : '#334155',
-                padding: '4px 10px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-              title="Retail Clinic Tax Invoice"
-            >
-              🧾 Retail Format
-            </button>
-          </div>
+          {/* Right: Status Pill & Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              padding: '2.5px 8px',
+              borderRadius: '4px',
+              fontSize: '10.5px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.4px',
+              background: invoice.status === 'PAID' ? '#dcfce7' : (invoice.status === 'CANCELLED' ? '#fee2e2' : '#fef3c7'),
+              color: invoice.status === 'PAID' ? '#166534' : (invoice.status === 'CANCELLED' ? '#991b1b' : '#92400e'),
+              border: `1px solid ${invoice.status === 'PAID' ? '#86efac' : (invoice.status === 'CANCELLED' ? '#fca5a5' : '#fde68a')}`
+            }}>
+              {invoice.status || 'ISSUED'}
+            </span>
 
-          {/* Copy Mode Toggle */}
-          <div style={{
-            display: 'inline-flex',
-            background: '#f1f5f9',
-            borderRadius: '6px',
-            padding: '2px',
-            border: '1px solid #cbd5e1'
-          }}>
             <button
               type="button"
-              onClick={() => setCopyMode('CUSTOMER')}
+              onClick={onClose}
               style={{
-                border: 'none',
-                background: copyMode === 'CUSTOMER' ? '#1e3a8a' : 'transparent',
-                color: copyMode === 'CUSTOMER' ? '#ffffff' : '#334155',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '5px',
+                color: '#64748b',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Close [Esc]"
+              onMouseEnter={e => {
+                e.currentTarget.style.color = '#dc2626';
+                e.currentTarget.style.borderColor = '#fca5a5';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = '#64748b';
+                e.currentTarget.style.borderColor = '#cbd5e1';
               }}
             >
-              Customer Copy
-            </button>
-            <button
-              type="button"
-              onClick={() => setCopyMode('SHOP')}
-              style={{
-                border: 'none',
-                background: copyMode === 'SHOP' ? '#1e3a8a' : 'transparent',
-                color: copyMode === 'SHOP' ? '#ffffff' : '#334155',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              Shop Copy
-            </button>
-            <button
-              type="button"
-              onClick={() => setCopyMode('BOTH')}
-              style={{
-                border: 'none',
-                background: copyMode === 'BOTH' ? '#1e3a8a' : 'transparent',
-                color: copyMode === 'BOTH' ? '#ffffff' : '#334155',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              Both (2 Pages)
+              <X size={15} />
             </button>
           </div>
         </div>
 
-        {/* Right: Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {/* Bank & Dispatch Details Settings button */}
-          <button
-            type="button"
-            onClick={() => setShowSettingsModal(true)}
-            style={{
+        {/* Tier 2: Print Layout & Action Controls */}
+        <div style={{
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          {/* Left Group: Format & Copy Toggles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Format Toggle */}
+            <div style={{
               display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.45rem 0.75rem',
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
+              background: '#f1f5f9',
               borderRadius: '6px',
-              fontSize: '11.5px',
-              fontWeight: 600,
-              color: '#334155',
-              cursor: 'pointer'
-            }}
-            title="Configure Firm Settings: Bank, UPI QR, Legal Terms, DL & Stamps"
-          >
-            <Settings2 size={13} color="#0f766e" />
-            Firm Settings
-          </button>
+              padding: '2px',
+              border: '1px solid #cbd5e1'
+            }}>
+              <button
+                type="button"
+                onClick={() => setLayoutMode('B2B_WHOLESALE')}
+                style={{
+                  border: 'none',
+                  background: layoutMode === 'B2B_WHOLESALE' ? '#0f766e' : 'transparent',
+                  color: layoutMode === 'B2B_WHOLESALE' ? '#ffffff' : '#475569',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Standard Indian Pharma Wholesale GST Invoice"
+              >
+                🏢 Wholesale Format
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode('RETAIL_STANDARD')}
+                style={{
+                  border: 'none',
+                  background: layoutMode === 'RETAIL_STANDARD' ? '#0f766e' : 'transparent',
+                  color: layoutMode === 'RETAIL_STANDARD' ? '#ffffff' : '#475569',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Retail Clinic Tax Invoice"
+              >
+                🧾 Retail Format
+              </button>
+            </div>
 
-          {invoice.payments && invoice.payments.length > 0 && (
+            {/* Copy Mode Toggle */}
+            <div style={{
+              display: 'inline-flex',
+              background: '#f1f5f9',
+              borderRadius: '6px',
+              padding: '2px',
+              border: '1px solid #cbd5e1'
+            }}>
+              <button
+                type="button"
+                onClick={() => setCopyMode('CUSTOMER')}
+                style={{
+                  border: 'none',
+                  background: copyMode === 'CUSTOMER' ? '#1e3a8a' : 'transparent',
+                  color: copyMode === 'CUSTOMER' ? '#ffffff' : '#475569',
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Customer Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyMode('SHOP')}
+                style={{
+                  border: 'none',
+                  background: copyMode === 'SHOP' ? '#1e3a8a' : 'transparent',
+                  color: copyMode === 'SHOP' ? '#ffffff' : '#475569',
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Shop Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyMode('BOTH')}
+                style={{
+                  border: 'none',
+                  background: copyMode === 'BOTH' ? '#1e3a8a' : 'transparent',
+                  color: copyMode === 'BOTH' ? '#ffffff' : '#475569',
+                  padding: '4px 9px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Both Copies (2 Pages)
+              </button>
+            </div>
+          </div>
+
+          {/* Right Group: Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => setShowVouchers(!showVouchers)}
+              onClick={() => setShowSettingsModal(true)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.45rem 0.75rem',
-                background: '#f8fafc',
+                gap: '5px',
+                padding: '5px 10px',
+                background: '#ffffff',
                 border: '1px solid #cbd5e1',
                 borderRadius: '6px',
                 fontSize: '11.5px',
@@ -1148,97 +1204,102 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                 color: '#334155',
                 cursor: 'pointer'
               }}
+              title="Configure Bank Details, UPI QR, Logo & Official Stamp"
             >
-              <FileText size={13} />
-              Vouchers ({invoice.payments.length})
-              {showVouchers ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              <Settings2 size={13} color="#0f766e" />
+              <span>Firm Settings</span>
             </button>
-          )}
 
-          {onEdit && invoice.status !== 'CANCELLED' && (
+            {invoice.payments && invoice.payments.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowVouchers(!showVouchers)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '5px 10px',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  cursor: 'pointer'
+                }}
+              >
+                <FileText size={13} />
+                <span>Vouchers ({invoice.payments.length})</span>
+                {showVouchers ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+            )}
+
+            {onEdit && invoice.status !== 'CANCELLED' && (
+              <button
+                type="button"
+                onClick={() => onEdit(invoice.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '5px 10px',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  cursor: 'pointer'
+                }}
+              >
+                <Edit2 size={12} /> <span>Edit</span>
+              </button>
+            )}
+
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(invoice.id, invoice.invoiceNumber)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '5px 10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  color: '#dc2626',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={12} /> <span>{invoice.status === 'CANCELLED' ? 'Delete' : 'Cancel'}</span>
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => onEdit(invoice.id)}
+              onClick={handlePrint}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.45rem 0.75rem',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                gap: '6px',
+                padding: '5px 14px',
+                background: '#0f766e',
+                border: '1px solid #0f766e',
                 borderRadius: '6px',
                 fontSize: '11.5px',
-                fontWeight: 700,
-                color: '#2563eb',
-                cursor: 'pointer'
+                fontWeight: 800,
+                color: '#ffffff',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(15, 118, 110, 0.25)'
               }}
             >
-              <Edit2 size={13} /> Edit
+              <Printer size={13} />
+              <span>Print Invoice</span>
             </button>
-          )}
-
-          {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(invoice.id, invoice.invoiceNumber)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.45rem 0.75rem',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                color: '#dc2626',
-                cursor: 'pointer'
-              }}
-            >
-              <Trash2 size={13} /> {invoice.status === 'CANCELLED' ? 'Delete' : 'Cancel'}
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.45rem 1rem',
-              background: '#0f766e',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 800,
-              color: '#ffffff',
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(15, 118, 110, 0.3)'
-            }}
-          >
-            <Printer size={15} /> Print Invoice
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              color: '#475569',
-              cursor: 'pointer'
-            }}
-            title="Close [Esc]"
-          >
-            <X size={16} />
-          </button>
+          </div>
         </div>
       </div>
 
