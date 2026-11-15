@@ -16,6 +16,7 @@ export interface LicenseInfo {
   daysRemaining: number;
   inGracePeriod: boolean;
   isHardExpired: boolean;
+  isSuspended?: boolean;
 }
 
 interface LicenseModalProps {
@@ -83,12 +84,16 @@ export default function LicenseModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isSuspended = license?.status === 'SUSPENDED' || license?.isSuspended;
+
   const statusColor = 
+    isSuspended ? '#dc2626' :
     license?.isHardExpired ? '#dc2626' :
     license?.inGracePeriod ? '#ea580c' :
     (license?.daysRemaining || 0) <= 15 ? '#d97706' : '#16a34a';
 
   const statusBg = 
+    isSuspended ? '#fef2f2' :
     license?.isHardExpired ? '#fef2f2' :
     license?.inGracePeriod ? '#fff7ed' :
     (license?.daysRemaining || 0) <= 15 ? '#fffbeb' : '#f0fdf4';
@@ -167,7 +172,9 @@ export default function LicenseModal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {license.isHardExpired ? (
+                  {isSuspended ? (
+                    <AlertOctagon size={20} color={statusColor} />
+                  ) : license.isHardExpired ? (
                     <AlertOctagon size={20} color={statusColor} />
                   ) : license.inGracePeriod ? (
                     <AlertTriangle size={20} color={statusColor} />
@@ -175,7 +182,8 @@ export default function LicenseModal({
                     <ShieldCheck size={20} color={statusColor} />
                   )}
                   <span style={{ fontWeight: 800, fontSize: '0.92rem', color: statusColor }}>
-                    {license.isHardExpired ? 'LICENSE EXPIRED (READ-ONLY)' :
+                    {isSuspended ? 'ACCOUNT SUSPENDED (ACCESS BLOCKED)' :
+                     license.isHardExpired ? 'LICENSE EXPIRED (READ-ONLY)' :
                      license.inGracePeriod ? 'GRACE PERIOD ACTIVE' :
                      'ACTIVE COMMERCIAL LICENSE'}
                   </span>

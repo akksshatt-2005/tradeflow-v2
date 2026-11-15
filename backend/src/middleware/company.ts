@@ -52,6 +52,23 @@ export async function requireCompany(req: CompanyScopedRequest, res: Response, n
       role: userCompany.role
     };
 
+    // Verify if this company's license has been suspended
+    const companyLicense = await prisma.license.findFirst({
+      where: { companyId },
+      orderBy: { expiresAt: 'desc' }
+    });
+
+    if (companyLicense && companyLicense.status === 'SUSPENDED') {
+      const isStatusQuery = req.originalUrl?.includes('/api/licenses/current');
+      if (!isStatusQuery) {
+        res.status(403).json({
+          code: 'ACCOUNT_SUSPENDED',
+          error: `Access Blocked: ${userCompany.company.name} has been suspended by TradeFlow Administration. All operations are halted.`
+        });
+        return;
+      }
+    }
+
     next();
   } catch (error: any) {
     console.error('Company middleware verification error:', error);

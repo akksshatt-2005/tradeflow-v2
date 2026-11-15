@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../prisma.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
-import { generateAccessToken, verifyAccessToken } from '../utils/tokens.js';
+import { generateAccessToken, verifyAccessToken, revokeUserTokens } from '../utils/tokens.js';
 
 const router = Router();
 
@@ -103,10 +103,18 @@ router.get('/current', requireAuth, requireCompany, async (req: CompanyScopedReq
     const inGracePeriod = now > expiry && now <= graceEnd;
     const isHardExpired = now > graceEnd;
 
+    const isSuspended = license.status === 'SUSPENDED';
+
     let computedStatus = license.status;
-    if (isHardExpired) computedStatus = 'EXPIRED';
-    else if (inGracePeriod) computedStatus = 'GRACE';
-    else if (now <= expiry) computedStatus = 'ACTIVE';
+    if (isSuspended) {
+      computedStatus = 'SUSPENDED';
+    } else if (isHardExpired) {
+      computedStatus = 'EXPIRED';
+    } else if (inGracePeriod) {
+      computedStatus = 'GRACE';
+    } else if (now <= expiry) {
+      computedStatus = 'ACTIVE';
+    }
 
     res.json({
       hasLicense: true,
@@ -123,7 +131,8 @@ router.get('/current', requireAuth, requireCompany, async (req: CompanyScopedReq
         expiresAt: license.expiresAt,
         daysRemaining,
         inGracePeriod,
-        isHardExpired
+        isHardExpired,
+        isSuspended
       }
     });
   } catch (err: any) {
@@ -534,6 +543,33 @@ const handleStatusLicense = async (req: AuthenticatedRequest, res: Response) => 
       where: { id },
       data: { status }
     });
+
+    if (status === 'SUSPENDED') {
+      try {
+        const userIdsToRevoke = new Set<string>();
+
+        if (existing.vendorUsername) {
+          const u = await prisma.user.findUnique({
+            where: { username: existing.vendorUsername.trim().toLowerCase() }
+          });
+          if (u) userIdsToRevoke.add(u.id);
+        }
+
+        if (existing.companyId) {
+          const members = await prisma.userCompany.findMany({
+            where: { companyId: existing.companyId },
+            select: { userId: true }
+          });
+          members.forEach(m => userIdsToRevoke.add(m.userId));
+        }
+
+        for (const uid of userIdsToRevoke) {
+          await revokeUserTokens(uid);
+        }
+      } catch (revErr) {
+        console.error('Failed to revoke sessions for suspended license:', revErr);
+      }
+    }
 
     res.json({
       message: `License status changed to ${status} successfully.`,

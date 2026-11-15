@@ -19,6 +19,7 @@ import {
   Layers,
   Users,
   AlertTriangle,
+  AlertOctagon,
   Package,
   TrendingUp,
   Boxes,
@@ -740,17 +741,23 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   fontSize: '0.73rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  border: license.isHardExpired
+                  border: (license.status === 'SUSPENDED' || (license as any).isSuspended)
+                    ? '1px solid #f87171'
+                    : license.isHardExpired
                     ? '1px solid #f87171'
                     : license.inGracePeriod
                     ? '1px solid #fdba74'
                     : (license.daysRemaining <= 15 ? '1px solid #fde047' : '1px solid #86efac'),
-                  backgroundColor: license.isHardExpired
+                  backgroundColor: (license.status === 'SUSPENDED' || (license as any).isSuspended)
+                    ? '#fef2f2'
+                    : license.isHardExpired
                     ? '#fef2f2'
                     : license.inGracePeriod
                     ? '#fff7ed'
                     : (license.daysRemaining <= 15 ? '#fefce8' : '#f0fdf4'),
-                  color: license.isHardExpired
+                  color: (license.status === 'SUSPENDED' || (license as any).isSuspended)
+                    ? '#b91c1c'
+                    : license.isHardExpired
                     ? '#b91c1c'
                     : license.inGracePeriod
                     ? '#c2410c'
@@ -758,7 +765,9 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   transition: 'all 0.15s ease'
                 }}
               >
-                {license.isHardExpired ? (
+                {(license.status === 'SUSPENDED' || (license as any).isSuspended) ? (
+                  <><AlertOctagon size={12} color="#dc2626" /> Suspended (Blocked)</>
+                ) : license.isHardExpired ? (
                   <><AlertTriangle size={12} /> Expired (Read-Only)</>
                 ) : license.inGracePeriod ? (
                   <><AlertTriangle size={12} /> Grace Active</>
@@ -841,8 +850,44 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           </div>
         </header>
 
-        {/* License Notice Banner (Grace Period or Expired) */}
-        {license && (license.isHardExpired || license.inGracePeriod) && (
+        {/* License Notice Banner (Suspended, Grace Period or Expired) */}
+        {license && (license.status === 'SUSPENDED' || (license as any).isSuspended) ? (
+          <div style={{
+            backgroundColor: '#fee2e2',
+            borderBottom: '2px solid #ef4444',
+            padding: '10px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.84rem',
+            color: '#991b1b',
+            fontWeight: 600,
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertOctagon size={18} color="#dc2626" />
+              <span>
+                ⛔ <strong>Account Suspended:</strong> This company ({activeCompany?.name}) has been suspended by TradeFlow Administration. All operations are blocked.
+              </span>
+            </div>
+            <button
+              onClick={() => setLicenseModalOpen(true)}
+              style={{
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                padding: '4px 12px',
+                borderRadius: '5px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Reactivate License
+            </button>
+          </div>
+        ) : license && (license.isHardExpired || license.inGracePeriod) && (
           <div style={{
             backgroundColor: license.isHardExpired ? '#fee2e2' : '#fff7ed',
             borderBottom: license.isHardExpired ? '1px solid #f87171' : '1px solid #fdba74',
@@ -1021,6 +1066,49 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
                   </div>
                 </div>
               </div>
+
+              {/* Suspended Lock Notice */}
+              {license && (license.status === 'SUSPENDED' || (license as any).isSuspended) && (
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderLeft: '4px solid #dc2626',
+                  borderRadius: '4px',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <AlertOctagon size={24} color="#dc2626" />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#991b1b' }}>
+                        Account Administratively Suspended
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '2px' }}>
+                        Billing, inward purchases, and ledger entries for {activeCompany?.name} are suspended.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setLicenseModalOpen(true)}
+                    style={{
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '6px 14px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Reactivate Key
+                  </button>
+                </div>
+              )}
 
               {/* Operations Command Panel */}
               <div>

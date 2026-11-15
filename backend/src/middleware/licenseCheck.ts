@@ -35,10 +35,7 @@ export async function requireActiveLicense(
   try {
     const license = await prisma.license.findFirst({
       where: {
-        companyId,
-        status: {
-          in: ['ACTIVE', 'GRACE']
-        }
+        companyId
       },
       orderBy: {
         expiresAt: 'desc'
@@ -49,6 +46,14 @@ export async function requireActiveLicense(
       res.status(403).json({
         code: 'LICENSE_MISSING',
         error: 'No active license found for this company. Please activate a license in Settings.'
+      });
+      return;
+    }
+
+    if (license.status === 'SUSPENDED') {
+      res.status(403).json({
+        code: 'ACCOUNT_SUSPENDED',
+        error: 'This company account has been suspended by TradeFlow Administration. All operations are blocked.'
       });
       return;
     }

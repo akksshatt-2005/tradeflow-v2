@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../prisma.js';
-import { generateAccessToken, createRefreshToken, rotateRefreshToken, revokeSingleToken } from '../utils/tokens.js';
+import { generateAccessToken, createRefreshToken, rotateRefreshToken, revokeSingleToken, revokeUserTokens } from '../utils/tokens.js';
 import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from '../utils/rateLimiter.js';
 
 const router = Router();
@@ -140,6 +140,33 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
+    // 3.5 Check if account or company is suspended
+    const userCompanyIds = user.userCompanies.map(uc => uc.companyId);
+    const suspendedLicense = await prisma.license.findFirst({
+      where: {
+        status: 'SUSPENDED',
+        OR: [
+          { vendorUsername: normalizedUsername },
+          { registeredEmail: normalizedUsername },
+          ...(userCompanyIds.length > 0 ? [{ companyId: { in: userCompanyIds } }] : [])
+        ]
+      },
+      include: {
+        company: true
+      }
+    });
+
+    if (suspendedLicense) {
+      const hasOtherCompany = user.userCompanies.some(uc => uc.companyId !== suspendedLicense.companyId);
+      if (!hasOtherCompany || suspendedLicense.vendorUsername === normalizedUsername) {
+        res.status(403).json({
+          code: 'ACCOUNT_SUSPENDED',
+          error: `This account (${suspendedLicense.company?.name || normalizedUsername}) has been suspended by TradeFlow Administration. Access is blocked. Please contact TradeFlow support.`
+        });
+        return;
+      }
+    }
+
     // 4. Reset rate limit on success
     await resetLoginRateLimit(normalizedUsername, ipAddress);
 
@@ -187,6 +214,33 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
     if (!result) {
       res.status(401).json({ error: 'Invalid or expired refresh token. Please log in again.' });
+      return;
+    }
+
+    // Verify user is not suspended
+    const userCompanyRecords = await prisma.userCompany.findMany({
+      where: { userId: result.userId },
+      select: { companyId: true }
+    });
+    const cIds = userCompanyRecords.map(r => r.companyId);
+
+    const suspended = await prisma.license.findFirst({
+      where: {
+        status: 'SUSPENDED',
+        OR: [
+          { vendorUsername: result.username },
+          { registeredEmail: result.username },
+          ...(cIds.length > 0 ? [{ companyId: { in: cIds } }] : [])
+        ]
+      }
+    });
+
+    if (suspended && (suspended.vendorUsername === result.username || cIds.length <= 1)) {
+      await revokeUserTokens(result.userId);
+      res.status(403).json({
+        code: 'ACCOUNT_SUSPENDED',
+        error: 'This account has been suspended by TradeFlow Administration. Access is blocked.'
+      });
       return;
     }
 
