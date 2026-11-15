@@ -140,6 +140,20 @@ export default function Login({ onSwitchToSignup }: { onSwitchToSignup: () => vo
             Create account
           </button>
         </div>
+
+        <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: '#94a3b8' }}>
+          <a
+            href="/superadmin"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, '', '/superadmin');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            style={{ color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+          >
+            <span>🔐</span> Master SuperAdmin Portal
+          </a>
+        </div>
       </div>
     </div>
   );

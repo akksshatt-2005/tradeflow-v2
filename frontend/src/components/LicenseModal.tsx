@@ -23,28 +23,19 @@ interface LicenseModalProps {
   onClose: () => void;
   license: LicenseInfo | null;
   onLicenseUpdated: () => void;
-  isOwner?: boolean;
-  onOpenManager?: () => void;
 }
 
 export default function LicenseModal({
   isOpen,
   onClose,
   license,
-  onLicenseUpdated,
-  isOwner = false,
-  onOpenManager
+  onLicenseUpdated
 }: LicenseModalProps) {
   const [activationKey, setActivationKey] = useState('');
   const [activating, setActivating] = useState(false);
   const [activateError, setActivateError] = useState<string | null>(null);
   const [activateSuccess, setActivateSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  // Admin key generation states
-  const [showAdminGen, setShowAdminGen] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminDuration, setAdminDuration] = useState('365');
   const [adminPlan, setAdminPlan] = useState('WHOLESALE');
   const [generating, setGenerating] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
@@ -71,29 +62,6 @@ export default function LicenseModal({
       setActivateError(err.message || err.error || 'Failed to activate license key.');
     } finally {
       setActivating(false);
-    }
-  };
-
-  const handleAdminGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminEmail.trim()) return;
-
-    setGenerating(true);
-    try {
-      const res = await api.post<any>('/api/licenses/admin/generate', {
-        registeredEmail: adminEmail.trim(),
-        durationDays: parseInt(adminDuration) || 365,
-        planType: adminPlan
-      });
-
-      if (res.license?.licenseKey) {
-        setGeneratedKey(res.license.licenseKey);
-        setAdminEmail('');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Failed to generate key');
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -292,79 +260,6 @@ export default function LicenseModal({
               </div>
             )}
           </div>
-
-          {/* Super Admin Tool (Visible to Owners) */}
-          {isOwner && (
-            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                  Master License Generator
-                </span>
-                <button
-                  onClick={() => setShowAdminGen(!showAdminGen)}
-                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  {showAdminGen ? 'Hide Generator' : '+ Generate New Key'}
-                </button>
-              </div>
-
-              {showAdminGen && (
-                <form onSubmit={handleAdminGenerate} style={{ background: '#f1f5f9', padding: '0.8rem', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <input
-                    type="email"
-                    placeholder="Recipient / Client Email"
-                    value={adminEmail}
-                    onChange={e => setAdminEmail(e.target.value)}
-                    required
-                    style={{ padding: '0.45rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                  />
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <select
-                      value={adminDuration}
-                      onChange={e => setAdminDuration(e.target.value)}
-                      style={{ flex: 1, padding: '0.45rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    >
-                      <option value="14">14 Days (Trial)</option>
-                      <option value="90">90 Days (Quarterly)</option>
-                      <option value="365">365 Days (Annual)</option>
-                      <option value="730">2 Years (Multi-Year)</option>
-                    </select>
-                    <select
-                      value={adminPlan}
-                      onChange={e => setAdminPlan(e.target.value)}
-                      style={{ flex: 1, padding: '0.45rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    >
-                      <option value="WHOLESALE">WHOLESALE</option>
-                      <option value="RETAIL_STD">RETAIL_STD</option>
-                      <option value="ENTERPRISE">ENTERPRISE</option>
-                    </select>
-                    <button
-                      type="submit"
-                      disabled={generating}
-                      style={{ padding: '0.45rem 0.8rem', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-                    >
-                      {generating ? 'Generating...' : 'Create'}
-                    </button>
-                  </div>
-
-                  {generatedKey && (
-                    <div style={{ marginTop: '0.4rem', padding: '0.5rem', background: '#ffffff', border: '1px solid #10b981', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f766e', fontSize: '0.85rem' }}>
-                        {generatedKey}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(generatedKey)}
-                        style={{ background: 'none', border: 'none', color: '#0f766e', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}
-                      >
-                        Copy Key
-                      </button>
-                    </div>
-                  )}
-                </form>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -373,32 +268,8 @@ export default function LicenseModal({
           borderTop: '1px solid #e2e8f0',
           backgroundColor: '#f8fafc',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          justifyContent: 'flex-end'
         }}>
-          {onOpenManager ? (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenManager();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'none',
-                border: 'none',
-                color: '#0f766e',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer'
-              }}
-            >
-              <ExternalLink size={13} />
-              <span>Open License Manager Panel</span>
-            </button>
-          ) : <div />}
-
           <button
             onClick={onClose}
             className="btn btn-secondary btn-sm"

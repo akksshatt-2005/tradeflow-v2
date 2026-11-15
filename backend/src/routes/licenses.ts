@@ -1,9 +1,69 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { requireCompany, CompanyScopedRequest } from '../middleware/company.js';
+import { generateAccessToken, verifyAccessToken } from '../utils/tokens.js';
 
 const router = Router();
+
+const SUPERADMIN_USER = process.env.SUPERADMIN_USERNAME || 'superadmin';
+const SUPERADMIN_PASS = process.env.SUPERADMIN_PASSWORD || 'AdminTradeFlow@2026';
+
+/**
+ * SuperAdmin Verification Middleware
+ * Only allows requests holding a token with role: 'superadmin'
+ */
+export function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'SuperAdmin authentication required.' });
+    return;
+  }
+
+  const token = authHeader.substring(7).trim();
+  try {
+    const payload = verifyAccessToken(token);
+    if (payload.role !== 'superadmin') {
+      res.status(403).json({ error: 'Access forbidden: SuperAdmin privileges required.' });
+      return;
+    }
+    req.user = payload;
+    next();
+  } catch (err: any) {
+    res.status(401).json({ error: 'SuperAdmin session expired or invalid.' });
+  }
+}
+
+/**
+ * POST /api/licenses/superadmin/login
+ * Standalone Master SuperAdmin Authentication
+ */
+router.post('/superadmin/login', async (req: Request, res: Response) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    res.status(400).json({ error: 'Username and password are required.' });
+    return;
+  }
+
+  if (username.trim() === SUPERADMIN_USER && password === SUPERADMIN_PASS) {
+    const token = generateAccessToken({
+      userId: 'master-superadmin-id',
+      username: SUPERADMIN_USER,
+      role: 'superadmin'
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        username: SUPERADMIN_USER,
+        role: 'superadmin'
+      }
+    });
+  } else {
+    res.status(401).json({ error: 'Invalid SuperAdmin ID or password.' });
+  }
+});
 
 export function generateLicenseKey(prefix = 'TF'): string {
   const year = new Date().getFullYear();
@@ -135,7 +195,7 @@ router.post('/activate', requireAuth, requireCompany, async (req: CompanyScopedR
  * POST /api/licenses/admin/generate
  * Super-Admin endpoint to generate a new license key with custom expiry date/time or duration
  */
-router.post('/admin/generate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/admin/generate', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { registeredEmail, planType = 'WHOLESALE', durationDays, expiresAt: customExpiry, companyId, maxUsers = 5, notes } = req.body;
 
   if (!registeredEmail || typeof registeredEmail !== 'string') {
@@ -187,7 +247,7 @@ router.post('/admin/generate', requireAuth, async (req: AuthenticatedRequest, re
  * GET /api/licenses/admin/list
  * Super-Admin endpoint to view all system licenses
  */
-router.get('/admin/list', requireAuth, async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/admin/list', requireSuperAdmin, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const licenses = await prisma.license.findMany({
       include: {
@@ -238,7 +298,7 @@ router.get('/admin/list', requireAuth, async (_req: AuthenticatedRequest, res: R
  * PATCH /api/licenses/admin/:id/extend
  * Super-Admin endpoint to extend license validity by N days
  */
-router.patch('/admin/:id/extend', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/admin/:id/extend', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { additionalDays = 365 } = req.body;
 
@@ -278,7 +338,7 @@ router.patch('/admin/:id/extend', requireAuth, async (req: AuthenticatedRequest,
  * PATCH /api/licenses/admin/:id/expiry
  * Super-Admin endpoint to set an exact expiry date and time
  */
-router.patch('/admin/:id/expiry', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/admin/:id/expiry', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { expiresAt } = req.body;
 
@@ -316,7 +376,7 @@ router.patch('/admin/:id/expiry', requireAuth, async (req: AuthenticatedRequest,
  * PATCH /api/licenses/admin/:id/status
  * Super-Admin endpoint to Activate or Deactivate (Suspend) a license
  */
-router.patch('/admin/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/admin/:id/status', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const { status } = req.body; // 'ACTIVE' or 'SUSPENDED'
 
@@ -356,7 +416,7 @@ router.patch('/admin/:id/status', requireAuth, async (req: AuthenticatedRequest,
  * DELETE /api/licenses/admin/:id
  * Super-Admin endpoint to permanently delete/revoke a license
  */
-router.delete('/admin/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/admin/:id', requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
   try {

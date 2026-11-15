@@ -9,6 +9,7 @@ const REFRESH_TOKEN_DAYS = 7;
 export interface TokenPayload {
   userId: string;
   username: string;
+  role?: string;
 }
 
 export function generateAccessToken(payload: TokenPayload): string {

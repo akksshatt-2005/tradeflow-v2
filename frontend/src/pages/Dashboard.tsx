@@ -9,7 +9,6 @@ import Sales from './Sales';
 import CreditNotes from './CreditNotes';
 import Settlements from './Settlements';
 import GstReports from './GstReports';
-import LicenseManager from './LicenseManager';
 import MultiPatientReturnModal from '../components/MultiPatientReturnModal';
 import LicenseModal, { LicenseInfo } from '../components/LicenseModal';
 import {
@@ -96,7 +95,7 @@ interface SupplierReturnItem {
 export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => void }) {
   const { user, activeCompany, companies, selectCompany, logout } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements' | 'gst-reports' | 'licensing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'purchases' | 'medicines' | 'batches' | 'parties' | 'credit-notes' | 'settlements' | 'gst-reports'>('dashboard');
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [license, setLicense] = useState<LicenseInfo | null>(null);
@@ -170,7 +169,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
     { id: 'credit-notes', label: 'Credit Notes (CN)', icon: RotateCcw, hotkey: 'Alt+C' },
     { id: 'settlements', label: 'Supplier Settlements', icon: Handshake, hotkey: 'Alt+T' },
     { id: 'gst-reports', label: 'GST & CA Reports', icon: FileSpreadsheet, hotkey: 'Alt+G' },
-    { id: 'licensing', label: 'License & Subs', icon: Key, hotkey: 'Alt+L' },
   ];
 
   // Global Navigation Hotkeys (Option A)
@@ -203,9 +201,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         } else if (k === 't') {
           e.preventDefault();
           setActiveTab('settlements');
-        } else if (k === 'l') {
-          e.preventDefault();
-          setActiveTab('licensing');
         } else if (k === 'g') {
           e.preventDefault();
           setActiveTab('gst-reports');
@@ -1243,7 +1238,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           {activeTab === 'credit-notes' && <CreditNotes />}
           {activeTab === 'settlements' && <Settlements />}
           {activeTab === 'gst-reports' && <GstReports />}
-          {activeTab === 'licensing' && <LicenseManager />}
         </main>
       </div>
 
@@ -1262,8 +1256,6 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         onClose={() => setLicenseModalOpen(false)}
         license={license}
         onLicenseUpdated={fetchLicense}
-        isOwner={activeCompany?.role === 'owner'}
-        onOpenManager={() => setActiveTab('licensing')}
       />
 
       {/* Multi-Item Supplier Return (Debit Note / CN) Modal */}

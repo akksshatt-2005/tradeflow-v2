@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ServerWakeBanner from './components/ServerWakeBanner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -6,11 +6,41 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import SelectCompany from './pages/SelectCompany';
 import Dashboard from './pages/Dashboard';
+import SuperAdminPortal from './pages/SuperAdminPortal';
 
 function MainApp() {
   const { user, activeCompany, loading } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [forceCompanySelection, setForceCompanySelection] = useState(false);
+  const [isSuperAdminRoute, setIsSuperAdminRoute] = useState(() => {
+    return window.location.pathname.startsWith('/superadmin') ||
+      window.location.pathname.startsWith('/admin') ||
+      window.location.hash === '#superadmin';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsSuperAdminRoute(
+        window.location.pathname.startsWith('/superadmin') ||
+        window.location.pathname.startsWith('/admin') ||
+        window.location.hash === '#superadmin'
+      );
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Separate SuperAdmin Licensing Dashboard
+  if (isSuperAdminRoute) {
+    return (
+      <SuperAdminPortal
+        onBackToApp={() => {
+          window.history.pushState({}, '', '/');
+          setIsSuperAdminRoute(false);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
