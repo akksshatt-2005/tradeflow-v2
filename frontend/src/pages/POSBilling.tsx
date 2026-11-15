@@ -111,8 +111,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [customerGstin, setCustomerGstin] = useState('');
   const [buyerDlNo, setBuyerDlNo] = useState('');
   const [buyerState, setBuyerState] = useState('');
-  const [doctorName, setDoctorName] = useState('Dr. Priyadarshi Srivastava');
-  const [doctorRegNo, setDoctorRegNo] = useState('UPMC 59048');
+  const [doctorName, setDoctorName] = useState('');
+  const [doctorRegNo, setDoctorRegNo] = useState('');
   const [patientName, setPatientName] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
@@ -1061,6 +1061,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                           setBuyerState('');
                         }
                         if (c.drugLicenseNo) setBuyerDlNo(c.drugLicenseNo);
+                        if (c.defaultDoctorName) setDoctorName(c.defaultDoctorName);
+                        if (c.defaultDoctorRegNo) setDoctorRegNo(c.defaultDoctorRegNo);
                         setShowCustomerDropdown(false);
                       }}
                       style={{

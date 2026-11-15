@@ -95,7 +95,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
   // Active company details
   const comp = invoice.company || activeCompany || {};
-  const companyName = comp.name || 'NEURO HARMONY CLINIC';
+  const companyName = comp.name || 'Medical Store';
   const companyAddress = comp.address && comp.address.trim()
     ? `${comp.address.trim()}${comp.city ? `, ${comp.city.trim()}` : ''}${comp.pincode ? ` - ${comp.pincode.trim()}` : ''}`
     : '';
@@ -103,10 +103,10 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   // Correct state spelling to UTTAR PRADESH and state code to 09
   const { stateName: companyState, stateCode: companyStateCode } = normalizeIndianState(comp.state, comp.gstin);
 
-  // Phone number (enforce Contact : 9703533694 only)
-  let companyPhone = '9703533694';
+  // Phone number (company specific)
+  let companyPhone = '';
   if (comp.phone && comp.phone.trim()) {
-    companyPhone = comp.phone.trim().replace('9703433694', '9703533694');
+    companyPhone = comp.phone.trim();
   }
 
   // Only display email if explicitly configured and not dummy domain
@@ -139,9 +139,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   // Doctor & Patient details
   const doctorName = invoice.doctorName
     ? (invoice.doctorName.startsWith('Dr') ? invoice.doctorName : `Dr. ${invoice.doctorName}`)
-    : 'Dr. Priyadarshi Srivastava';
-  const doctorRegNo = invoice.doctorRegNo || 'UPMC 59048';
-  const patientName = invoice.patientName || invoice.customerName;
+    : '';
+  const doctorRegNo = invoice.doctorRegNo ? invoice.doctorRegNo.trim() : '';
+  const patientName = invoice.patientName || (invoice.customerName && invoice.customerName !== 'Cash Customer' ? invoice.customerName : '');
 
   // Numeric totals
   const subtotal = Number(invoice.subtotal || 0);
@@ -356,10 +356,16 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             )}
 
             {/* Doctor / Patient Prescription Details */}
-            <div style={{ marginTop: '5px', paddingTop: '5px', borderTop: '1px dashed #ccc', fontSize: '10.5px', color: '#111' }}>
-              <div>Doctor : <strong>{doctorName}</strong> {doctorRegNo && <span style={{ color: '#333' }}>(Reg No: <strong>{doctorRegNo}</strong>)</span>}</div>
-              <div>Patient : <strong>{patientName}</strong></div>
-            </div>
+            {(doctorName || (patientName && patientName !== 'Cash Customer')) && (
+              <div style={{ marginTop: '5px', paddingTop: '5px', borderTop: '1px dashed #ccc', fontSize: '10.5px', color: '#111' }}>
+                {doctorName && (
+                  <div>Doctor : <strong>{doctorName}</strong> {doctorRegNo && <span style={{ color: '#333' }}>(Reg No: <strong>{doctorRegNo}</strong>)</span>}</div>
+                )}
+                {patientName && patientName !== 'Cash Customer' && (
+                  <div>Patient : <strong>{patientName}</strong></div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Invoice Meta */}

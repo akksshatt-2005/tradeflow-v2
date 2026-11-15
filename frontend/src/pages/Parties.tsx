@@ -1548,7 +1548,7 @@ export default function Parties() {
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>Contact Person Name</label>
                       <input
                         type="text"
-                        placeholder="e.g. Priyadarshi Sharma"
+                        placeholder="e.g. Ramesh Kumar"
                         value={contactPerson}
                         onChange={e => setContactPerson(e.target.value)}
                         style={{ width: '100%', padding: '0.65rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
