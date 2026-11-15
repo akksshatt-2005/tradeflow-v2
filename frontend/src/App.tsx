@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import ServerWakeBanner from './components/ServerWakeBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -62,7 +61,6 @@ function MainApp() {
   if (!user) {
     return (
       <div>
-        <div className="no-print"><ServerWakeBanner /></div>
         {authMode === 'login' ? (
           <Login onSwitchToSignup={() => setAuthMode('signup')} />
         ) : (
@@ -76,7 +74,6 @@ function MainApp() {
   if (!activeCompany || forceCompanySelection) {
     return (
       <div>
-        <div className="no-print"><ServerWakeBanner /></div>
         <SelectCompany onCompanySelected={() => setForceCompanySelection(false)} />
       </div>
     );
@@ -85,7 +82,6 @@ function MainApp() {
   // Authenticated Dashboard
   return (
     <div>
-      <div className="no-print"><ServerWakeBanner /></div>
       <Dashboard onSwitchCompany={() => setForceCompanySelection(true)} />
     </div>
   );
