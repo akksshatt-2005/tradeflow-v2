@@ -57,6 +57,7 @@ interface CustomerParty {
   phone?: string | null;
   address?: string | null;
   gstin?: string | null;
+  drugLicenseNo?: string | null;
   defaultDoctorName?: string | null;
   defaultDoctorRegNo?: string | null;
   isCash: boolean;
@@ -102,9 +103,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [nextInvoiceNo, setNextInvoiceNo] = useState('');
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // Form Header State (Photo 3: Marg ERP Sale Entry)
+  // Form Header State (Unified Account / Ledger Architecture)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerParty | null>(null);
-  const [saleType, setSaleType] = useState<'B2C' | 'B2B'>('B2C');
   const [customerName, setCustomerName] = useState('Cash Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [patientAddress, setPatientAddress] = useState('');
@@ -115,6 +115,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   const [doctorRegNo, setDoctorRegNo] = useState('UPMC 59048');
   const [patientName, setPatientName] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  // Auto-detect B2B Wholesale vs B2C Retail based on Account / GSTIN
+  const isB2B = Boolean(
+    (customerGstin && customerGstin.trim().length >= 10) ||
+    (selectedCustomer?.gstin && selectedCustomer.gstin.trim().length >= 10)
+  );
+  const saleType: 'B2C' | 'B2B' = isB2B ? 'B2B' : 'B2C';
 
   // Standard Indian State Codes for GSTIN
   const GST_STATE_MAP: Record<string, string> = {
@@ -297,7 +304,6 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           setPatientAddress(inv.patientAddress || inv.customerAddress || '');
           setCustomerGstin(inv.customerGstin || '');
           if (inv.customerGstin && inv.customerGstin.trim().length >= 10) {
-            setSaleType('B2B');
             handleGstinChange(inv.customerGstin);
             setIsGstBill(true);
           }
@@ -842,299 +848,43 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         </div>
       )}
 
-      {/* B2C Retail vs B2B Wholesale Tax Invoice Switcher & Customer Header */}
-      <div style={{ background: 'var(--card-bg)', border: saleType === 'B2B' ? '1.5px solid #2563eb' : '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', boxShadow: saleType === 'B2B' ? '0 2px 8px rgba(37,99,235,0.08)' : 'none' }}>
-        
-        {/* Category Toggle Strip */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.6rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              SALE CATEGORY :
-            </span>
-            <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '2px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setSaleType('B2C');
-                  if (!selectedCustomer) {
-                    setCustomerName('Cash Customer');
-                    setPatientName('Cash Customer');
-                    setCustomerGstin('');
-                  }
-                }}
-                style={{
-                  padding: '0.35rem 0.8rem',
-                  borderRadius: '5px',
-                  border: 'none',
-                  background: saleType === 'B2C' ? '#0f766e' : 'transparent',
-                  color: saleType === 'B2C' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: saleType === 'B2C' ? 700 : 500,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>🛒</span> B2C Retail (Patient Walk-in)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSaleType('B2B');
-                  handleToggleGstBill(true);
-                  if (customerName === 'Cash Customer') {
-                    setCustomerName('');
-                    setPatientName('');
-                    setSelectedCustomer(null);
-                  }
-                }}
-                style={{
-                  padding: '0.35rem 0.8rem',
-                  borderRadius: '5px',
-                  border: 'none',
-                  background: saleType === 'B2B' ? '#1d4ed8' : 'transparent',
-                  color: saleType === 'B2B' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: saleType === 'B2B' ? 700 : 500,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>🏢</span> B2B Wholesale / Tax Invoice (With GSTIN)
-              </button>
-            </div>
-          </div>
-
-          <div>
-            {saleType === 'B2B' ? (
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '3px 10px', borderRadius: '4px' }}>
-                ✓ B2B Tax Invoice (Reports to GSTR-1 Table 4 for Buyer ITC Claim)
-              </span>
-            ) : (
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f766e', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '3px 10px', borderRadius: '4px' }}>
-                ✓ B2C Retail Sale (Reports to GSTR-1 Table 7 Retail Cash Register)
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Fields Grid */}
-        {saleType === 'B2B' ? (
-          /* B2B WHOLESALE - ONLY BUYER / FIRM NAME [F2] */
-          <div style={{ maxWidth: '560px' }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1d4ed8' }}>
-                  BUYER / FIRM NAME [F2] * :
-                </label>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                  Click to select from Suppliers & Clients
-                </span>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <input
-                  ref={patientInputRef}
-                  type="text"
-                  placeholder="Click or type to search Doctor Clinic, Hospital, or Chemist Name..."
-                  value={customerName}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setCustomerName(val);
-                    setPatientName(val);
-                    if (selectedCustomer && selectedCustomer.name !== val) {
-                      setSelectedCustomer(null);
-                    }
-                    setShowCustomerDropdown(true);
-                  }}
-                  onFocus={() => setShowCustomerDropdown(true)}
-                  style={{
-                    width: '100%',
-                    padding: '0.55rem 2rem 0.55rem 0.75rem',
-                    background: 'var(--bg-secondary)',
-                    border: selectedCustomer ? '1.5px solid #0f766e' : '1.5px solid #93c5fd',
-                    borderRadius: '6px',
-                    color: 'var(--text-primary)',
-                    fontWeight: '700'
-                  }}
-                />
-                {customerName && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCustomer(null);
-                      setCustomerName('');
-                      setPatientName('');
-                      setCustomerGstin('');
-                      setShowCustomerDropdown(true);
-                    }}
-                    style={{
-                      position: 'absolute',
-                      right: '8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 700
-                    }}
-                    title="Clear party"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {/* Linked Ledger Details Tag */}
-              {selectedCustomer && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginTop: '5px',
-                  padding: '4px 8px',
-                  background: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: '5px',
-                  fontSize: '0.73rem',
-                  color: '#166534'
-                }}>
-                  <span style={{ fontWeight: 800 }}>✓ Ledger Linked: {selectedCustomer.name}</span>
-                  {selectedCustomer.station && <span>📍 {selectedCustomer.station}</span>}
-                  {selectedCustomer.gstin && <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>GSTIN: {selectedCustomer.gstin}</span>}
-                  <span style={{
-                    marginLeft: 'auto',
-                    fontWeight: 800,
-                    color: selectedCustomer.outstandingBalance > 0 ? '#dc2626' : '#15803d'
-                  }}>
-                    Balance: ₹{selectedCustomer.outstandingBalance ? selectedCustomer.outstandingBalance.toFixed(2) : '0.00'}
-                  </span>
-                </div>
-              )}
-
-              {/* Suppliers & Clients Master Dropdown */}
-              {showCustomerDropdown && (customers || []).length > 0 && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 60,
-                    background: 'var(--card-bg, #ffffff)',
-                    border: '1.5px solid #cbd5e1',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                    maxHeight: '260px',
-                    overflowY: 'auto',
-                    marginTop: '4px'
-                  }}
-                >
-                  <div style={{
-                    padding: '6px 10px',
-                    background: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    color: '#475569',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span>📒 SUPPLIERS & CLIENTS LEDGER MASTER ({customers.length})</span>
-                    <span style={{ color: '#0f766e', cursor: 'pointer' }} onClick={() => setShowCustomerDropdown(false)}>Close ✕</span>
-                  </div>
-
-                  {(customers || [])
-                    .filter(c => {
-                      if (!c) return false;
-                      const q = (customerName || '').trim().toLowerCase();
-                      if (!q) return true; // show all when empty!
-                      const nameMatch = (c.name || '').toLowerCase().includes(q) || (c.mailTo || '').toLowerCase().includes(q);
-                      const gstinMatch = Boolean(c.gstin && c.gstin.toLowerCase().includes(q));
-                      const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
-                      const stationMatch = Boolean(c.station && c.station.toLowerCase().includes(q));
-                      return nameMatch || gstinMatch || phoneMatch || stationMatch;
-                    })
-                    .slice(0, 15)
-                    .map(c => (
-                      <div
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedCustomer(c);
-                          setCustomerName(c.name);
-                          setPatientName(c.name);
-                          if (c.phone) setCustomerPhone(c.phone);
-                          if (c.address) setPatientAddress(c.address);
-                          if (c.gstin) {
-                            handleGstinChange(c.gstin);
-                          }
-                          setShowCustomerDropdown(false);
-                        }}
-                        style={{
-                          padding: '0.55rem 0.8rem',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--border-color, #f1f5f9)',
-                          fontSize: '0.82rem',
-                          transition: 'background 0.15s ease'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary, #f1f5f9)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>{c.name}</span>
-                            <span style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              padding: '1px 5px',
-                              borderRadius: '3px',
-                              backgroundColor: c.type === 'supplier' ? '#ffedd5' : '#e0e7ff',
-                              color: c.type === 'supplier' ? '#c2410c' : '#3730a3'
-                            }}>
-                              {c.type}
-                            </span>
-                          </div>
-                          <span style={{
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            color: c.outstandingBalance > 0 ? '#dc2626' : '#15803d'
-                          }}>
-                            {c.outstandingBalance > 0 ? `Due: ₹${c.outstandingBalance.toFixed(2)}` : 'Nil'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #64748b)', display: 'flex', gap: '10px', marginTop: '2px', alignItems: 'center' }}>
-                          {c.station && <span>📍 {c.station}</span>}
-                          {c.phone && <span>📞 {c.phone}</span>}
-                          {c.gstin && <span style={{ color: '#0f766e', fontFamily: 'monospace', fontWeight: 600 }}>GSTIN: {c.gstin}</span>}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* B2C RETAIL PATIENT FIELDS */
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-            
-            {/* Patient [F2] */}
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--brand-teal)', marginBottom: '0.3rem' }}>
-                PATIENT [F2] / CUSTOMER :
+      {/* Unified Account / Ledger & Billing Header (Marg ERP / Tally Prime Architecture) */}
+      <div style={{
+        background: 'var(--card-bg, #ffffff)',
+        border: isB2B ? '1.5px solid #2563eb' : '1px solid var(--border-color, #e2e8f0)',
+        borderRadius: '10px',
+        padding: '0.85rem 1rem',
+        marginBottom: '1rem',
+        boxShadow: isB2B ? '0 2px 8px rgba(37,99,235,0.08)' : '0 1px 3px rgba(0,0,0,0.03)'
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(280px, 1.8fr) minmax(200px, 1.2fr) minmax(180px, 1.1fr) minmax(130px, 0.8fr)',
+          gap: '0.85rem',
+          alignItems: 'start'
+        }}>
+          {/* 1. Account / Ledger [F2] (Handles all Cash Sales & Account/Credit Sales) */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isB2B ? '#1d4ed8' : '#0f766e' }}>
+                ACCOUNT / PARTY [F2] * :
               </label>
+              {isB2B ? (
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '4px' }}>
+                  🏢 B2B TAX INVOICE
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f766e', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '4px' }}>
+                  🛒 RETAIL / CASH SALE
+                </span>
+              )}
+            </div>
+
+            <div style={{ position: 'relative' }}>
               <input
                 ref={patientInputRef}
                 type="text"
-                placeholder="Patient / Customer Name"
+                placeholder="Search Account / Party or 'Cash Customer'..."
                 value={customerName}
                 onChange={e => {
                   const val = e.target.value;
@@ -1146,119 +896,269 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   setShowCustomerDropdown(true);
                 }}
                 onFocus={() => setShowCustomerDropdown(true)}
-                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 2rem 0.55rem 0.75rem',
+                  background: 'var(--bg-secondary)',
+                  border: isB2B ? '1.5px solid #93c5fd' : (selectedCustomer ? '1.5px solid #0f766e' : '1px solid var(--border-color)'),
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontWeight: '700',
+                  fontSize: '0.88rem'
+                }}
               />
-              {showCustomerDropdown && (customers || []).length > 0 && customerName && customerName.trim() && (
-                <div
+              {customerName && customerName !== 'Cash Customer' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setCustomerName('Cash Customer');
+                    setPatientName('Cash Customer');
+                    setCustomerGstin('');
+                    setBuyerDlNo('');
+                    setCustomerPhone('');
+                    setPatientAddress('');
+                  }}
                   style={{
                     position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 50,
-                    background: 'var(--card-bg)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-                    maxHeight: '180px',
-                    overflowY: 'auto'
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 700
                   }}
+                  title="Reset to Cash Customer"
                 >
-                  {(customers || [])
-                    .filter(c => {
-                      if (!c) return false;
-                      const q = (customerName || '').trim().toLowerCase();
-                      if (!q) return true;
-                      const nameMatch = (c.name || '').toLowerCase().includes(q);
-                      const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
-                      return nameMatch || phoneMatch;
-                    })
-                    .slice(0, 6)
-                    .map(c => (
-                      <div
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedCustomer(c);
-                          setCustomerName(c.name);
-                          setPatientName(c.name);
-                          if (c.phone) setCustomerPhone(c.phone);
-                          if (c.address) setPatientAddress(c.address);
-                          if (c.gstin) {
-                            handleGstinChange(c.gstin);
-                            setSaleType('B2B');
-                          }
-                          setShowCustomerDropdown(false);
-                        }}
-                        style={{
-                          padding: '0.5rem 0.8rem',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid var(--border-color)',
-                          fontSize: '0.85rem'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{c.name} {c.isCash ? '(Cash)' : ''}</div>
-                        {c.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📞 {c.phone}</div>}
-                      </div>
-                    ))}
-                </div>
+                  ✕
+                </button>
               )}
             </div>
 
-            {/* Patient Address & Phone */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                ADDRESS / MOBILE :
-              </label>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <input
-                  type="text"
-                  placeholder="Mobile"
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                  style={{ width: '105px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                />
-                <input
-                  type="text"
-                  placeholder="Patient Address"
-                  value={patientAddress}
-                  onChange={e => setPatientAddress(e.target.value)}
-                  style={{ flex: 1, minWidth: '100px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                />
+            {/* Linked Ledger Info Pill */}
+            {selectedCustomer && !selectedCustomer.isCash && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '5px',
+                padding: '3px 8px',
+                background: isB2B ? '#eff6ff' : '#f0fdf4',
+                border: isB2B ? '1px solid #bfdbfe' : '1px solid #bbf7d0',
+                borderRadius: '4px',
+                fontSize: '0.72rem',
+                color: isB2B ? '#1e40af' : '#166534',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{ fontWeight: 800 }}>✓ {selectedCustomer.name}</span>
+                {selectedCustomer.station && <span>📍 {selectedCustomer.station}</span>}
+                {selectedCustomer.gstin && <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>GSTIN: {selectedCustomer.gstin}</span>}
+                <span style={{
+                  marginLeft: 'auto',
+                  fontWeight: 800,
+                  color: selectedCustomer.outstandingBalance > 0 ? '#dc2626' : '#15803d'
+                }}>
+                  Bal: ₹{selectedCustomer.outstandingBalance ? selectedCustomer.outstandingBalance.toFixed(2) : '0.00'}
+                </span>
               </div>
-            </div>
+            )}
 
-            {/* Doctor [F1] */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0284c7', marginBottom: '0.3rem' }}>
-                DOCTOR [F1] :
-              </label>
+            {/* Account / Ledger Master Dropdown */}
+            {showCustomerDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  zIndex: 60,
+                  background: 'var(--card-bg, #ffffff)',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  marginTop: '4px'
+                }}
+              >
+                <div style={{
+                  padding: '6px 10px',
+                  background: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  color: '#475569',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span>📒 SELECT ACCOUNT / LEDGER</span>
+                  <span style={{ color: '#0f766e', cursor: 'pointer' }} onClick={() => setShowCustomerDropdown(false)}>Close ✕</span>
+                </div>
+
+                {/* Cash Option Always Available at Top */}
+                <div
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setCustomerName('Cash Customer');
+                    setPatientName('Cash Customer');
+                    setCustomerGstin('');
+                    setBuyerDlNo('');
+                    setShowCustomerDropdown(false);
+                  }}
+                  style={{
+                    padding: '0.55rem 0.8rem',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #e2e8f0',
+                    fontSize: '0.82rem',
+                    background: customerName === 'Cash Customer' ? '#f0fdf4' : 'transparent',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+                  onMouseLeave={e => (e.currentTarget.style.background = customerName === 'Cash Customer' ? '#f0fdf4' : 'transparent')}
+                >
+                  <div>
+                    <span style={{ fontWeight: 800, color: '#0f766e' }}>💵 Cash Customer</span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: '6px' }}>(Walk-in Retail Cash Sale)</span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, background: '#dcfce7', color: '#166534', padding: '1px 6px', borderRadius: '4px' }}>
+                    CASH SALE
+                  </span>
+                </div>
+
+                {/* Filtered Master Ledgers */}
+                {(customers || [])
+                  .filter(c => {
+                    if (!c || c.isCash) return false;
+                    const q = (customerName || '').trim().toLowerCase();
+                    if (!q || q === 'cash customer') return true;
+                    const nameMatch = (c.name || '').toLowerCase().includes(q) || (c.mailTo || '').toLowerCase().includes(q);
+                    const gstinMatch = Boolean(c.gstin && c.gstin.toLowerCase().includes(q));
+                    const phoneMatch = Boolean(c.phone && c.phone.includes(customerName));
+                    const stationMatch = Boolean(c.station && c.station.toLowerCase().includes(q));
+                    return nameMatch || gstinMatch || phoneMatch || stationMatch;
+                  })
+                  .slice(0, 15)
+                  .map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        setSelectedCustomer(c);
+                        setCustomerName(c.name);
+                        setPatientName(c.name);
+                        if (c.phone) setCustomerPhone(c.phone);
+                        if (c.address) setPatientAddress(c.address);
+                        if (c.gstin) {
+                          handleGstinChange(c.gstin);
+                          setIsGstBill(true);
+                        } else {
+                          setCustomerGstin('');
+                          setBuyerState('');
+                        }
+                        if (c.drugLicenseNo) setBuyerDlNo(c.drugLicenseNo);
+                        setShowCustomerDropdown(false);
+                      }}
+                      style={{
+                        padding: '0.55rem 0.8rem',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--border-color, #f1f5f9)',
+                        fontSize: '0.82rem',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary, #f1f5f9)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{c.name}</span>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            backgroundColor: c.gstin ? '#dbeafe' : '#f1f5f9',
+                            color: c.gstin ? '#1e40af' : '#475569'
+                          }}>
+                            {c.gstin ? 'B2B GST' : c.type}
+                          </span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          color: c.outstandingBalance > 0 ? '#dc2626' : '#15803d'
+                        }}>
+                          {c.outstandingBalance > 0 ? `Due: ₹${c.outstandingBalance.toFixed(2)}` : 'Nil'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #64748b)', display: 'flex', gap: '10px', marginTop: '2px', alignItems: 'center' }}>
+                        {c.station && <span>📍 {c.station}</span>}
+                        {c.phone && <span>📞 {c.phone}</span>}
+                        {c.gstin && <span style={{ color: '#0f766e', fontFamily: 'monospace', fontWeight: 600 }}>GSTIN: {c.gstin}</span>}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Patient / Mobile / Address */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+              MOBILE / ADDRESS :
+            </label>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
               <input
-                ref={doctorInputRef}
                 type="text"
-                placeholder="Dr. Name (Prescribing Doctor)"
-                value={doctorName}
-                onChange={e => setDoctorName(e.target.value)}
-                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+                placeholder="Mobile"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+                style={{ width: '105px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
               />
-            </div>
-
-            {/* Reg. No. */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                REG. NO. :
-              </label>
               <input
                 type="text"
-                placeholder="Doctor MCI Reg No."
-                value={doctorRegNo}
-                onChange={e => setDoctorRegNo(e.target.value.toUpperCase())}
-                style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                placeholder={isB2B ? "Firm Billing Address" : "Patient Address"}
+                value={patientAddress}
+                onChange={e => setPatientAddress(e.target.value)}
+                style={{ flex: 1, minWidth: '90px', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
               />
             </div>
           </div>
-        )}
+
+          {/* 3. Doctor [F1] */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#0284c7', marginBottom: '0.3rem' }}>
+              DOCTOR [F1] :
+            </label>
+            <input
+              ref={doctorInputRef}
+              type="text"
+              placeholder="Dr. Name (Prescribing Doctor)"
+              value={doctorName}
+              onChange={e => setDoctorName(e.target.value)}
+              style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', fontWeight: '600' }}
+            />
+          </div>
+
+          {/* 4. Reg. No. */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+              REG. NO. :
+            </label>
+            <input
+              type="text"
+              placeholder="MCI Reg No."
+              value={doctorRegNo}
+              onChange={e => setDoctorRegNo(e.target.value.toUpperCase())}
+              style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)' }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Main Medicine Search & Bill Grid (Photo 3 Middle Table) */}
