@@ -534,16 +534,22 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   }, 0);
   const grossTaxable = Math.max(0, valueOfGoods - totalItemDiscount);
 
-  // Automatic 10% Scheme on bills exceeding ₹500
+  // Automatic 10% Scheme on bills exceeding ₹500 — EXCLUSIVELY for Dr. Priyadarshi Srivastava's vendor/clinic
+  const isPriyadarshiVendor = Boolean(
+    activeCompany?.name?.toUpperCase().includes('PRIYADARSHI') ||
+    activeCompany?.name?.toUpperCase().includes('NEURO HARMONY') ||
+    (doctorName && doctorName.toUpperCase().includes('PRIYADARSHI'))
+  );
+
   useEffect(() => {
     if (!manualDiscountOverride && !editingInvoiceId) {
-      if (grossTaxable > 500) {
+      if (isPriyadarshiVendor && grossTaxable > 500) {
         setBillDiscountPct(10);
       } else {
         setBillDiscountPct(0);
       }
     }
-  }, [grossTaxable, manualDiscountOverride, editingInvoiceId]);
+  }, [grossTaxable, manualDiscountOverride, editingInvoiceId, isPriyadarshiVendor]);
 
   const billDiscountAmt = (grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100;
   const netTaxable = Math.max(0, grossTaxable - billDiscountAmt);
@@ -1278,7 +1284,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   width: '52px',
                   padding: '0.3rem 0.4rem',
                   background: 'var(--card-bg)',
-                  border: grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
+                  border: isPriyadarshiVendor && grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
                   borderRadius: '5px',
                   color: 'var(--text-primary)',
                   textAlign: 'center',
@@ -1287,15 +1293,20 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 }}
               />
               <span style={{ color: 'var(--text-muted)' }}>%</span>
+              {isPriyadarshiVendor && grossTaxable > 500 && billDiscountPct === 10 && (
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '1px 5px', borderRadius: '3px' }}>
+                  10% Dr. Priyadarshi Scheme
+                </span>
+              )}
               {manualDiscountOverride && (
                 <button
                   type="button"
                   onClick={() => {
                     setManualDiscountOverride(false);
-                    if (grossTaxable > 500) setBillDiscountPct(10);
+                    if (isPriyadarshiVendor && grossTaxable > 500) setBillDiscountPct(10);
                     else setBillDiscountPct(0);
                   }}
-                  title="Reset to automatic 10% scheme for bills > ₹500"
+                  title={isPriyadarshiVendor ? "Reset to automatic 10% scheme for bills > ₹500" : "Reset discount"}
                   style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: '0 2px' }}
                 >
                   ↺ Auto
