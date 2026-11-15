@@ -49,6 +49,7 @@ import {
   Upload,
   Image as ImageIcon
 } from 'lucide-react';
+import { CompanySettingsModal } from '../components/CompanySettingsModal';
 
 interface InventorySummary {
   totalMedicines: number;
@@ -104,66 +105,8 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
   const [license, setLicense] = useState<LicenseInfo | null>(null);
   const [licenseModalOpen, setLicenseModalOpen] = useState(false);
 
-  // Bank & Mohar Settings Modal
-  const [bankSettingsOpen, setBankSettingsOpen] = useState(false);
-  const [bankForm, setBankForm] = useState<{
-    bankName: string;
-    accountNo: string;
-    ifscCode: string;
-    branch: string;
-    accountName: string;
-    signatureImage?: string;
-  }>({
-    bankName: 'Bank Of India',
-    accountNo: '777140000006',
-    ifscCode: 'BIN0537594',
-    branch: activeCompany?.city ? `${activeCompany.city}-Branch` : 'LUCKNOW-Branch',
-    accountName: activeCompany?.name || ''
-  });
-
-  // Load saved bank details on company change
-  useEffect(() => {
-    if (!activeCompany?.id) return;
-    try {
-      const saved = localStorage.getItem(`tradeflow_bank_${activeCompany.id}`);
-      if (saved) {
-        setBankForm(JSON.parse(saved));
-      } else {
-        setBankForm({
-          bankName: 'Bank Of India',
-          accountNo: '777140000006',
-          ifscCode: 'BIN0537594',
-          branch: activeCompany.city ? `${activeCompany.city}-Branch` : 'LUCKNOW-Branch',
-          accountName: activeCompany.name
-        });
-      }
-    } catch {}
-  }, [activeCompany?.id, activeCompany?.name, activeCompany?.city]);
-
-  const handleSaveBankSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeCompany?.id) return;
-    localStorage.setItem(`tradeflow_bank_${activeCompany.id}`, JSON.stringify(bankForm));
-    window.dispatchEvent(new Event('tradeflow_bank_updated'));
-    setBankSettingsOpen(false);
-    alert(`Bank Details & Mohar / Stamp saved successfully for ${activeCompany.name}!`);
-  };
-
-  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit. Please upload a smaller image.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (typeof event.target?.result === 'string') {
-        setBankForm(prev => ({ ...prev, signatureImage: event.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  // Company Settings Modal (All 7 Professional Categories)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Collapsible Sidebar State (persisted in localStorage)
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
@@ -789,10 +732,10 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Setting icon just left to the admin / user button */}
+            {/* Professional Settings Modal Button */}
             <button
-              onClick={() => setBankSettingsOpen(true)}
-              title="Configure Bank Details & Mohar / Stamp for this Firm"
+              onClick={() => setSettingsModalOpen(true)}
+              title="Configure Firm Settings: Bank, UPI QR, Legal Terms, Pharma DL & Printing"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1919,205 +1862,12 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         </div>
       )}
 
-      {/* ── COMPANY BANK & SIGNATURE / MOHAR SETTINGS MODAL ── */}
-      {bankSettingsOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '1rem',
-          backdropFilter: 'blur(3px)'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '520px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{
-              padding: '12px 18px',
-              borderBottom: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Settings size={16} color="#0f766e" /> Bank Details & Mohar / Stamp Setup
-                </h3>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                  Active Firm: <strong style={{ color: '#0f766e' }}>{activeCompany?.name}</strong>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBankSettingsOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBankSettings} style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                🏦 Bank Account Information (Auto-printed on Invoices)
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Bank Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Bank Of India"
-                    value={bankForm.bankName}
-                    onChange={e => setBankForm({ ...bankForm, bankName: e.target.value })}
-                    style={{ width: '100%', padding: '7px 9px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Account Number *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 777140000006"
-                    value={bankForm.accountNo}
-                    onChange={e => setBankForm({ ...bankForm, accountNo: e.target.value })}
-                    style={{ width: '100%', padding: '7px 9px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '0.82rem', fontFamily: 'monospace' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>IFSC Code *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. BIN0537594"
-                    value={bankForm.ifscCode}
-                    onChange={e => setBankForm({ ...bankForm, ifscCode: e.target.value.toUpperCase() })}
-                    style={{ width: '100%', padding: '7px 9px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '0.82rem', fontFamily: 'monospace' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Branch Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. LUCKNOW-Branch"
-                    value={bankForm.branch}
-                    onChange={e => setBankForm({ ...bankForm, branch: e.target.value })}
-                    style={{ width: '100%', padding: '7px 9px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Account Beneficiary / Company Name</label>
-                <input
-                  type="text"
-                  placeholder={activeCompany?.name || 'Account Holder Name'}
-                  value={bankForm.accountName}
-                  onChange={e => setBankForm({ ...bankForm, accountName: e.target.value })}
-                  style={{ width: '100%', padding: '7px 9px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '0.82rem' }}
-                />
-              </div>
-
-              {/* Upload Signature or Mohar / Stamp */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                  ✍️ Authorized Signature / Mohar (Stamp) Upload
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '8px' }}>
-                  Upload your pharmacy / clinic stamp or official signature. It will be printed directly in the "Authorized Signatory" box on all invoices.
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {bankForm.signatureImage ? (
-                    <div style={{ position: 'relative', display: 'inline-block', padding: '6px', border: '1.5px solid #86efac', borderRadius: '8px', background: '#f0fdf4' }}>
-                      <img
-                        src={bankForm.signatureImage}
-                        alt="Uploaded Stamp / Signature"
-                        style={{ maxHeight: '56px', maxWidth: '140px', objectFit: 'contain' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setBankForm({ ...bankForm, signatureImage: undefined })}
-                        title="Remove Stamp"
-                        style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          right: '-6px',
-                          background: '#dc2626',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '18px',
-                          height: '18px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          fontSize: '10px'
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{
-                      flex: 1,
-                      border: '1.5px dashed #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      textAlign: 'center',
-                      backgroundColor: '#f8fafc'
-                    }}>
-                      <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                        <Upload size={20} color="#0f766e" />
-                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e' }}>Click to Upload Stamp / Mohar / Signature</span>
-                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>PNG or JPEG format (transparent background recommended)</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleSignatureUpload}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setBankSettingsOpen(false)}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-sm"
-                  style={{ backgroundColor: '#0f766e', borderColor: '#0f766e', fontWeight: 700 }}
-                >
-                  Save For {activeCompany?.name}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── ALL 7 PROFESSIONAL COMPANY SETTINGS MODAL ── */}
+      <CompanySettingsModal
+        activeCompany={activeCompany}
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+      />
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Printer, Edit2, Trash2, X, ChevronDown, ChevronUp, FileText, Settings2, Check, Upload } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { CompanySettings, getCompanySettings } from '../utils/companySettings';
+import { CompanySettingsModal } from './CompanySettingsModal';
 import { Company } from '../context/AuthContext';
 import { numberToIndianWords, normalizeIndianState } from '../utils/numberToWords';
 
@@ -203,23 +206,31 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const [editBankForm, setEditBankForm] = useState(bankDetails);
   const [editDispatchForm, setEditDispatchForm] = useState(dispatchDetails);
 
-  // Sync bank details if changed from Dashboard settings
+  // Comprehensive Firm Settings (Bank, UPI QR, DL 20B/21B, FSSAI, Terms, Paper, Logo, Mohar)
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(() => getCompanySettings(companyId, comp));
+
+  // Sync settings whenever updated
   useEffect(() => {
-    const handleBankUpdate = () => {
-      try {
-        const saved = localStorage.getItem(bankStorageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setBankDetails(parsed);
-          setEditBankForm(parsed);
-        }
-      } catch {}
+    const handleUpdate = () => {
+      const updated = getCompanySettings(companyId, comp);
+      setCompanySettings(updated);
+      setBankDetails(prev => ({
+        ...prev,
+        bankName: updated.bankName,
+        accountNo: updated.accountNo,
+        ifscCode: updated.ifscCode,
+        branch: updated.branch,
+        accountName: updated.accountName,
+        signatureImage: updated.signatureImage
+      }));
     };
-    window.addEventListener('tradeflow_bank_updated', handleBankUpdate);
+    window.addEventListener('tradeflow_settings_updated', handleUpdate);
+    window.addEventListener('tradeflow_bank_updated', handleUpdate);
     return () => {
-      window.removeEventListener('tradeflow_bank_updated', handleBankUpdate);
+      window.removeEventListener('tradeflow_settings_updated', handleUpdate);
+      window.removeEventListener('tradeflow_bank_updated', handleUpdate);
     };
-  }, [bankStorageKey]);
+  }, [companyId, comp]);
 
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -393,6 +404,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         
         {/* Box 1: Left - Company Details */}
         <div style={{ padding: '6px 8px', borderRight: '1.5px solid #000000', fontSize: '9.5px', lineHeight: 1.35 }}>
+          {companySettings.companyLogo && (
+            <div style={{ marginBottom: '4px' }}>
+              <img
+                src={companySettings.companyLogo}
+                alt="Logo"
+                style={{ maxHeight: '34px', maxWidth: '130px', objectFit: 'contain' }}
+              />
+            </div>
+          )}
           <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>
             {companyName}
           </div>
@@ -406,8 +426,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             Phone : <strong style={{ fontFamily: 'monospace' }}>{companyPhone || '—'}</strong>
           </div>
           <div>
-            D.L.No. : <strong style={{ fontFamily: 'monospace' }}>{companyDlNo || '20B-194000, 21B-194001'}</strong>
+            D.L.No. : <strong style={{ fontFamily: 'monospace' }}>
+              {companySettings.dl20b ? `${companySettings.dl20b}${companySettings.dl21b ? `, ${companySettings.dl21b}` : ''}` : (companyDlNo || '20B-194000, 21B-194001')}
+            </strong>
           </div>
+          {companySettings.fssaiNo && (
+            <div>
+              FSSAI No. : <strong style={{ fontFamily: 'monospace' }}>{companySettings.fssaiNo}</strong>
+            </div>
+          )}
           <div style={{ marginTop: '1px' }}>
             GSTIN : <strong style={{ fontFamily: 'monospace', fontSize: '10px' }}>{companyGstin || 'URP / UNREGISTERED'}</strong>
           </div>
@@ -684,26 +711,40 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', fontSize: '8.5px' }}>
-        {/* Left: Terms & Conditions + Bank Details */}
+        {/* Left: Terms & Conditions + Bank Details + UPI QR */}
         <div style={{ borderRight: '1.5px solid #000000', padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
           <div>
             <div style={{ fontWeight: 800, textDecoration: 'underline', marginBottom: '2px' }}>Terms & Conditions</div>
-            <div style={{ color: '#1f2937' }}>Goods once sold will not be taken back or exchanged.</div>
-            <div style={{ color: '#1f2937' }}>All disputes subject to Jurisdiction only.</div>
-            <div style={{ color: '#1f2937' }}>Bills not paid due date will attract 24% interest.</div>
+            <div style={{ color: '#1f2937' }}>{companySettings.termsLine1 || 'Goods once sold will not be taken back or exchanged.'}</div>
+            <div style={{ color: '#1f2937' }}>{companySettings.termsLine2 || `All disputes subject to ${companySettings.jurisdiction || 'Jurisdiction only.'}`}</div>
+            <div style={{ color: '#1f2937' }}>{companySettings.termsLine3 || `Bills not paid due date will attract ${companySettings.creditInterestRate || '24'}% interest.`}</div>
           </div>
 
-          <div style={{ borderTop: '1px dashed #9ca3af', paddingTop: '4px' }}>
-            <div style={{ fontWeight: 800, textDecoration: 'underline', marginBottom: '2px' }}>Bank Details</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
-              <div>Bank Name : <strong>{bankDetails.bankName}</strong></div>
-              <div>A/C No. : <strong style={{ fontFamily: 'monospace' }}>{bankDetails.accountNo}</strong></div>
-              <div>IFSC Code : <strong style={{ fontFamily: 'monospace' }}>{bankDetails.ifscCode}</strong></div>
-              <div>Branch : <strong>{bankDetails.branch}</strong></div>
+          <div style={{ borderTop: '1px dashed #9ca3af', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, textDecoration: 'underline', marginBottom: '2px' }}>Bank Details</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+                <div>Bank Name : <strong>{companySettings.bankName || bankDetails.bankName}</strong></div>
+                <div>A/C No. : <strong style={{ fontFamily: 'monospace' }}>{companySettings.accountNo || bankDetails.accountNo}</strong></div>
+                <div>IFSC Code : <strong style={{ fontFamily: 'monospace' }}>{companySettings.ifscCode || bankDetails.ifscCode}</strong></div>
+                <div>Branch : <strong>{companySettings.branch || bankDetails.branch}</strong></div>
+              </div>
+              <div style={{ marginTop: '1px' }}>
+                Account Name : <strong>{companySettings.accountName || bankDetails.accountName || companyName}</strong>
+              </div>
             </div>
-            <div style={{ marginTop: '1px' }}>
-              Account Name : <strong>{bankDetails.accountName || companyName}</strong>
-            </div>
+
+            {/* Dynamic UPI QR Code */}
+            {companySettings.showUpiQrOnInvoice && companySettings.upiId && (
+              <div style={{ textAlign: 'center', marginLeft: '8px', borderLeft: '1px dashed #cbd5e1', paddingLeft: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <QRCodeSVG
+                  value={`upi://pay?pa=${companySettings.upiId}&pn=${encodeURIComponent(companySettings.upiPayeeName || companyName)}&am=${grandTotal.toFixed(2)}&cu=INR`}
+                  size={48}
+                  level="M"
+                />
+                <div style={{ fontSize: '7px', fontWeight: 800, color: '#0f766e', marginTop: '2px', textTransform: 'uppercase' }}>Scan & Pay UPI</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -735,9 +776,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             width: '100%',
             margin: '2px 0'
           }}>
-            {bankDetails.signatureImage ? (
+            {(companySettings.signatureImage || bankDetails.signatureImage) ? (
               <img
-                src={bankDetails.signatureImage}
+                src={companySettings.signatureImage || bankDetails.signatureImage}
                 alt={`Official Stamp / Signature for ${companyName}`}
                 style={{
                   maxHeight: '44px',
@@ -1084,10 +1125,10 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
               color: '#334155',
               cursor: 'pointer'
             }}
-            title="Configure Bank Details & Transport for this Vendor"
+            title="Configure Firm Settings: Bank, UPI QR, Legal Terms, DL & Stamps"
           >
             <Settings2 size={13} color="#0f766e" />
-            Bank & Transport
+            Firm Settings
           </button>
 
           {invoice.payments && invoice.payments.length > 0 && (
@@ -1201,233 +1242,24 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         </div>
       </div>
 
-      {/* ── VENDOR BANK & DISPATCH CONFIGURATION MODAL ── */}
-      {showSettingsModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '10px',
-            width: '100%',
-            maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                ⚙️ {companyName} — Bank & Transport Setup
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSettings} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase' }}>
-                🏦 Vendor Bank Details (Prints on Invoice Footer)
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Bank Name</label>
-                  <input
-                    type="text"
-                    value={editBankForm.bankName}
-                    onChange={e => setEditBankForm({ ...editBankForm, bankName: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>A/C Number</label>
-                  <input
-                    type="text"
-                    value={editBankForm.accountNo}
-                    onChange={e => setEditBankForm({ ...editBankForm, accountNo: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontFamily: 'monospace' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>IFSC Code</label>
-                  <input
-                    type="text"
-                    value={editBankForm.ifscCode}
-                    onChange={e => setEditBankForm({ ...editBankForm, ifscCode: e.target.value.toUpperCase() })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontFamily: 'monospace' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Branch</label>
-                  <input
-                    type="text"
-                    value={editBankForm.branch}
-                    onChange={e => setEditBankForm({ ...editBankForm, branch: e.target.value })}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Account Beneficiary / Company Name</label>
-                <input
-                  type="text"
-                  placeholder={companyName}
-                  value={editBankForm.accountName || ''}
-                  onChange={e => setEditBankForm({ ...editBankForm, accountName: e.target.value })}
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                />
-              </div>
-
-              {/* Upload Signature or Mohar / Stamp */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  ✍️ Authorized Signature / Mohar (Stamp) Upload
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {editBankForm.signatureImage ? (
-                    <div style={{ position: 'relative', display: 'inline-block', padding: '4px', border: '1.5px solid #86efac', borderRadius: '6px', background: '#f0fdf4' }}>
-                      <img
-                        src={editBankForm.signatureImage}
-                        alt="Stamp / Mohar"
-                        style={{ maxHeight: '48px', maxWidth: '120px', objectFit: 'contain' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditBankForm({ ...editBankForm, signatureImage: undefined })}
-                        title="Remove Stamp"
-                        style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          right: '-6px',
-                          background: '#dc2626',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '18px',
-                          height: '18px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          fontSize: '10px'
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <label style={{
-                      flex: 1,
-                      border: '1.5px dashed #cbd5e1',
-                      borderRadius: '6px',
-                      padding: '10px',
-                      textAlign: 'center',
-                      backgroundColor: '#f8fafc',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <Upload size={16} color="#0f766e" />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f766e' }}>Click to Upload Stamp / Mohar / Signature</span>
-                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>PNG or JPEG format (transparent background recommended)</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleSignatureUpload}
-                        style={{ display: 'none' }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  🚚 Dispatch & Logistics Details
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Transport Name</label>
-                    <input
-                      type="text"
-                      value={editDispatchForm.transport}
-                      onChange={e => setEditDispatchForm({ ...editDispatchForm, transport: e.target.value })}
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>L.R. Number</label>
-                    <input
-                      type="text"
-                      value={editDispatchForm.lrNo}
-                      onChange={e => setEditDispatchForm({ ...editDispatchForm, lrNo: e.target.value })}
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>Cases / Boxes</label>
-                    <input
-                      type="text"
-                      value={editDispatchForm.cases}
-                      onChange={e => setEditDispatchForm({ ...editDispatchForm, cases: e.target.value })}
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#475569', marginBottom: '3px' }}>E-Way Bill No.</label>
-                    <input
-                      type="text"
-                      value={editDispatchForm.ewayBill}
-                      onChange={e => setEditDispatchForm({ ...editDispatchForm, ewayBill: e.target.value })}
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowSettingsModal(false)}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-sm"
-                  style={{ backgroundColor: '#0f766e', borderColor: '#0f766e', fontWeight: 700 }}
-                >
-                  Save For This Company
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── ALL 7 PROFESSIONAL COMPANY SETTINGS MODAL ── */}
+      <CompanySettingsModal
+        activeCompany={comp}
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSaved={(updated) => {
+          setCompanySettings(updated);
+          setBankDetails(prev => ({
+            ...prev,
+            bankName: updated.bankName,
+            accountNo: updated.accountNo,
+            ifscCode: updated.ifscCode,
+            branch: updated.branch,
+            accountName: updated.accountName,
+            signatureImage: updated.signatureImage
+          }));
+        }}
+      />
 
       {/* ── PRINTABLE INVOICE CONTAINER ── */}
       <div id="printable-tax-invoice" className="tax-invoice-print-container" style={{
