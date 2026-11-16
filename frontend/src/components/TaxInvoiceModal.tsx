@@ -712,10 +712,16 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                 </td>
               </tr>
               {discountAmt > 0 && (
-                <tr>
-                  <td style={{ padding: '1.5px 0', fontWeight: 700 }}>DIS AMT.{discountPct > 0 ? ` (${discountPct}%)` : ''}</td>
-                  <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>-{discountAmt.toFixed(2)}</td>
-                </tr>
+                <>
+                  <tr>
+                    <td style={{ padding: '1.5px 0', fontWeight: 700 }}>DIS AMT.{discountPct > 0 ? ` (${discountPct}%)` : ''}</td>
+                    <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>-{discountAmt.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '1.5px 0', fontWeight: 700 }}>TAXABLE VAL</td>
+                    <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{taxableAmount.toFixed(2)}</td>
+                  </tr>
+                </>
               )}
               {totalTax > 0 && (
                 <>

@@ -638,8 +638,8 @@ router.post('/', idempotencyMiddleware, requireActiveLicense, async (req: Compan
 
     // Bill-level discount
     const numBillDiscountPct = Math.max(0, Math.min(100, parseFloat(billDiscountPct) || 0));
-    const billDiscountAmt = (taxableAmount * numBillDiscountPct) / 100;
-    const finalTaxable = Math.max(0, taxableAmount - billDiscountAmt);
+    const billDiscountAmt = Math.round(((taxableAmount * numBillDiscountPct) / 100) * 100) / 100;
+    const finalTaxable = Math.round(Math.max(0, taxableAmount - billDiscountAmt) * 100) / 100;
 
     // Recalculate tax on final taxable if bill discount is applied
     if (numBillDiscountPct > 0) {
@@ -1028,8 +1028,8 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
     }
 
     const numBillDiscountPct = Math.max(0, Math.min(100, parseFloat(billDiscountPct) || 0));
-    const billDiscountAmt = (taxableAmount * numBillDiscountPct) / 100;
-    const finalTaxable = Math.max(0, taxableAmount - billDiscountAmt);
+    const billDiscountAmt = Math.round(((taxableAmount * numBillDiscountPct) / 100) * 100) / 100;
+    const finalTaxable = Math.round(Math.max(0, taxableAmount - billDiscountAmt) * 100) / 100;
 
     if (numBillDiscountPct > 0) {
       totalCgst = 0;

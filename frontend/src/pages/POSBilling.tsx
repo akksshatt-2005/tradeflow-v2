@@ -575,8 +575,8 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
     }
   }, [grossTaxable, manualDiscountOverride, editingInvoiceId, isPriyadarshiParty]);
 
-  const billDiscountAmt = (grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100;
-  const netTaxable = Math.max(0, grossTaxable - billDiscountAmt);
+  const billDiscountAmt = Math.round(((grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100) * 100) / 100;
+  const netTaxable = Math.round(Math.max(0, grossTaxable - billDiscountAmt) * 100) / 100;
 
   const discountMultiplier = 1 - (Math.max(0, Math.min(100, billDiscountPct)) / 100);
   const totalGstAmount = invoiceItems.reduce((sum, item) => {
@@ -1912,6 +1912,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </span>
               <span style={{ fontWeight: '700' }}>- ₹{(totalItemDiscount + billDiscountAmt).toFixed(2)}</span>
             </div>
+
+            {(totalItemDiscount > 0 || billDiscountPct > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontWeight: '700', borderTop: '1px dashed var(--border-color)', paddingTop: '0.25rem', marginTop: '0.1rem' }}>
+                <span>TAXABLE VALUE :</span>
+                <span style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>₹{netTaxable.toFixed(2)}</span>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
               <span>{totalGstAmount > 0 ? (isInterState ? 'IGST TAX :' : 'GST (CGST+SGST) :') : 'GST (0% / NON-GST) :'}</span>
