@@ -145,7 +145,9 @@ router.get('/fefo-suggestions', async (req: CompanyScopedRequest, res: Response)
 router.get('/', async (req: CompanyScopedRequest, res: Response) => {
   const companyId = req.company!.id;
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit as string) || 500));
+  const limit = req.query.limit === 'all'
+    ? 25000
+    : Math.min(25000, Math.max(1, parseInt(req.query.limit as string) || 500));
   const skip = (page - 1) * limit;
 
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
@@ -249,10 +251,12 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
         }
       }
 
-      // Profit = MRP/Selling Price - Purchase Cost
+      // Cost of goods sold (COGS)
       const finalCost = Math.round(invoiceCost * 100) / 100;
       const finalMrp = Math.round(invoiceMrpVal * 100) / 100;
-      const finalProfit = Math.max(0, Math.round((finalMrp - finalCost) * 100) / 100);
+      // Actual Profit = Selling Price (grandTotal) - Purchase Cost (COGS)
+      const billedRevenue = totalAmt > 0 ? totalAmt : Number(inv.taxableAmount || 0);
+      const finalProfit = billedRevenue > finalCost ? Math.round((billedRevenue - finalCost) * 100) / 100 : 0;
 
       return {
         id: inv.id,
