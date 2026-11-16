@@ -330,28 +330,41 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               const matchedItem = itemsRes.items?.find((m: MedicineItem) => m.id === (i.itemId || i.item?.id));
               const matchedBatch = matchedItem?.batches?.find((b: any) => b.id === (i.batchId || i.batch?.id));
 
+              const strips = i.strips || 0;
+              const loose = i.looseQty || 0;
+              const factor = matchedItem?.conversionFactor || 1;
+              const unitPrice = Number(i.unitPrice || 0);
+              const discPct = Number(i.discountPercent || 0);
+              const gstRate = Number(i.gstRate || 0);
+
+              const lineGross = (strips * unitPrice) + (loose * (unitPrice / factor));
+              const lineDisc = (lineGross * discPct) / 100;
+              const lineTaxable = Math.max(0, lineGross - lineDisc);
+              const lineGst = (lineTaxable * gstRate) / 100;
+              const lineTotal = lineTaxable + lineGst;
+
               return {
                 itemId: i.itemId || i.item?.id || '',
                 medicineName: i.medicineName || i.item?.name || matchedItem?.name || 'Medicine Item',
                 genericName: i.genericName || i.item?.genericName || matchedItem?.genericName || '',
                 sku: i.sku || i.item?.sku || matchedItem?.sku || '',
                 pack: i.pack || '10 TAB',
-                conversionFactor: matchedItem?.conversionFactor || 1,
+                conversionFactor: factor,
                 batchId: i.batchId || i.batch?.id || matchedBatch?.id || '',
                 batchNumber: i.batchNumber || i.batch?.batchNumber || matchedBatch?.batchNumber || 'BATCH',
                 expiryDate: i.expiryDate || i.batch?.expiryDate || matchedBatch?.expiryDate || '',
                 currentStock: matchedBatch?.currentStock || 999,
-                strips: i.strips || 0,
-                looseQty: i.looseQty || 0,
-                quantity: i.quantity || 1,
+                strips,
+                looseQty: loose,
+                quantity: i.quantity || ((strips * factor) + loose) || 1,
                 freeQuantity: i.freeQuantity || 0,
-                unitPrice: Number(i.unitPrice || 0),
+                unitPrice,
                 mrp: Number(i.mrp || 0),
-                discountPercent: Number(i.discountPercent || 0),
-                gstRate: Number(i.gstRate || 0),
-                taxableAmount: Number(i.taxableAmount || 0),
-                gstAmount: Number(i.cgstAmount || 0) + Number(i.sgstAmount || 0) + Number(i.igstAmount || 0),
-                totalAmount: Number(i.totalAmount || 0)
+                discountPercent: discPct,
+                gstRate,
+                taxableAmount: Math.round(lineTaxable * 100) / 100,
+                gstAmount: Math.round(lineGst * 100) / 100,
+                totalAmount: Math.round(lineTotal * 100) / 100
               };
             });
             setInvoiceItems(mappedItems);

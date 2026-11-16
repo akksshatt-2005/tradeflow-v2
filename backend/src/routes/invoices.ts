@@ -658,7 +658,9 @@ router.post('/', idempotencyMiddleware, requireActiveLicense, async (req: Compan
           item.cgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
           item.sgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
         }
-        item.totalAmount = Math.round((effTaxable + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
+        // Line item total must represent the line amount (Line Taxable + Line GST).
+        // Bill discount is an invoice-level summary deduction and must not corrupt individual line totals.
+        item.totalAmount = Math.round((item.taxableAmount + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
         totalCgst += item.cgstAmount;
         totalSgst += item.sgstAmount;
         totalIgst += item.igstAmount;
@@ -1045,7 +1047,9 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
           item.cgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
           item.sgstAmount = Math.round((effTaxable * (item.gstRate / 2) / 100) * 100) / 100;
         }
-        item.totalAmount = Math.round((effTaxable + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
+        // Line item total must represent the line amount (Line Taxable + Line GST).
+        // Bill discount is an invoice-level summary deduction and must not corrupt individual line totals.
+        item.totalAmount = Math.round((item.taxableAmount + item.cgstAmount + item.sgstAmount + item.igstAmount) * 100) / 100;
         totalCgst += item.cgstAmount;
         totalSgst += item.sgstAmount;
         totalIgst += item.igstAmount;

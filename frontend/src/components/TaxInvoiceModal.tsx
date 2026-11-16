@@ -707,24 +707,38 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             <tbody>
               <tr>
                 <td style={{ padding: '1.5px 0', fontWeight: 700 }}>TOTAL</td>
-                <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{taxableAmount.toFixed(2)}</td>
+                <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>
+                  {(subtotal || (taxableAmount + discountAmt)).toFixed(2)}
+                </td>
               </tr>
-              <tr>
-                <td style={{ padding: '1.5px 0', fontWeight: 700 }}>DIS AMT.</td>
-                <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{discountAmt.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '1.5px 0', fontWeight: 700 }}>SGST PAYBLE</td>
-                <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>{sgstAmount.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '1.5px 0', fontWeight: 700 }}>CGST PAYBLE</td>
-                <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>{cgstAmount.toFixed(2)}</td>
-              </tr>
+              {discountAmt > 0 && (
+                <tr>
+                  <td style={{ padding: '1.5px 0', fontWeight: 700 }}>DIS AMT.{discountPct > 0 ? ` (${discountPct}%)` : ''}</td>
+                  <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>-{discountAmt.toFixed(2)}</td>
+                </tr>
+              )}
+              {totalTax > 0 && (
+                <>
+                  <tr>
+                    <td style={{ padding: '1.5px 0', fontWeight: 700 }}>SGST PAYBLE</td>
+                    <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>{sgstAmount.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '1.5px 0', fontWeight: 700 }}>CGST PAYBLE</td>
+                    <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>{cgstAmount.toFixed(2)}</td>
+                  </tr>
+                </>
+              )}
               <tr>
                 <td style={{ padding: '1.5px 0', fontWeight: 700 }}>CR/DR NOTE</td>
                 <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>0.00</td>
               </tr>
+              {roundOff !== 0 && (
+                <tr>
+                  <td style={{ padding: '1.5px 0', fontWeight: 700 }}>ROUND OFF</td>
+                  <td style={{ padding: '1.5px 0', textAlign: 'right', fontFamily: 'monospace' }}>{roundOff > 0 ? `+${roundOff.toFixed(2)}` : roundOff.toFixed(2)}</td>
+                </tr>
+              )}
               <tr style={{ borderTop: '1px solid #000000', fontSize: '11px', fontWeight: 900 }}>
                 <td style={{ padding: '3px 0 1px 0' }}>Grand Total</td>
                 <td style={{ padding: '3px 0 1px 0', textAlign: 'right', fontFamily: 'monospace' }}>₹{grandTotal.toFixed(2)}</td>
@@ -975,8 +989,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         <div>
           <strong>Total Words:</strong> {numberToIndianWords(grandTotal)}
         </div>
-        <div style={{ fontSize: '14px', fontWeight: 900 }}>
-          Grand Total: ₹{grandTotal.toFixed(2)}
+        <div style={{ textAlign: 'right' }}>
+          {discountAmt > 0 && (
+            <div style={{ fontSize: '10.5px', color: '#4b5563', marginBottom: '2px' }}>
+              Subtotal: ₹{(subtotal || (taxableAmount + discountAmt)).toFixed(2)} | Disc{discountPct > 0 ? ` (${discountPct}%)` : ''}: -₹{discountAmt.toFixed(2)}
+            </div>
+          )}
+          <div style={{ fontSize: '14px', fontWeight: 900 }}>
+            Grand Total: ₹{grandTotal.toFixed(2)}
+          </div>
         </div>
       </div>
     </div>
