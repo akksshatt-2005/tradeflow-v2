@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -58,9 +58,11 @@ export default function Medicines() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const pageSize = 2000;
+  const [pageSize, setPageSize] = useState<number>(100);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const latestRequestIdRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
   // Modals
@@ -359,13 +361,27 @@ export default function Medicines() {
     reader.readAsArrayBuffer(file);
   };
 
+  // Debounce search input by 250ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  // Trigger item fetch when company, debounced search, or page size changes
   useEffect(() => {
     setCurrentPage(1);
-    fetchItems(1);
-  }, [activeCompany?.id, search]);
+    fetchItems(1, debouncedSearch, pageSize);
+  }, [activeCompany?.id, debouncedSearch, pageSize]);
 
-  const fetchItems = async (pageToFetch = currentPage) => {
+  const fetchItems = async (
+    pageToFetch = currentPage,
+    term = debouncedSearch,
+    limit = pageSize
+  ) => {
     if (!activeCompany) return;
+    const thisRequestId = ++latestRequestIdRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -377,9 +393,15 @@ export default function Medicines() {
           total: number;
           totalPages: number;
         };
-      }>(`/api/items?search=${encodeURIComponent(search)}&page=${pageToFetch}&limit=${pageSize}`, {
+      }>(`/api/items?search=${encodeURIComponent(term)}&page=${pageToFetch}&limit=${limit}`, {
         companyId: activeCompany.id
       });
+
+      // Discard stale responses if a newer request was dispatched
+      if (thisRequestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       setItems(res.items || []);
       if (res.pagination) {
         setTotalCount(res.pagination.total);
@@ -391,9 +413,13 @@ export default function Medicines() {
         setTotalPages(1);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load medicines');
+      if (thisRequestId === latestRequestIdRef.current) {
+        setError(err.message || 'Failed to load medicines');
+      }
     } finally {
-      setLoading(false);
+      if (thisRequestId === latestRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -768,14 +794,39 @@ export default function Medicines() {
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '320px', flexWrap: 'wrap' }}>
-          <div className="search-box" style={{ flex: 1, minWidth: '240px', maxWidth: '420px' }}>
+          <div className="search-box" style={{ flex: 1, minWidth: '240px', maxWidth: '420px', position: 'relative' }}>
             <Search size={16} />
             <input
               type="text"
               placeholder="Search by brand name, generic composition, SKU, or manufacturer..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  setDebouncedSearch('');
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  padding: '2px',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Quick Filter Buttons: All Medicines vs Alert Medicines Only */}
@@ -848,6 +899,11 @@ export default function Medicines() {
           ) : (
             <span>
               Total Medicines: <strong style={{ color: '#0f172a' }}>{totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length}</strong>
+              {debouncedSearch && (
+                <span style={{ marginLeft: '6px', color: '#0f766e', fontWeight: 600 }}>
+                  (matching &ldquo;{debouncedSearch}&rdquo;)
+                </span>
+              )}
               {totalPages > 1 && (
                 <span style={{ marginLeft: '8px', fontSize: '12px', color: '#64748b' }}>
                   (Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount).toLocaleString('en-IN')} • Page {currentPage} of {totalPages})
@@ -1153,12 +1209,39 @@ export default function Medicines() {
             <strong style={{ color: '#0f172a' }}>{totalCount.toLocaleString('en-IN')}</strong> medicines
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '6px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const newSize = parseInt(e.target.value) || 100;
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '12px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value={500}>500</option>
+                <option value={1000}>1,000</option>
+              </select>
+            </div>
+
             <button
               type="button"
               onClick={() => {
                 if (currentPage > 1) {
-                  fetchItems(1);
+                  fetchItems(1, debouncedSearch, pageSize);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
@@ -1179,7 +1262,7 @@ export default function Medicines() {
               type="button"
               onClick={() => {
                 if (currentPage > 1) {
-                  fetchItems(currentPage - 1);
+                  fetchItems(currentPage - 1, debouncedSearch, pageSize);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
@@ -1213,7 +1296,7 @@ export default function Medicines() {
               type="button"
               onClick={() => {
                 if (currentPage < totalPages) {
-                  fetchItems(currentPage + 1);
+                  fetchItems(currentPage + 1, debouncedSearch, pageSize);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
@@ -1234,7 +1317,7 @@ export default function Medicines() {
               type="button"
               onClick={() => {
                 if (currentPage < totalPages) {
-                  fetchItems(totalPages);
+                  fetchItems(totalPages, debouncedSearch, pageSize);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
