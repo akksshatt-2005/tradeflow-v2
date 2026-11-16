@@ -312,7 +312,7 @@ export default function Dashboard({ onSwitchCompany }: { onSwitchCompany: () => 
         setLoadingItems(true);
         const [partiesRes, itemsRes] = await Promise.all([
           api.get<{ parties: any[] }>('/api/parties?type=SUPPLIER', { companyId: activeCompany.id }),
-          api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', { companyId: activeCompany.id })
+          api.get<{ items: MedicineItem[] }>('/api/items?limit=all', { companyId: activeCompany.id })
         ]);
         const supps = partiesRes.parties || [];
         setSuppliers(supps);

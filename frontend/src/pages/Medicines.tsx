@@ -55,6 +55,10 @@ interface MedicineItem {
 export default function Medicines() {
   const { activeCompany } = useAuth();
   const [items, setItems] = useState<MedicineItem[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const pageSize = 2000;
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -152,12 +156,24 @@ export default function Medicines() {
   const [importSearch, setImportSearch] = useState('');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleExportMedicines = () => {
-    if (items.length === 0) {
-      alert('No medicines available to export.');
-      return;
-    }
-    const data = items.map((item, idx) => ({
+  const handleExportMedicines = async () => {
+    if (!activeCompany) return;
+    try {
+      let exportList = items;
+      if (totalCount > items.length) {
+        const res = await api.get<{ items: MedicineItem[] }>('/api/items?limit=all', {
+          companyId: activeCompany.id
+        });
+        if (res.items && res.items.length > 0) {
+          exportList = res.items;
+        }
+      }
+
+      if (exportList.length === 0) {
+        alert('No medicines available to export.');
+        return;
+      }
+      const data = exportList.map((item, idx) => ({
       'S.No': idx + 1,
       'SKU / Code': item.sku,
       'Medicine Name': item.name,
@@ -178,7 +194,10 @@ export default function Medicines() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicine Catalog');
     const compName = (activeCompany?.name || 'Catalog').replace(/[^a-zA-Z0-9_-]/g, '_');
     XLSX.writeFile(workbook, `Medicines_${compName}_${getLocalDateString()}.xlsx`);
-  };
+  } catch (err: any) {
+    alert('Failed to export medicines: ' + (err.message || 'Error'));
+  }
+};
 
   const handleExportTemplate = () => {
     const templateData = [
@@ -341,18 +360,36 @@ export default function Medicines() {
   };
 
   useEffect(() => {
-    fetchItems();
+    setCurrentPage(1);
+    fetchItems(1);
   }, [activeCompany?.id, search]);
 
-  const fetchItems = async () => {
+  const fetchItems = async (pageToFetch = currentPage) => {
     if (!activeCompany) return;
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
+      const res = await api.get<{
+        items: MedicineItem[];
+        pagination?: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>(`/api/items?search=${encodeURIComponent(search)}&page=${pageToFetch}&limit=${pageSize}`, {
         companyId: activeCompany.id
       });
       setItems(res.items || []);
+      if (res.pagination) {
+        setTotalCount(res.pagination.total);
+        setCurrentPage(res.pagination.page);
+        setTotalPages(res.pagination.totalPages);
+      } else {
+        setTotalCount(res.items?.length || 0);
+        setCurrentPage(1);
+        setTotalPages(1);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load medicines');
     } finally {
@@ -513,14 +550,15 @@ export default function Medicines() {
       });
 
       setEditingBatchInfo(null);
-      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
-        companyId: activeCompany.id
-      });
-      const freshItems = res.items || [];
-      setItems(freshItems);
+      await fetchItems(currentPage);
       if (viewingItemBatches) {
-        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
-        if (updatedViewing) setViewingItemBatches(updatedViewing);
+        // Refresh currently viewed item batches
+        try {
+          const detailRes = await api.get<MedicineItem>(`/api/items/${viewingItemBatches.id}`, {
+            companyId: activeCompany.id
+          });
+          if (detailRes) setViewingItemBatches(detailRes);
+        } catch (_) {}
       }
     } catch (err: any) {
       console.error('Failed to update batch:', err);
@@ -543,14 +581,14 @@ export default function Medicines() {
         companyId: activeCompany.id
       });
 
-      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
-        companyId: activeCompany.id
-      });
-      const freshItems = res.items || [];
-      setItems(freshItems);
+      await fetchItems(currentPage);
       if (viewingItemBatches) {
-        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
-        if (updatedViewing) setViewingItemBatches(updatedViewing);
+        try {
+          const detailRes = await api.get<MedicineItem>(`/api/items/${viewingItemBatches.id}`, {
+            companyId: activeCompany.id
+          });
+          if (detailRes) setViewingItemBatches(detailRes);
+        } catch (_) {}
       }
     } catch (err: any) {
       console.error('Failed to delete batch:', err);
@@ -762,7 +800,7 @@ export default function Medicines() {
               }}
             >
               <Package size={14} />
-              <span>All Medicines ({items.length})</span>
+              <span>All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})</span>
             </button>
 
             <button
@@ -806,9 +844,16 @@ export default function Medicines() {
 
         <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap' }}>
           {showAlertsOnly ? (
-            <span>Showing <strong style={{ color: '#dc2626' }}>{displayedItems.length}</strong> Low Stock Alerts</span>
+            <span>Showing <strong style={{ color: '#dc2626' }}>{displayedItems.length}</strong> Low Stock Alerts (on page)</span>
           ) : (
-            <span>Total Medicines: <strong style={{ color: '#0f172a' }}>{items.length}</strong></span>
+            <span>
+              Total Medicines: <strong style={{ color: '#0f172a' }}>{totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length}</strong>
+              {totalPages > 1 && (
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#64748b' }}>
+                  (Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount).toLocaleString('en-IN')} • Page {currentPage} of {totalPages})
+                </span>
+              )}
+            </span>
           )}
         </div>
       </div>
@@ -847,7 +892,7 @@ export default function Medicines() {
               cursor: 'pointer'
             }}
           >
-            Show All Medicines ({items.length})
+            Show All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})
           </button>
         </div>
       )}
@@ -906,7 +951,7 @@ export default function Medicines() {
                         className="btn btn-secondary"
                         style={{ fontSize: '12px' }}
                       >
-                        Show All Medicines ({items.length})
+                        Show All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})
                       </button>
                     </div>
                   ) : (
@@ -1087,6 +1132,128 @@ export default function Medicines() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {!showAlertsOnly && totalPages > 1 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 16px',
+          background: '#ffffff',
+          border: '1px solid var(--border-light, #e2e8f0)',
+          borderRadius: '8px',
+          marginTop: '4px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ fontSize: '13px', color: '#64748b' }}>
+            Showing <strong>{((currentPage - 1) * pageSize) + 1}</strong> to{' '}
+            <strong>{Math.min(currentPage * pageSize, totalCount).toLocaleString('en-IN')}</strong> of{' '}
+            <strong style={{ color: '#0f172a' }}>{totalCount.toLocaleString('en-IN')}</strong> medicines
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (currentPage > 1) {
+                  fetchItems(1);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage <= 1 || loading}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                opacity: currentPage <= 1 ? 0.5 : 1
+              }}
+              title="First Page"
+            >
+              « First
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (currentPage > 1) {
+                  fetchItems(currentPage - 1);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage <= 1 || loading}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                opacity: currentPage <= 1 ? 0.5 : 1
+              }}
+              title="Previous Page"
+            >
+              ◀ Previous
+            </button>
+
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#0f766e',
+              background: '#f0fdfa',
+              border: '1px solid #ccfbf1',
+              padding: '4px 12px',
+              borderRadius: '6px'
+            }}>
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  fetchItems(currentPage + 1);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage >= totalPages || loading}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                opacity: currentPage >= totalPages ? 0.5 : 1
+              }}
+              title="Next Page"
+            >
+              Next ▶
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  fetchItems(totalPages);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage >= totalPages || loading}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                opacity: currentPage >= totalPages ? 0.5 : 1
+              }}
+              title="Last Page"
+            >
+              Last »
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Low Stock Alert Detail */}
       {alertDetailItem && (
