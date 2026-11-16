@@ -115,6 +115,9 @@ export default function NewPurchase({
 
   // Keyboard Navigation Refs for Zero-Mouse Rapid Inward Entry
   const supplierInputRef = useRef<HTMLInputElement>(null);
+
+  // Stable idempotency key for the current purchase bill (rotated after each successful save)
+  const purIdempotencyKeyRef = useRef<string>(`pur-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`);
   const partyBillNoInputRef = useRef<HTMLInputElement>(null);
   const billDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -829,14 +832,17 @@ export default function NewPurchase({
       if (editingPurchaseId) {
         await api.put(`/api/purchases/${editingPurchaseId}`, payload, {
           companyId: activeCompany.id,
-          idempotencyKey: `pur-edit-${Date.now()}`
+          idempotencyKey: `pur-edit-${editingPurchaseId}`
         });
       } else {
         await api.post('/api/purchases', payload, {
           companyId: activeCompany.id,
-          idempotencyKey: `pur-${Date.now()}`
+          idempotencyKey: purIdempotencyKeyRef.current
         });
       }
+
+      // Rotate idempotency key so the next new purchase bill gets a fresh key
+      purIdempotencyKeyRef.current = `pur-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
 
       onCreated();
     } catch (err: any) {

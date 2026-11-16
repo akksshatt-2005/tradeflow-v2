@@ -221,6 +221,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       .slice(0, 40);
   }, [items, medicineSearch]);
 
+  // Stable idempotency key for the current bill (rotated after each successful save)
+  // Using a ref so the same key is reused across all retry attempts for one bill action.
+  const posIdempotencyKeyRef = useRef<string>(`pos-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`);
+
   // Dropdown scroll & keyboard navigation protection (prevents mouse hover collision when scrolling)
   const isKeyboardNavRef = useRef(false);
   const keyboardTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -683,12 +687,12 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       if (editingInvoiceId) {
         await api.put<{ invoice: any }>(`/api/invoices/${editingInvoiceId}`, payload, {
           companyId: activeCompany.id,
-          idempotencyKey: `pos-edit-${Date.now()}`
+          idempotencyKey: `pos-edit-${editingInvoiceId}`
         });
       } else {
         const res = await api.post<{ invoice: any }>('/api/invoices', payload, {
           companyId: activeCompany.id,
-          idempotencyKey: `pos-${Date.now()}`
+          idempotencyKey: posIdempotencyKeyRef.current
         });
         invoiceId = res.invoice.id;
       }
@@ -700,6 +704,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setCreatedInvoice(detailsRes.invoice);
       setNextInvoiceNo(detailsRes.invoice.invoiceNumber);
       setShowPrintModal(true);
+
+      // Rotate idempotency key so the NEXT new bill gets a fresh key
+      posIdempotencyKeyRef.current = `pos-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
 
       if (onInvoiceCreated) {
         onInvoiceCreated();
