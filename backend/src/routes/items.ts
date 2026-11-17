@@ -20,8 +20,8 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = req.query.limit === 'all'
-    ? 50000
-    : Math.min(50000, Math.max(1, parseInt(req.query.limit as string) || 100));
+    ? 10000
+    : Math.min(10000, Math.max(1, parseInt(req.query.limit as string) || 2000));
   const skip = (page - 1) * limit;
 
   try {
@@ -30,24 +30,12 @@ router.get('/', async (req: CompanyScopedRequest, res: Response) => {
     };
 
     if (search) {
-      const words = search.split(/\s+/).filter(Boolean);
-      if (words.length > 1) {
-        where.AND = words.map(w => ({
-          OR: [
-            { name: { contains: w, mode: 'insensitive' } },
-            { genericName: { contains: w, mode: 'insensitive' } },
-            { sku: { contains: w, mode: 'insensitive' } },
-            { manufacturer: { contains: w, mode: 'insensitive' } }
-          ]
-        }));
-      } else {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { genericName: { contains: search, mode: 'insensitive' } },
-          { sku: { contains: search, mode: 'insensitive' } },
-          { manufacturer: { contains: search, mode: 'insensitive' } }
-        ];
-      }
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { genericName: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+        { manufacturer: { contains: search, mode: 'insensitive' } }
+      ];
     }
 
     const [total, items] = await Promise.all([

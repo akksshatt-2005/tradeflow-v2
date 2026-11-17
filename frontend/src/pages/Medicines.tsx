@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { getLocalDateString } from '../utils/dateUtils';
@@ -55,14 +55,8 @@ interface MedicineItem {
 export default function Medicines() {
   const { activeCompany } = useAuth();
   const [items, setItems] = useState<MedicineItem[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(100);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const latestRequestIdRef = useRef(0);
+  const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Modals
@@ -158,24 +152,12 @@ export default function Medicines() {
   const [importSearch, setImportSearch] = useState('');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleExportMedicines = async () => {
-    if (!activeCompany) return;
-    try {
-      let exportList = items;
-      if (totalCount > items.length) {
-        const res = await api.get<{ items: MedicineItem[] }>('/api/items?limit=all', {
-          companyId: activeCompany.id
-        });
-        if (res.items && res.items.length > 0) {
-          exportList = res.items;
-        }
-      }
-
-      if (exportList.length === 0) {
-        alert('No medicines available to export.');
-        return;
-      }
-      const data = exportList.map((item, idx) => ({
+  const handleExportMedicines = () => {
+    if (items.length === 0) {
+      alert('No medicines available to export.');
+      return;
+    }
+    const data = items.map((item, idx) => ({
       'S.No': idx + 1,
       'SKU / Code': item.sku,
       'Medicine Name': item.name,
@@ -196,10 +178,7 @@ export default function Medicines() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicine Catalog');
     const compName = (activeCompany?.name || 'Catalog').replace(/[^a-zA-Z0-9_-]/g, '_');
     XLSX.writeFile(workbook, `Medicines_${compName}_${getLocalDateString()}.xlsx`);
-  } catch (err: any) {
-    alert('Failed to export medicines: ' + (err.message || 'Error'));
-  }
-};
+  };
 
   const handleExportTemplate = () => {
     const templateData = [
@@ -361,65 +340,23 @@ export default function Medicines() {
     reader.readAsArrayBuffer(file);
   };
 
-  // Debounce search input by 250ms
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchInput.trim());
-    }, 250);
-    return () => clearTimeout(handler);
-  }, [searchInput]);
+    fetchItems();
+  }, [activeCompany?.id, search]);
 
-  // Trigger item fetch when company, debounced search, or page size changes
-  useEffect(() => {
-    setCurrentPage(1);
-    fetchItems(1, debouncedSearch, pageSize);
-  }, [activeCompany?.id, debouncedSearch, pageSize]);
-
-  const fetchItems = async (
-    pageToFetch = currentPage,
-    term = debouncedSearch,
-    limit = pageSize
-  ) => {
+  const fetchItems = async () => {
     if (!activeCompany) return;
-    const thisRequestId = ++latestRequestIdRef.current;
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get<{
-        items: MedicineItem[];
-        pagination?: {
-          page: number;
-          limit: number;
-          total: number;
-          totalPages: number;
-        };
-      }>(`/api/items?search=${encodeURIComponent(term)}&page=${pageToFetch}&limit=${limit}`, {
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
         companyId: activeCompany.id
       });
-
-      // Discard stale responses if a newer request was dispatched
-      if (thisRequestId !== latestRequestIdRef.current) {
-        return;
-      }
-
       setItems(res.items || []);
-      if (res.pagination) {
-        setTotalCount(res.pagination.total);
-        setCurrentPage(res.pagination.page);
-        setTotalPages(res.pagination.totalPages);
-      } else {
-        setTotalCount(res.items?.length || 0);
-        setCurrentPage(1);
-        setTotalPages(1);
-      }
     } catch (err: any) {
-      if (thisRequestId === latestRequestIdRef.current) {
-        setError(err.message || 'Failed to load medicines');
-      }
+      setError(err.message || 'Failed to load medicines');
     } finally {
-      if (thisRequestId === latestRequestIdRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -576,15 +513,14 @@ export default function Medicines() {
       });
 
       setEditingBatchInfo(null);
-      await fetchItems(currentPage);
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
+        companyId: activeCompany.id
+      });
+      const freshItems = res.items || [];
+      setItems(freshItems);
       if (viewingItemBatches) {
-        // Refresh currently viewed item batches
-        try {
-          const detailRes = await api.get<MedicineItem>(`/api/items/${viewingItemBatches.id}`, {
-            companyId: activeCompany.id
-          });
-          if (detailRes) setViewingItemBatches(detailRes);
-        } catch (_) {}
+        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
+        if (updatedViewing) setViewingItemBatches(updatedViewing);
       }
     } catch (err: any) {
       console.error('Failed to update batch:', err);
@@ -607,14 +543,14 @@ export default function Medicines() {
         companyId: activeCompany.id
       });
 
-      await fetchItems(currentPage);
+      const res = await api.get<{ items: MedicineItem[] }>(`/api/items?search=${encodeURIComponent(search)}&limit=2000`, {
+        companyId: activeCompany.id
+      });
+      const freshItems = res.items || [];
+      setItems(freshItems);
       if (viewingItemBatches) {
-        try {
-          const detailRes = await api.get<MedicineItem>(`/api/items/${viewingItemBatches.id}`, {
-            companyId: activeCompany.id
-          });
-          if (detailRes) setViewingItemBatches(detailRes);
-        } catch (_) {}
+        const updatedViewing = freshItems.find(i => i.id === viewingItemBatches.id);
+        if (updatedViewing) setViewingItemBatches(updatedViewing);
       }
     } catch (err: any) {
       console.error('Failed to delete batch:', err);
@@ -794,39 +730,14 @@ export default function Medicines() {
         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '320px', flexWrap: 'wrap' }}>
-          <div className="search-box" style={{ flex: 1, minWidth: '240px', maxWidth: '420px', position: 'relative' }}>
+          <div className="search-box" style={{ flex: 1, minWidth: '240px', maxWidth: '420px' }}>
             <Search size={16} />
             <input
               type="text"
               placeholder="Search by brand name, generic composition, SKU, or manufacturer..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchInput('');
-                  setDebouncedSearch('');
-                }}
-                style={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: '2px',
-                  display: 'inline-flex',
-                  alignItems: 'center'
-                }}
-                title="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
           </div>
 
           {/* Quick Filter Buttons: All Medicines vs Alert Medicines Only */}
@@ -851,7 +762,7 @@ export default function Medicines() {
               }}
             >
               <Package size={14} />
-              <span>All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})</span>
+              <span>All Medicines ({items.length})</span>
             </button>
 
             <button
@@ -895,21 +806,9 @@ export default function Medicines() {
 
         <div style={{ fontSize: '13px', color: '#64748b', whiteSpace: 'nowrap' }}>
           {showAlertsOnly ? (
-            <span>Showing <strong style={{ color: '#dc2626' }}>{displayedItems.length}</strong> Low Stock Alerts (on page)</span>
+            <span>Showing <strong style={{ color: '#dc2626' }}>{displayedItems.length}</strong> Low Stock Alerts</span>
           ) : (
-            <span>
-              Total Medicines: <strong style={{ color: '#0f172a' }}>{totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length}</strong>
-              {debouncedSearch && (
-                <span style={{ marginLeft: '6px', color: '#0f766e', fontWeight: 600 }}>
-                  (matching &ldquo;{debouncedSearch}&rdquo;)
-                </span>
-              )}
-              {totalPages > 1 && (
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#64748b' }}>
-                  (Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount).toLocaleString('en-IN')} • Page {currentPage} of {totalPages})
-                </span>
-              )}
-            </span>
+            <span>Total Medicines: <strong style={{ color: '#0f172a' }}>{items.length}</strong></span>
           )}
         </div>
       </div>
@@ -948,7 +847,7 @@ export default function Medicines() {
               cursor: 'pointer'
             }}
           >
-            Show All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})
+            Show All Medicines ({items.length})
           </button>
         </div>
       )}
@@ -1007,7 +906,7 @@ export default function Medicines() {
                         className="btn btn-secondary"
                         style={{ fontSize: '12px' }}
                       >
-                        Show All Medicines ({totalCount > 0 ? totalCount.toLocaleString('en-IN') : items.length})
+                        Show All Medicines ({items.length})
                       </button>
                     </div>
                   ) : (
@@ -1188,155 +1087,6 @@ export default function Medicines() {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination Controls */}
-      {!showAlertsOnly && totalPages > 1 && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 16px',
-          background: '#ffffff',
-          border: '1px solid var(--border-light, #e2e8f0)',
-          borderRadius: '8px',
-          marginTop: '4px',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div style={{ fontSize: '13px', color: '#64748b' }}>
-            Showing <strong>{((currentPage - 1) * pageSize) + 1}</strong> to{' '}
-            <strong>{Math.min(currentPage * pageSize, totalCount).toLocaleString('en-IN')}</strong> of{' '}
-            <strong style={{ color: '#0f172a' }}>{totalCount.toLocaleString('en-IN')}</strong> medicines
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>Per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  const newSize = parseInt(e.target.value) || 100;
-                  setPageSize(newSize);
-                  setCurrentPage(1);
-                }}
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '12px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={200}>200</option>
-                <option value={500}>500</option>
-                <option value={1000}>1,000</option>
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (currentPage > 1) {
-                  fetchItems(1, debouncedSearch, pageSize);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage <= 1 || loading}
-              className="btn btn-secondary"
-              style={{
-                padding: '4px 10px',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-                opacity: currentPage <= 1 ? 0.5 : 1
-              }}
-              title="First Page"
-            >
-              « First
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (currentPage > 1) {
-                  fetchItems(currentPage - 1, debouncedSearch, pageSize);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage <= 1 || loading}
-              className="btn btn-secondary"
-              style={{
-                padding: '4px 12px',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-                opacity: currentPage <= 1 ? 0.5 : 1
-              }}
-              title="Previous Page"
-            >
-              ◀ Previous
-            </button>
-
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#0f766e',
-              background: '#f0fdfa',
-              border: '1px solid #ccfbf1',
-              padding: '4px 12px',
-              borderRadius: '6px'
-            }}>
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (currentPage < totalPages) {
-                  fetchItems(currentPage + 1, debouncedSearch, pageSize);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage >= totalPages || loading}
-              className="btn btn-secondary"
-              style={{
-                padding: '4px 12px',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-                opacity: currentPage >= totalPages ? 0.5 : 1
-              }}
-              title="Next Page"
-            >
-              Next ▶
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (currentPage < totalPages) {
-                  fetchItems(totalPages, debouncedSearch, pageSize);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage >= totalPages || loading}
-              className="btn btn-secondary"
-              style={{
-                padding: '4px 10px',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-                opacity: currentPage >= totalPages ? 0.5 : 1
-              }}
-              title="Last Page"
-            >
-              Last »
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Modal: Low Stock Alert Detail */}
       {alertDetailItem && (

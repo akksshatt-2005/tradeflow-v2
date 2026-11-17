@@ -270,7 +270,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       setError(null);
 
       const [itemsRes, partiesRes, nextNumRes] = await Promise.all([
-        api.get<{ items: MedicineItem[] }>('/api/items?limit=all', {
+        api.get<{ items: MedicineItem[] }>('/api/items?limit=2000', {
           companyId: activeCompany.id
         }).catch(err => {
           console.warn('Failed to fetch items:', err);
