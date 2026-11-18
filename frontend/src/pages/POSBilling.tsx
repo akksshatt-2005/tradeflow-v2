@@ -659,7 +659,14 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
       const finalCustomerName = (selectedCustomer && !selectedCustomer.isCash)
         ? selectedCustomer.name
-        : (patientName.trim() || (customerName.trim() !== 'Cash Customer' ? customerName.trim() : 'Cash Customer'));
+        : (
+            // Prefer the entered patient name for cash sales
+            patientName.trim()
+            // Fallback to a real customer name (not the generic placeholder)
+            || (customerName.trim() && customerName.trim() !== 'Cash Customer'
+                ? customerName.trim()
+                : 'Cash Customer')
+        );
     // Ensure the customer name saved reflects the entered patient name for cash sales
 
       const payload = {
