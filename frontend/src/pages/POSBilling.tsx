@@ -405,11 +405,18 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       const pricePerStrip = item.unitPrice || 0;
       const discPct = item.discountPercent || 0;
 
-      const lineGross = (strips * pricePerStrip) + (loose * (pricePerStrip / factor));
-      const lineDisc = (lineGross * discPct) / 100;
-      const lineTaxable = Math.max(0, lineGross - lineDisc);
-      const lineGst = (lineTaxable * newGstRate) / 100;
-      const lineTotal = lineTaxable + lineGst;
+      // Bug 4 Fix: Use integer-cent arithmetic to avoid floating-point drift
+      const lineGrossCents = Math.round(strips * pricePerStrip * 100) + Math.round(loose * (pricePerStrip / factor) * 100);
+      const lineDiscCents = Math.round((lineGrossCents * discPct) / 100);
+      const lineTaxableCents = Math.max(0, lineGrossCents - lineDiscCents);
+      const lineGstCents = Math.round((lineTaxableCents * newGstRate) / 100);
+      const lineTotalCents = lineTaxableCents + lineGstCents;
+
+      const lineGross = lineGrossCents / 100;
+      const lineDisc = lineDiscCents / 100;
+      const lineTaxable = lineTaxableCents / 100;
+      const lineGst = lineGstCents / 100;
+      const lineTotal = lineTotalCents / 100;
 
       return {
         ...item,
@@ -656,6 +663,11 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
           finalPartyId = matched.id;
         }
       }
+      // Bug 6: Fallback to the generic cash party so partyId is never null
+      if (!finalPartyId) {
+        const cashParty = (customers || []).find(c => c.isCash);
+        if (cashParty) finalPartyId = cashParty.id;
+      }
 
       const finalCustomerName = (selectedCustomer && !selectedCustomer.isCash)
         ? selectedCustomer.name
@@ -673,7 +685,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
         partyId: finalPartyId,
         customerName: finalCustomerName,
         customerPhone: customerPhone.trim() || null,
-        customerAddress: patientAddress.trim() || null,
+        customerAddress: (customerName.trim() && customerName.trim() !== 'Cash Customer' ? '' : patientAddress.trim()) || null,
         customerGstin: cleanGstin,
         doctorName: doctorName.trim() || null,
         doctorRegNo: doctorRegNo.trim() || null,

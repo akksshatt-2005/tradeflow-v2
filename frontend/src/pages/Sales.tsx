@@ -1415,7 +1415,7 @@ export default function Sales({ initialShowPOS = false }: SalesProps = {}) {
                           <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
                             {inv.customerName && inv.customerName !== 'Cash Customer' 
                               ? inv.customerName 
-                              : (inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
+                              : (inv.patientName || inv.party?.mailTo || inv.customerName || inv.party?.name || 'Cash Customer')}
                           </span>
                           {(inv.customerGstin && inv.customerGstin.trim().length >= 10) || (inv.party?.gstin && inv.party.gstin.trim().length >= 10) ? (
                             <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 5px', borderRadius: '4px' }}>

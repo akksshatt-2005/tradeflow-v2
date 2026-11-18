@@ -35,19 +35,22 @@ export async function idempotencyMiddleware(req: Request, res: Response, next: N
     res.json = function (body: any) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        prisma.idempotencyKey.upsert({
-          where: { key: sanitizedKey },
-          create: {
-            key: sanitizedKey,
-            endpoint,
-            requestHash,
-            statusCode: res.statusCode,
-            responseBody: body,
-            expiresAt
-          },
-          update: {}
-        }).catch((err: any) => {
-          console.error(`[Idempotency Error] Failed to persist key ${sanitizedKey}:`, err.message);
+        // Fire-and-forget with proper error logging – must NOT block the response
+        setImmediate(() => {
+          prisma.idempotencyKey.upsert({
+            where: { key: sanitizedKey },
+            create: {
+              key: sanitizedKey,
+              endpoint,
+              requestHash,
+              statusCode: res.statusCode,
+              responseBody: body,
+              expiresAt
+            },
+            update: {}
+          }).catch((err: any) => {
+            console.error(`[Idempotency Error] Failed to persist key ${sanitizedKey}:`, err.message);
+          });
         });
       }
       res.setHeader('X-Idempotency-Key', sanitizedKey);

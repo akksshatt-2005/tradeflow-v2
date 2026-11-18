@@ -519,6 +519,11 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             <div style={{ fontWeight: 900, color: '#000000', fontSize: '11px', textTransform: 'uppercase' }}>
               {buyerName}
             </div>
+            {patientName && patientName !== buyerName && (
+              <div style={{ color: '#1f2937', fontSize: '9px', marginTop: '1px' }}>
+                Patient / Customer: <strong>{patientName}</strong>
+              </div>
+            )}
             <div style={{ color: '#1f2937', marginTop: '2px', fontSize: '9px' }}>
               {buyerAddress || 'LOCAL PHARMACY / CLINIC'}
             </div>
