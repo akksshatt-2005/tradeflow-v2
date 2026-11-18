@@ -689,9 +689,12 @@ router.post('/', idempotencyMiddleware, requireActiveLicense, async (req: Compan
     const parsedInvoiceDate = parseRecordDate(invoiceDate);
     const parsedDueDate = dueDate ? new Date(dueDate) : null;
 
-    const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
-      ? customerName.trim()
-      : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
+    const cleanCustomerName =
+      (customerName && typeof customerName === 'string' && customerName.trim().length > 0 && customerName.trim() !== 'Cash Customer')
+        ? customerName.trim()
+        : (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
+          ? patientName.trim()
+          : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
 
     const cleanPatientName = (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
       ? patientName.trim()
@@ -903,9 +906,12 @@ router.put('/:id', idempotencyMiddleware, async (req: CompanyScopedRequest, res:
       }
     }
 
-    const cleanCustomerName = (customerName && typeof customerName === 'string' && customerName.trim().length > 0)
-      ? customerName.trim()
-      : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
+    const cleanCustomerName =
+      (customerName && typeof customerName === 'string' && customerName.trim().length > 0 && customerName.trim() !== 'Cash Customer')
+        ? customerName.trim()
+        : (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
+          ? patientName.trim()
+          : (customerParty ? (customerParty.mailTo || customerParty.name) : 'Cash Customer');
 
     const cleanPatientName = (patientName && typeof patientName === 'string' && patientName.trim().length > 0)
       ? patientName.trim()

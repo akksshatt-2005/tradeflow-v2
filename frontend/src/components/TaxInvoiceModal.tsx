@@ -149,7 +149,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
   // Buyer / Party details
   const party = invoice.party || {};
-  const buyerName = invoice.customerName || party.name || 'Walk-in Customer';
+  const buyerName = invoice.customerName && invoice.customerName !== 'Cash Customer'
+    ? invoice.customerName
+    : (invoice.patientName && invoice.patientName.trim() ? invoice.patientName.trim() : party.name || 'Walk-in Customer');
   const buyerAddress = invoice.customerAddress || party.address || '';
   const { stateName: buyerState, stateCode: buyerStateCode } = normalizeIndianState(
     party.state || invoice.patientAddress || comp.state,
