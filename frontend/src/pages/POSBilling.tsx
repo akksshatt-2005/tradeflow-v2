@@ -558,29 +558,34 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
   }, 0);
   const grossTaxable = Math.max(0, valueOfGoods - totalItemDiscount);
 
-  // Automatic 10% Scheme on bills exceeding ₹500 — EXCLUSIVELY for Dr. Priyadarshi Srivastava's account/vendor
+  // Automatic 10% Scheme on all bills exceeding ₹500 — Neuro Harmony Clinic policy
+  // (Previously scoped to Priyadarshi only; now applies to ALL customers)
+  const autoDiscountEligible = grossTaxable > 500;
+
+  // Keep isPriyadarshiParty for backward-compat with any other references, but it no longer gates the discount
   const isPriyadarshiParty = Boolean(
     (customerName && customerName.trim().toUpperCase().includes('PRIYADARSHI')) ||
     (selectedCustomer?.name && selectedCustomer.name.trim().toUpperCase().includes('PRIYADARSHI'))
   );
 
-  // When switching away from Priyadarshi to another vendor (like SS TRADERS or Cash), reset discount to 0
+  // When switching away to Cash or any party, only reset if not already auto-eligible
   useEffect(() => {
-    if (!isPriyadarshiParty && !editingInvoiceId) {
-      setBillDiscountPct(0);
-      setManualDiscountOverride(false);
+    if (!editingInvoiceId && !manualDiscountOverride) {
+      if (!autoDiscountEligible) {
+        setBillDiscountPct(0);
+      }
     }
-  }, [customerName, selectedCustomer?.id, isPriyadarshiParty, editingInvoiceId]);
+  }, [customerName, selectedCustomer?.id, editingInvoiceId]);
 
   useEffect(() => {
     if (!manualDiscountOverride && !editingInvoiceId) {
-      if (isPriyadarshiParty && grossTaxable > 500) {
+      if (autoDiscountEligible) {
         setBillDiscountPct(10);
       } else {
         setBillDiscountPct(0);
       }
     }
-  }, [grossTaxable, manualDiscountOverride, editingInvoiceId, isPriyadarshiParty]);
+  }, [grossTaxable, manualDiscountOverride, editingInvoiceId, autoDiscountEligible]);
 
   const billDiscountAmt = Math.round(((grossTaxable * Math.max(0, Math.min(100, billDiscountPct))) / 100) * 100) / 100;
   const netTaxable = Math.round(Math.max(0, grossTaxable - billDiscountAmt) * 100) / 100;
@@ -1336,15 +1341,15 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
               </label>
             )}
 
-            {/* Scheme Indicator Badge - Strictly for Dr. Priyadarshi vendor only */}
-            {isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? (
+            {/* Auto-Discount Badge — Neuro Harmony Clinic policy: 10% on bills > ₹500 */}
+            {autoDiscountEligible && billDiscountPct === 10 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', padding: '0.25rem 0.6rem', borderRadius: '6px', fontWeight: '700' }}>
-                <span>🎁 10% Scheme Applied (Bill &gt; ₹500)</span>
+                <span>🎁 10% Discount Applied (Bill &gt; ₹500)</span>
                 <span style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '800' }}>(-₹{billDiscountAmt.toFixed(2)})</span>
               </div>
-            ) : isPriyadarshiParty && grossTaxable > 0 && grossTaxable <= 500 ? (
+            ) : !autoDiscountEligible && grossTaxable > 0 ? (
               <div style={{ fontSize: '0.74rem', color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
-                💡 Add <strong style={{ color: '#0f766e' }}>₹{(500 - grossTaxable + 0.01).toFixed(2)}</strong> more for <strong>10% Scheme OFF</strong>
+                💡 Add <strong style={{ color: '#0f766e' }}>₹{(500 - grossTaxable + 0.01).toFixed(2)}</strong> more for <strong>10% Discount</strong>
               </div>
             ) : null}
 
@@ -1367,7 +1372,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   width: '52px',
                   padding: '0.3rem 0.4rem',
                   background: 'var(--card-bg)',
-                  border: isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
+                  border: autoDiscountEligible && billDiscountPct === 10 ? '1.5px solid #10b981' : '1px solid var(--border-color)',
                   borderRadius: '5px',
                   color: 'var(--text-primary)',
                   textAlign: 'center',
@@ -1376,9 +1381,9 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                 }}
               />
               <span style={{ color: 'var(--text-muted)' }}>%</span>
-              {isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 && (
+              {autoDiscountEligible && billDiscountPct === 10 && (
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '1px 5px', borderRadius: '3px' }}>
-                  10% Dr. Priyadarshi Scheme
+                  10% Auto-Discount (Neuro Harmony)
                 </span>
               )}
               {manualDiscountOverride && (
@@ -1386,10 +1391,10 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
                   type="button"
                   onClick={() => {
                     setManualDiscountOverride(false);
-                    if (isPriyadarshiParty && grossTaxable > 500) setBillDiscountPct(10);
+                    if (autoDiscountEligible) setBillDiscountPct(10);
                     else setBillDiscountPct(0);
                   }}
-                  title={isPriyadarshiParty ? "Reset to automatic 10% scheme for bills > ₹500" : "Reset discount to 0%"}
+                  title={autoDiscountEligible ? "Reset to automatic 10% discount for bills > ₹500" : "Reset discount to 0%"}
                   style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: '0 2px' }}
                 >
                   ↺ Reset
@@ -1932,7 +1937,7 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
               <span>
-                DISCOUNT {billDiscountPct > 0 ? `(${billDiscountPct}%${isPriyadarshiParty && grossTaxable > 500 && billDiscountPct === 10 ? ' Scheme' : ''})` : ''} :
+                DISCOUNT {billDiscountPct > 0 ? `(${billDiscountPct}%${autoDiscountEligible && billDiscountPct === 10 ? ' Auto' : ''})` : ''} :
               </span>
               <span style={{ fontWeight: '700' }}>- ₹{(totalItemDiscount + billDiscountAmt).toFixed(2)}</span>
             </div>
