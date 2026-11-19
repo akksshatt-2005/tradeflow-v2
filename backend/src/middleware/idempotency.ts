@@ -7,6 +7,13 @@ import prisma from '../prisma.js';
  * Guarantees that retried mutations do not duplicate records.
  */
 export async function idempotencyMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // CRITICAL: Never apply idempotency caching to PUT/PATCH/DELETE — only POST creates.
+  // PUT requests (invoice edits) with the same idempotency key would otherwise replay
+  // the first edit's response on every subsequent edit, causing all changes to revert.
+  if (req.method !== 'POST') {
+    return next();
+  }
+
   const idempotencyKey = (req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || req.body?.idempotency_key) as string | undefined;
 
   if (!idempotencyKey || typeof idempotencyKey !== 'string') {

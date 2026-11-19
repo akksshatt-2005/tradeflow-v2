@@ -718,9 +718,13 @@ export default function POSBilling({ onBack, onInvoiceCreated, editingInvoiceId 
       let invoiceId = editingInvoiceId;
 
       if (editingInvoiceId) {
+        // CRITICAL FIX: Never reuse the same idempotency key for edits.
+        // A fixed key like `pos-edit-${id}` causes the middleware to cache the FIRST
+        // edit response and replay it on every subsequent edit, making all changes revert.
+        // Each edit attempt must get a unique key so it always reaches the backend.
         await api.put<{ invoice: any }>(`/api/invoices/${editingInvoiceId}`, payload, {
           companyId: activeCompany.id,
-          idempotencyKey: `pos-edit-${editingInvoiceId}`
+          idempotencyKey: `pos-edit-${editingInvoiceId}-${Date.now()}`
         });
       } else {
         const res = await api.post<{ invoice: any }>('/api/invoices', payload, {
